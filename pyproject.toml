@@ -1,0 +1,31 @@
+# Guide
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+
+# ruff code formatter settings
+[tool.ruff]
+exclude = [".git", ".venv", ".vscode", "venv"]
+line-length = 120
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint]
+ignore = ["E402"]
+
+[tool.flake8]
+exclude = [".git", ".venv", ".vscode", "venv"]
+max-line-length = 120
+inline-quotes = "double"
+ignore = [
+    "Q", # quotes
+    "I", # imports
+    "D", # docstrings
+]
+max-complexity = 10

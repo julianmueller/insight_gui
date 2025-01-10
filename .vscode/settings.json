@@ -1,0 +1,29 @@
+{
+    // common settings
+    "editor.rulers": [
+        120
+    ],
+    "editor.formatOnSave": true,
+    "editor.wordWrap": "off",
+    "editor.wordWrapColumn": 120,
+    // XML specific settings
+    "[xml]": {
+        "editor.autoClosingBrackets": "never",
+    },
+    "xml.format.preserveAttributeLineBreaks": false,
+    "xml.format.enforceQuoteStyle": "preferred",
+    "xml.format.maxLineWidth": 0,
+    // Python specific settings
+    "[python]": {
+        "diffEditor.ignoreTrimWhitespace": false,
+        "editor.defaultFormatter": "charliermarsh.ruff",
+    },
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python",
+    "autoDocstring.docstringFormat": "sphinx-notypes",
+    "todo-tree.tree.scanMode": "workspace",
+    "editor.detectIndentation": false,
+    "codeium.enableExplainProblem": false,
+}

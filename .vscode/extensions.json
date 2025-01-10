@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "jeanp413.open-remote-ssh",
+        "jeanp413.open-remote-wsl",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "gruntfuggly.todo-tree",
+    ]
+}

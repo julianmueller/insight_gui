@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+# standard imports
+from pathlib import Path
+
+# GTK and GUI specific imports
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, GLib
+
+# custom imports
+from insight_gui.widgets.window import MainWindow
+from insight_gui.ros2_node import ROS2CommunicationNode
+
+
+class Ros2GuiApp(Adw.Application):
+    """The main application singleton class."""
+
+    def __init__(self, share_dir: Path = None, start_ros2_node: bool = True):
+        super().__init__(application_id="com.example.InsightGUI")  # TODO somehow set this id
+        Gtk.init()
+        Adw.init()
+
+        self.share_dir = share_dir
+
+        # Load the compiled GResource file
+        # resource_path = Path(get_package_share_directory("insight_gui")) / "data" / "resources.gresource.xml"
+        # resource = Gio.resource_load(str(resource_path))  # TODO compile the gresource
+        # Gio.Resource._register(resource)
+
+        self.window = None
+
+        # add event handles
+        self.connect("activate", self.on_activate)
+
+        if start_ros2_node:
+            self.ros2_node = ROS2CommunicationNode()
+
+    def on_activate(self, app):
+        if not self.window:
+            self.window = MainWindow(application=app)
+
+        self.window.connect("close-request", self.shutdown)
+        self.window.present()
+
+    def shutdown(self, widget=None):
+        print("Shutting down GTK window.")
+        self.ros2_node.shutdown()
+        Gtk.Application.quit(self)
+        return GLib.SOURCE_REMOVE
