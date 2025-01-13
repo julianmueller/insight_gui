@@ -1,7 +1,6 @@
-
 def is_between(value: float, lower: float, upper: float, incl_lower: bool = True, incl_upper: bool = True) -> bool:
-    """Check if a value is in between a lower and an upper boundary. Whether the boundaries itself are included can be
-    specified.
+    """
+    Check if a value is in between a lower and an upper boundary. Whether the boundaries are included can be specified.
 
     :param value: value to check
     :param lower: lower boundary
@@ -24,7 +23,8 @@ def is_between(value: float, lower: float, upper: float, incl_lower: bool = True
 
 
 def clamp(value: float, lower: float, upper: float) -> float:
-    """Clamp a value between two boundaries.
+    """
+    Clamp a value between two boundaries.
 
     :param value: number that will be clamped
     :param lower: lower boundary of the clamping

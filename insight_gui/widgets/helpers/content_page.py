@@ -52,7 +52,7 @@ class ContentPage(Adw.Bin):
 
     @Gtk.Template.Callback()
     def on_search_changed(self, *args):
-        self.pref_page.filter(self.search_entry.get_text())
+        self.pref_page.apply_filter(self.search_entry.get_text())
 
     @Gtk.Template.Callback()
     def on_refresh(self, *args):

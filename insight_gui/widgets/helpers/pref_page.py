@@ -54,7 +54,7 @@ class PrefPage(Adw.PreferencesPage):
             self.remove_group(pref_group)
         # self.groups = []
 
-    def filter(self, text: str):
+    def apply_filter(self, text: str):
         # Check for empty search input
         if not text.strip():
             # Show all groups and rows if no text is provided

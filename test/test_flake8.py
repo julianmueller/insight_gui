@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 from ament_flake8.main import main_with_errors
 import pytest
 
@@ -19,7 +21,14 @@ import pytest
 @pytest.mark.flake8
 @pytest.mark.linter
 def test_flake8():
-    rc, errors = main_with_errors(argv=[])
-    assert rc == 0, \
-        'Found %d code style errors / warnings:\n' % len(errors) + \
-        '\n'.join(errors)
+    config_file = Path(__file__).parent.parent / "setup.cfg"
+
+    # Debug: Ensure the file exists and print its path
+    assert config_file.is_file(), f"Config file not found at: {config_file}"
+
+    # Debug: Print the config file being used
+    print(f"Flake8 is using configuration file: {config_file}")
+
+    # Run the actual linting test
+    rc, errors = main_with_errors(argv=["--config", str(config_file)])
+    assert rc == 0, "Found %d code style errors / warnings:\n" % len(errors) + "\n".join(errors)

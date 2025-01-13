@@ -74,7 +74,7 @@ class PrefGroup(Adw.PreferencesGroup):
     def set_empty_row_title(self, empty_msg: str):
         self.empty_row.set_title(empty_msg)
 
-    def filter(self, text: str):
+    def apply_filter(self, text: str):
         # Compile the regex once for efficiency
         try:
             regex = re.compile(text, re.IGNORECASE)

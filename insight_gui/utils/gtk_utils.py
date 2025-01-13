@@ -8,7 +8,9 @@ from gi.repository import Gtk
 # https://developer.mozilla.org/en-US/docs/Web/CSS/margin#syntax
 def set_margin(widget: Gtk.Widget, margin: list | int):
     """
-    Convenience function for setting the margins of a GTK.Widget as:
+    Set the margins of a GTK.Widget using a list.
+
+    Options:
         - one value for all
         - 2x list: [top & bottom, right=end & left=start]
         - 3x list: [top, right=end & left=start, bottom]
@@ -21,7 +23,9 @@ def set_margin(widget: Gtk.Widget, margin: list | int):
 
 def margins_dict(margin: list | int):
     """
-    Convenience function for putting the margins in a dict, to be used for Gtk.Widget as properties:
+    Set the margins of a GTK.Widget using a dict.
+
+    Options:
         - one value for all
         - 2x list: [top & bottom, right=end & left=start]
         - 3x list: [top, right=end & left=start, bottom]
@@ -59,7 +63,7 @@ def margins_dict(margin: list | int):
 
 
 def add_css_classes(widget: Gtk.Widget, classes: list):
-    """Convenience function for adding multiple css classes to a widget."""
+    """Add multiple css classes to a GTK.Widget."""
     if not isinstance(widget, list):
         raise ValueError("malformatted css classes")
 
@@ -68,7 +72,7 @@ def add_css_classes(widget: Gtk.Widget, classes: list):
 
 
 def get_child_by_name(parent_widget, name):
-    """Convenience function to get the child of a widget by its name."""
+    """Get the child of a GTK.Widget by its name."""
     first_child = parent_widget.get_first_child()
     last_child = parent_widget.get_last_child()
 
