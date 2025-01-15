@@ -7,7 +7,7 @@
         <child type="header-suffix">
             <object class="GtkBox" id="suffix_box">
                 <property name="orientation">horizontal</property>
-                <property name="spacing">10</property>
+                <property name="spacing">12</property>
                 <property name="visible">False</property>
                 <!-- <child>
                     <object class="GtkButton" id="refresh_btn">

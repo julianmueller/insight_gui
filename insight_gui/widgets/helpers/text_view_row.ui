@@ -6,14 +6,15 @@
 
     <template class="TextViewRow" parent="AdwPreferencesRow">
         <property name="activatable">False</property>
+
         <child>
             <object class="GtkBox" id="main_box">
-                <property name="margin-top">12</property>
-                <property name="margin-bottom">12</property>
+                <property name="margin-top">6</property>
+                <property name="margin-bottom">6</property>
                 <property name="margin-start">12</property>
                 <property name="margin-end">12</property>
                 <property name="orientation">vertical</property>
-                <property name="spacing">12</property>
+                <property name="spacing">6</property>
 
                 <child>
                     <object class="GtkBox" id="header_box">
@@ -22,11 +23,13 @@
                                 <property name="orientation">vertical</property>
                                 <property name="spacing">4</property>
                                 <property name="hexpand">true</property>
+                                <property name="vexpand">true</property>
 
                                 <child>
                                     <object class="GtkLabel" id="title_label">
                                         <property name="xalign">0</property>
                                         <property name="yalign">0.5</property>
+                                        <property name="vexpand">true</property>
                                         <style>
                                             <class name="title" />
                                         </style>

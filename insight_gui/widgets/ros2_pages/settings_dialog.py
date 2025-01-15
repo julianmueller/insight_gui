@@ -42,7 +42,7 @@ class SettingsDialog(Adw.PreferencesDialog):
         row_hide_node = settings_group.add_row(Adw.SwitchRow(title="Hide Node"))
         row_node_namespace = settings_group.add_row(Adw.EntryRow(title="ros2_node_namespace", show_apply_button=True))
         row_network_id = settings_group.add_row(Adw.EntryRow(title="ros2_network_id", show_apply_button=True))
-        row_apply_btn: PrefRow = settings_group.add_row(PrefRow(title="Apply Changes"))
+        row_apply_btn: PrefRow = settings_group.add_row(PrefRow(title="Apply Changes"))  # TODO make a ButtonRow
         row_apply_btn.add_suffix_btn(
             icon_name="document-save-symbolic", tooltip_text="Save", func=self.on_apply_changes
         )

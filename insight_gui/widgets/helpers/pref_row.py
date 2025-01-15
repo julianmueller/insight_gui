@@ -24,7 +24,7 @@ class PrefRow(Adw.ActionRow):
         is_hidden: bool = False,
         prefix_icon: str = "",
         suffix_lbl: str = "",
-        css_classes: list[str] = [],
+        css_classes: list[str] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -46,26 +46,40 @@ class PrefRow(Adw.ActionRow):
         if str(suffix_lbl):
             self.add_suffix_label(str(suffix_lbl))
 
-        for css_class in css_classes:
-            super().add_css_class(css_class)
+        if css_classes is not None:
+            for css_class in css_classes:
+                super().add_css_class(css_class)
 
     def set_prefix_icon(self, icon_name: str):
         self.prefix_icon.set_from_icon_name(icon_name)
         self.prefixes.set_visible(True)
 
-    def add_suffix_btn(self, icon_name: str, tooltip_text: str, func: Callable, **func_kwargs):
-        btn = Gtk.Button.new_from_icon_name(icon_name)
-        btn.set_tooltip_text(tooltip_text)
+    def add_suffix_btn(
+        self,
+        label: str | None = None,
+        icon_name: str | None = None,
+        tooltip_text: str | None = None,
+        func: Callable = None,
+        **func_kwargs,
+    ):
+        btn = Gtk.Button()
+        if label:
+            btn.set_label(label)
+        if icon_name:
+            btn.set_icon_name(icon_name)
+        if tooltip_text:
+            btn.set_tooltip_text(tooltip_text)
+
         btn.connect("clicked", lambda *_: func(**func_kwargs))
-        self.add_suffix_widget(btn)
+        self._add_suffix_widget(btn)
 
     def add_suffix_label(self, label_text: str):
         if len(label_text) == 0:
             label_text = "<i>empty string</i>"
         label = Gtk.Label(label=label_text, use_markup=True)
-        self.add_suffix_widget(label)
+        self._add_suffix_widget(label)
 
-    def add_suffix_widget(self, widget: Gtk.Widget):
+    def _add_suffix_widget(self, widget: Gtk.Widget):
         self.suffix_list.append(widget)
         self.suffix_box.append(widget)
         self.suffix_box.reorder_child_after(self.next_page_icon, widget)
@@ -83,3 +97,7 @@ class PrefRow(Adw.ActionRow):
 
 def empty_pref_row(title: str = "empty list", subtitle: str = ""):
     return PrefRow(title=title, subtitle=subtitle, prefix_icon="dialog-error-symbolic", css_classes=["dim-label"])
+
+
+# TODO add a button row?
+# https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.1/class.ButtonRow.html

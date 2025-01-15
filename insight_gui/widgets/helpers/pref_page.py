@@ -93,6 +93,9 @@ class PrefPage(Adw.PreferencesPage):
                 # If group does not match, filter rows individually
                 group_visible = False
                 for row in group.rows:
+                    # TODO add a generic property to the rows, which strings to check when filtering, for custum rows,
+                    # that dont have a title or description
+
                     row_title = row.get_title()
                     row_subtitle = row.get_subtitle()  # Assuming rows have subtitles
                     if row_title and regex.search(row_title) or row_subtitle and regex.search(row_subtitle):

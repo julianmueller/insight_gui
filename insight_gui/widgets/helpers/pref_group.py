@@ -74,6 +74,7 @@ class PrefGroup(Adw.PreferencesGroup):
     def set_empty_row_title(self, empty_msg: str):
         self.empty_row.set_title(empty_msg)
 
+    # TODO i think, this is obsolete, as the filter is now done per page
     def apply_filter(self, text: str):
         # Compile the regex once for efficiency
         try:

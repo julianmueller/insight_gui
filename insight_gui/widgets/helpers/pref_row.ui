@@ -6,21 +6,16 @@
     <!-- based on https://github.com/workbenchdev/Workbench/blob/main/src/Library/EntryRow.blp -->
 
     <template class="PrefRow" parent="AdwActionRow">
-        <style>
-            <class name="activatable" />
-        </style>
-
         <child type="prefix">
             <object class="GtkImage" id="prefix_icon">
                 <property name="icon-name">eye-not-looking-symbolic</property>
-                <!-- <property name="visible">false</property> -->
             </object>
         </child>
 
         <child type="suffix">
             <object class="GtkBox" id="suffix_box">
                 <property name="orientation">horizontal</property>
-                <property name="spacing">10</property>
+                <property name="spacing">6</property>
                 <property name="homogeneous">true</property>
                 <property name="valign">center</property>
 

@@ -57,7 +57,8 @@ class ContentPage(Adw.Bin):
     @Gtk.Template.Callback()
     def on_refresh(self, *args):
         self.search_bar.set_search_mode(False)
-        if self.refresh_func():
+        ret_val = self.refresh_func()
+        if ret_val or bool(self.pref_page.num_groups):
             self.content_stack.set_visible_child(self.pref_page)
         else:
             self.show_toast("Refresh yielded no results")
