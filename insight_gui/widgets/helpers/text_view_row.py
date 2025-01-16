@@ -30,6 +30,7 @@ class TextViewRow(Adw.PreferencesRow):
         min_height: int = -1,
         max_height: int = -1,
         show_copy_btn: bool = False,
+        filterable: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -47,6 +48,10 @@ class TextViewRow(Adw.PreferencesRow):
         else:
             self.subtitle_label.set_visible(False)
 
+        if not title and not subtitle:
+            self.header_box.set_visible(False)
+
+        self.filterable = filterable
         self.toggle_copy_button_visibility(show_copy_btn)
         self.scrolled.set_min_content_height(min_height)
         self.scrolled.set_max_content_height(max_height)
@@ -54,6 +59,20 @@ class TextViewRow(Adw.PreferencesRow):
     @property
     def line_count(self) -> int:
         return self.text_buffer.get_line_count()
+
+    @property
+    def filter_text(self) -> str:
+        return f"{self.title_label.get_text()} {self.subtitle_label.get_text()} {self.get_text()}"
+
+    def set_title(self, title: str):
+        self.title_label.set_label(str(title))
+        self.title_label.set_visible(len(str(title)) > 0)
+        self.header_box.set_visible(len(self.title_label.get_label()) > 0 or len(self.subtitle_label.get_label()) > 0)
+
+    def set_subtitle(self, subtitle: str):
+        self.subtitle_label.set_label(str(subtitle))
+        self.subtitle_label.set_visible(len(str(subtitle)) > 0)
+        self.header_box.set_visible(len(self.title_label.get_label()) > 0 or len(self.subtitle_label.get_label()) > 0)
 
     def get_text(self) -> str:
         start_iter = self.text_buffer.get_start_iter()

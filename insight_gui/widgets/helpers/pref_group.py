@@ -17,7 +17,15 @@ class PrefGroup(Adw.PreferencesGroup):
 
     suffix_box: Gtk.Box = Gtk.Template.Child()
 
-    def __init__(self, *, title: str = "", description: str = "", empty_msg: str = "empty list", **kwargs):
+    def __init__(
+        self,
+        *,
+        title: str = "",
+        description: str = "",
+        empty_msg: str = "empty list",
+        filterable: bool = True,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         super().set_title(str(title))
         super().set_description(str(description))
@@ -28,6 +36,7 @@ class PrefGroup(Adw.PreferencesGroup):
         if not title and not description:
             super().get_first_child().get_first_child().set_visible(False)  # disable group header
 
+        self.filterable = filterable
         self.empty_row = empty_pref_row(title=str(empty_msg))
         super().add(self.empty_row)
 
@@ -38,6 +47,10 @@ class PrefGroup(Adw.PreferencesGroup):
     @property
     def is_empty(self):
         return self.num_rows == 0
+
+    @property
+    def filter_text(self) -> str:
+        return f"{self.get_title()} {self.get_description()}"
 
     def add(self, *args, **kwargs):
         raise NotImplementedError("use 'add_row' instead")
@@ -75,26 +88,26 @@ class PrefGroup(Adw.PreferencesGroup):
         self.empty_row.set_title(empty_msg)
 
     # TODO i think, this is obsolete, as the filter is now done per page
-    def apply_filter(self, text: str):
-        # Compile the regex once for efficiency
-        try:
-            regex = re.compile(text, re.IGNORECASE)
-        except re.error as e:
-            ros2_node = self.get_root().ros2_node
-            if ros2_node:
-                ros2_node.get_logger().error(f"Regex error: {e}", once=True)
-            else:
-                print(f"Regex error: {e}")
+    # def apply_filter(self, text: str):
+    #     # Compile the regex once for efficiency
+    #     try:
+    #         regex = re.compile(text, re.IGNORECASE)
+    #     except re.error as e:
+    #         ros2_node = self.get_root().ros2_node
+    #         if ros2_node:
+    #             ros2_node.get_logger().error(f"Regex error: {e}", once=True)
+    #         else:
+    #             print(f"Regex error: {e}")
 
-            # If the regex is invalid, show all rows
-            for row in self.rows:
-                row.set_visible(True)
-            return
+    #         # If the regex is invalid, show all rows
+    #         for row in self.rows:
+    #             row.set_visible(True)
+    #         return
 
-        for row in self.rows:
-            title = row.get_title()
-            subtitle = row.get_subtitle()
-            if title and regex.search(title) or subtitle and regex.search(subtitle):
-                row.set_visible(True)
-            else:
-                row.set_visible(False)
+    #     for row in self.rows:
+    #         title = row.get_title()
+    #         subtitle = row.get_subtitle()
+    #         if title and regex.search(title) or subtitle and regex.search(subtitle):
+    #             row.set_visible(True)
+    #         else:
+    #             row.set_visible(False)

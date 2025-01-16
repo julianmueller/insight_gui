@@ -35,7 +35,7 @@ class TransformsPage(Adw.NavigationPage):
         self.content_page.set_search_entry_placeholder_text("Search for Frames")
         super().set_child(self.content_page)
 
-        self.calc_group = self.content_page.pref_page.add_group(title="Calculate Transform")
+        self.calc_group = self.content_page.pref_page.add_group(title="Calculate Transform", filterable=False)
 
         # TODO use prefix_icons left-large-symbolic and right-large-symbolic
         self.source_frame_row = self.calc_group.add_row(Adw.ComboRow(title="Source Frame"))
@@ -52,8 +52,9 @@ class TransformsPage(Adw.NavigationPage):
             )
         )
 
-        self.result_row = self.calc_group.add_row(TextViewRow(title="Result", show_copy_btn=True, min_height=200))
-        self.result_row.set_visible(False)  # TODO this does somehow not work
+        self.result_text_row = self.calc_group.add_row(
+            TextViewRow(title="Result", show_copy_btn=True, min_height=200, visible=False)
+        )
 
         # self.list_group = self.content_page.pref_page.add_group(empty_msg="No transforms found")
 
@@ -67,13 +68,24 @@ class TransformsPage(Adw.NavigationPage):
             return False
 
         self.frames_group.clear()
+        self.result_text_row.set_visible(False)
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self.ros2_node.node)
         time.sleep(1.0)
 
-        frames_dict = yaml.safe_load(self.tf_buffer.all_frames_as_yaml())
-        self.frames_list = sorted(list(frames_dict.keys()))
+        # Get the frames from the buffer as YAML
+        result = self.tf_buffer.all_frames_as_yaml()
+        frames_dict = yaml.safe_load(result)
+
+        # Check if frames are present in the result
+        if isinstance(frames_dict, dict):
+            self.frames_list = sorted(frames_dict.keys())
+            self.calc_button.set_sensitive(True)
+        elif isinstance(frames_dict, list):
+            self.content_page.show_toast("No frames found")
+            self.calc_button.set_sensitive(False)
+            return False
 
         # Create a Gio.ListStore
         self.list_store = Gio.ListStore.new(Gtk.StringObject)
@@ -87,7 +99,9 @@ class TransformsPage(Adw.NavigationPage):
 
         # Set the Gio.ListModel on the ComboRow
         self.source_frame_row.set_model(self.list_store)
+        self.source_frame_row.set_selected(0)
         self.target_frame_row.set_model(self.list_store)
+        self.target_frame_row.set_selected(0)
 
     def on_source_frame_changed(self, *args):
         self.source_frame = self.source_frame_row.get_selected_item().get_string()
@@ -100,7 +114,7 @@ class TransformsPage(Adw.NavigationPage):
         target_frame = self.target_frame_row.get_selected_item().get_string()
 
         if source_frame == target_frame:
-            self.content_page.show_toast("Source and target frame cannot be the same")
+            self.content_page.show_toast("'source frame' and 'target frame' cannot be the same")
             return
 
         try:
@@ -110,8 +124,8 @@ class TransformsPage(Adw.NavigationPage):
             )
 
             text = (
-                f"Transform from {self.source_frame} to {self.target_frame}:\n"
-                + "Translation:\n"
+                # f"Transform from {self.source_frame} to {self.target_frame}:\n"
+                "Translation:\n"
                 + f"  x: {transform.transform.translation.x:.8f},\n"
                 + f"  y: {transform.transform.translation.y:.8f},\n"
                 + f"  z: {transform.transform.translation.z:.8f}\n"
@@ -122,9 +136,12 @@ class TransformsPage(Adw.NavigationPage):
                 + f"  w: {transform.transform.rotation.w:.8f}"
             )
 
-            self.result_row.set_text(text)
-            self.result_row.set_visible(True)
+            self.result_text_row.set_subtitle(f"from '{self.source_frame}' to '{self.target_frame}'")
+            self.result_text_row.set_text(text)
+            self.result_text_row.set_visible(True)
 
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().error(f"Could not calculate transform: {e}")
-            self.result_row.set_visible(False)
+            self.content_page.show_toast(f"Could not calculate transform: {e}")
+            self.result_text_row.set_text("")
+            self.result_text_row.set_visible(False)

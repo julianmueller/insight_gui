@@ -26,6 +26,7 @@ class ButtonRow(Adw.PreferencesRow):
         tooltip_text: str = "",
         func: Callable = None,
         func_kwargs: dict = None,
+        filterable: bool = True,
         css_classes: list[str] = None,
         **kwargs,
     ):
@@ -55,6 +56,12 @@ class ButtonRow(Adw.PreferencesRow):
         if css_classes is not None:
             for css_class in css_classes:
                 super().add_css_class(css_class)
+
+        self.filterable = filterable
+
+    @property
+    def filter_text(self) -> str:
+        return self.btn.get_label()
 
     def set_func(self, func: Callable, **func_kwargs):
         self.func = func

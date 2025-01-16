@@ -12,6 +12,7 @@ from rosidl_parser.definition import (
     UnboundedString,
     BoundedWString,
     UnboundedWString,
+    BasicType,
 )
 
 import gi
@@ -241,6 +242,7 @@ def _on_open_msg_webpage(btn: Gtk.Button = None, *, msg_full_name: str):
     webbrowser.open(f"https://docs.ros2.org/foxy/api/{msg_full_name}.html")
 
 
+# TODO this can be improved, especially the nested messages
 def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.NavigationView):
     msg_instance = msg_class()
     # Iterate through the message fields
@@ -253,7 +255,7 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
 
         # for nested messages
         if isinstance(slot_type, NamespacedType):
-            nested_msg_full_name = "/".join(slot_type.namespaces + [slot_type.name])
+            nested_msg_full_name = "/".join(slot_type.namespaced_name())
             row = PrefRow(title=field_name, subtitle=nested_msg_full_name)
             row.set_subpage_link(
                 nav_view=nav_view,
@@ -271,31 +273,58 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
         #     row.add(PrefRow(title="Size", suffix_lbl=field_value.size))
         #     row.add(PrefRow(title="Value", suffix_lbl=field_value))
 
-        # for not nested types types
-        else:
-            # for lists of defined lengths
-            if isinstance(slot_type, (UnboundedSequence, BoundedSequence)):
-                field_value = field_value if field_value else "<i>empty list</i>"
-
-            # for lists
-            elif isinstance(slot_type, Array):
-                # Remove brackets and split the list
-                content = str(field_value).strip("[]").split()
-                total_count = len(content)
-
-                if len(field_value) <= 6:
-                    field_value = str(field_value)
+        # for sequences of defined lengths
+        elif isinstance(slot_type, (UnboundedSequence, BoundedSequence)):
+            if not isinstance(
+                slot_type.value_type, (BasicType, BoundedString, UnboundedString, BoundedWString, UnboundedWString)
+            ):
+                nested_msg_full_name = "/".join(slot_type.value_type.namespaced_name())
+                row = PrefRow(title=field_name, subtitle=f"sequence of <{nested_msg_full_name}>")
+                row.set_subpage_link(
+                    nav_view=nav_view,
+                    subpage_class=MessageTypeInfoPage,
+                    msg_full_name=nested_msg_full_name,
+                )
+            else:
+                if isinstance(slot_type.value_type, BasicType):
+                    subtitle = f"sequence of <{slot_type.value_type.typename}>"
                 else:
-                    field_value = f"[{content[0]} {content[1]} ... {content[-2]} {content[-1]}] <i>x{total_count}</i>"
+                    subtitle = "sequence of <string>"
 
-            # for strings
-            elif isinstance(slot_type, (BoundedString, UnboundedString, BoundedWString, UnboundedWString)):
-                field_value = "<i>empty string</i>"
+                row = PrefRow(
+                    title=field_name,
+                    subtitle=subtitle,
+                    prefix_icon="sudoku-app-symbolic",
+                    suffix_lbl="<i>empty list</i>",
+                )
+            # field_value = field_value if field_value else "<i>empty list</i>"
+
+        # for arrays
+        elif isinstance(slot_type, Array):
+            # Remove brackets and split the list
+            content = str(field_value).strip("[]").split()
+            total_count = len(content)
+
+            if len(field_value) <= 6:
+                field_value = str(field_value)
+            else:
+                field_value = f"[{content[0]} {content[1]} ... {content[-2]} {content[-1]}] <i>x{total_count}</i>"
+
+            row = PrefRow(
+                title=field_name, subtitle=field_type, prefix_icon="sudoku-app-symbolic", suffix_lbl=field_value
+            )
+
+        # for strings
+        elif isinstance(slot_type, (BoundedString, UnboundedString, BoundedWString, UnboundedWString)):
+            row = PrefRow(
+                title=field_name,
+                subtitle=field_type,
+                prefix_icon="sudoku-app-symbolic",
+                suffix_lbl="<i>empty string</i>",
+            )
 
             # for basic types
-            else:
-                pass
-
+        elif isinstance(slot_type, BasicType):
             row = PrefRow(
                 title=field_name, subtitle=field_type, prefix_icon="sudoku-app-symbolic", suffix_lbl=field_value
             )
@@ -330,7 +359,7 @@ class MessageTypeDialog(Adw.PreferencesDialog):
             text=yaml_text,
             text_type="YAML",
         )
-        yaml_text_view = yaml_group.add_row(TextViewRow(title="Message Type as YAML text"))
+        yaml_text_view = yaml_group.add_row(TextViewRow(min_height=30))
         yaml_text_view.set_text(yaml_text)
 
         # CSV Message Text
@@ -343,7 +372,7 @@ class MessageTypeDialog(Adw.PreferencesDialog):
             text=csv_text,
             text_type="CSV",
         )
-        csv_text_view = csv_group.add_row(TextViewRow(title="Message Type as CSV text"))
+        csv_text_view = csv_group.add_row(TextViewRow(min_height=30))
         csv_text_view.set_text(csv_text)
 
         # JSON Message Text
@@ -356,7 +385,7 @@ class MessageTypeDialog(Adw.PreferencesDialog):
             text=json_text,
             text_type="JSON",
         )
-        json_text_view = json_group.add_row(TextViewRow(title="Message Type as JSON text"))
+        json_text_view = json_group.add_row(TextViewRow(min_height=30))
         json_text_view.set_text(json_text)
 
     def on_text_to_clipboard(self, text: str, text_type: str):

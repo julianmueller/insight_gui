@@ -54,14 +54,22 @@ class PrefPage(Adw.PreferencesPage):
             self.remove_group(pref_group)
         # self.groups = []
 
+    # TODO this causes some hidden rows to be shown
     def apply_filter(self, text: str):
+        def unfilter():
+            for group in self.groups:
+                if not group.filterable:
+                    continue
+                group.set_visible(True)
+                for row in group.rows:
+                    if not row.filterable:
+                        continue
+                    row.set_visible(True)
+
         # Check for empty search input
         if not text.strip():
             # Show all groups and rows if no text is provided
-            for group in self.groups:
-                group.set_visible(True)
-                for row in group.rows:
-                    row.set_visible(True)
+            unfilter()
             return
 
         # Compile the regex once for efficiency
@@ -70,35 +78,29 @@ class PrefPage(Adw.PreferencesPage):
         except re.error as e:
             print(f"Regex error: {e}")
             # If the regex is invalid, show all groups and rows
-            for group in self.groups:
-                group.set_visible(True)
-                for row in group.rows:
-                    row.set_visible(True)
+            unfilter()
             return
 
         # Filter groups and their rows
         for group in self.groups:
-            group_title = group.get_title()
-            group_description = group.get_description()  # Assuming groups have descriptions
-            group_matches = (
-                group_title and regex.search(group_title) or group_description and regex.search(group_description)
-            )
+            if not group.filterable:
+                continue
 
-            if group_matches:
+            if group.filter_text and regex.search(group.filter_text):
                 # If group matches, show all rows in the group
                 group.set_visible(True)
                 for row in group.rows:
+                    if not row.filterable:
+                        continue
                     row.set_visible(True)
             else:
                 # If group does not match, filter rows individually
                 group_visible = False
                 for row in group.rows:
-                    # TODO add a generic property to the rows, which strings to check when filtering, for custum rows,
-                    # that dont have a title or description
+                    if not row.filterable:
+                        continue
 
-                    row_title = row.get_title()
-                    row_subtitle = row.get_subtitle()  # Assuming rows have subtitles
-                    if row_title and regex.search(row_title) or row_subtitle and regex.search(row_subtitle):
+                    if row.filter_text and regex.search(row.filter_text):
                         row.set_visible(True)
                         group_visible = True  # Show the group if any row matches
                     else:

@@ -24,6 +24,7 @@ class PrefRow(Adw.ActionRow):
         is_hidden: bool = False,
         prefix_icon: str = "",
         suffix_lbl: str = "",
+        filterable: bool = True,
         css_classes: list[str] = None,
         **kwargs,
     ):
@@ -46,9 +47,15 @@ class PrefRow(Adw.ActionRow):
         if str(suffix_lbl):
             self.add_suffix_label(str(suffix_lbl))
 
+        self.filterable = filterable
+
         if css_classes is not None:
             for css_class in css_classes:
                 super().add_css_class(css_class)
+
+    @property
+    def filter_text(self) -> str:
+        return f"{self.get_title()} {self.get_subtitle()}"
 
     def set_prefix_icon(self, icon_name: str):
         self.prefix_icon.set_from_icon_name(icon_name)
