@@ -31,6 +31,7 @@ class TextViewRow(Adw.PreferencesRow):
         max_height: int = -1,
         show_copy_btn: bool = False,
         filterable: bool = True,
+        editable: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -50,6 +51,9 @@ class TextViewRow(Adw.PreferencesRow):
 
         if not title and not subtitle:
             self.header_box.set_visible(False)
+
+        if editable:
+            self.text_view.set_editable(True)
 
         self.filterable = filterable
         self.toggle_copy_button_visibility(show_copy_btn)
