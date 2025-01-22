@@ -35,14 +35,13 @@ class PackageListPage(Adw.NavigationPage):
         available_pkgs = get_packages_with_prefixes()
 
         for pkg_name, pkg_path in available_pkgs.items():
-            row = PrefRow(title=pkg_name, subtitle=pkg_path)
+            row = self.list_group.add_row(PrefRow(title=pkg_name, subtitle=pkg_path))
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=PackageInfoPage,
                 pkg_name=pkg_name,
                 pkg_path=pkg_path,
             )
-            self.list_group.add_row(row)
 
         return bool(self.content_page.pref_page.num_groups)
 
@@ -83,34 +82,15 @@ class PackageInfoPage(Adw.NavigationPage):
 
         for path in sorted(executable_paths):
             executable_name = Path(path).name
-            row = PrefRow(title=executable_name)
-            row.add_suffix_btn(
-                icon_name="edit-copy-symbolic",
+            row: PrefRow = executables_group.add_row(PrefRow(title=executable_name))
+            row.add_copy_btn(
+                copy_text=f"ros2 run {pkg_name} {executable_name}",
                 tooltip_text="Copy 'ros2 run' command",
-                func=self.on_copy_executable,
-                pkg_name=pkg_name,
-                executable_name=executable_name,
+                toast_host=self.content_page.toast_overlay,
             )
-            # TODO maybe add a copy btn, so the user can past the "ros2 run/launch" command directly somewhere?
-            # row.set_subpage_link(
-            #     nav_view=self.nav_view,
-            #     subpage_class=NodeInfoPage,
-            #     node_name=node_name,
-            #     node_namespace=node_namespace,
-            #     node_full_name=node_full_name,
-            #     ros2_node=self.ros2_node,
-            # )
-            executables_group.add_row(row)
 
         # add the counts as descriptions
         executables_group.set_description_to_row_count()
-
-    def on_copy_executable(self, pkg_name: str, executable_name: str):
-        # TODO add also roslaunch?
-        cmd = f"ros2 run {pkg_name} {executable_name}"
-        clip = self.get_clipboard()
-        clip.set(cmd)
-        self.content_page.show_toast(f"copied '{cmd}'")
 
     def on_open_pkg_folder(self, *, pkg_path: str, pkg_name: str):
         path = (Path(pkg_path) / "share" / pkg_name).resolve()

@@ -55,7 +55,7 @@ class PrefRow(Adw.ActionRow):
 
     @property
     def filter_text(self) -> str:
-        return f"{self.get_title()} {self.get_subtitle()}"
+        return f"{super().get_title()} {super().get_subtitle()}"
 
     def set_prefix_icon(self, icon_name: str):
         self.prefix_icon.set_from_icon_name(icon_name)
@@ -80,6 +80,18 @@ class PrefRow(Adw.ActionRow):
         btn.connect("clicked", lambda *_: func(**func_kwargs))
         self._add_suffix_widget(btn)
 
+    def add_copy_btn(self, copy_text: str = "", tooltip_text: str = "Copy to clipboard", toast_host: Gtk.Widget = None):
+        if not copy_text or copy_text is None:
+            copy_text = super().get_title()
+
+        self.add_suffix_btn(
+            icon_name="edit-copy-symbolic",
+            tooltip_text=tooltip_text,
+            func=self.on_copy_button_clicked,
+            text=copy_text,
+            toast_host=toast_host,
+        )
+
     def add_suffix_label(self, label_text: str):
         if len(label_text) == 0:
             label_text = "<i>empty string</i>"
@@ -97,9 +109,16 @@ class PrefRow(Adw.ActionRow):
         def on_activate(*args):
             nav_view.push(subpage_class(nav_view=nav_view, **subpage_kwargs))
 
-        self.connect("activated", on_activate)
-        self.set_activatable(True)
+        super().connect("activated", on_activate)
+        super().set_activatable(True)
         self.next_page_icon.set_visible(True)
+
+    def on_copy_button_clicked(self, text: str, toast_host: Gtk.Widget = None):
+        clip = super().get_clipboard()
+        clip.set(str(text))
+
+        if toast_host is not None:
+            toast_host.add_toast(Adw.Toast(title=f"Copied '{text}' to clipboard"))
 
 
 def empty_pref_row(title: str = "empty list", subtitle: str = ""):
