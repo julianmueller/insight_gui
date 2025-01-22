@@ -1,17 +1,15 @@
 import os
 import webbrowser
-import rclpy
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gdk
+from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_node import ROS2CommunicationNode
 from insight_gui.widgets.helpers.pref_page import PrefPage
 from insight_gui.widgets.helpers.pref_row import PrefRow
-from insight_gui.widgets.helpers.text_view_row import TextViewRow
 from insight_gui.widgets.helpers.button_row import ButtonRow
 
 # TODO add setting to show/hide hidden nodes/topics etc

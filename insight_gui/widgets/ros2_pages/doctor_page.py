@@ -84,8 +84,20 @@ class DoctorPage(Adw.NavigationPage):
                     row.add_copy_btn(copy_text=row.get_subtitle(), toast_host=self.content_page.toast_overlay)
 
             elif report.name == "TOPIC LIST":
-                for item in report.items:
-                    self.topic_list_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
+                for i in range(0, len(report.items), 4):
+                    topic_type = report.items[i]
+                    pub_node = report.items[i + 1]
+                    sub_node = report.items[i + 2]
+                    compatibility_status = report.items[i + 3]
+
+                    row = self.topic_list_group.add_row(PrefRow(title=topic_type[1]))
+                    # TODO make the title/subtitle use markup
+                    row.set_use_markup(True)
+                    row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
+                    if compatibility_status[1] == "OK":
+                        row.set_prefix_icon("check-symbolic")
+                    else:
+                        row.set_prefix_icon("dialog-error-symbolic")
 
         return bool(self.content_page.pref_page.num_groups)
 

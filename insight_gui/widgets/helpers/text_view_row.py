@@ -120,7 +120,7 @@ class TextViewRow(Adw.PreferencesRow):
         self.scrolled.set_max_content_height(natural_size.height)
 
     # TODO do the filtering with GtkTextTags
-    def filter_text(self, filter_snippets: list[str]):
+    def filter(self, filter_snippets: list[str]):
         # Get the current text from the buffer
         start_iter = self.text_buffer.get_start_iter()
         end_iter = self.text_buffer.get_end_iter()

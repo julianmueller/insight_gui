@@ -8,6 +8,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
+gi.require_version("GLib", "2.0")
 from gi.repository import Gtk, Adw, GLib
 
 # custom imports
@@ -19,7 +20,7 @@ class Ros2GuiApp(Adw.Application):
     """The main application singleton class."""
 
     def __init__(self, share_dir: Path = None, start_ros2_node: bool = True):
-        super().__init__(application_id="com.example.InsightGUI")  # TODO somehow set this id
+        super().__init__(application_id="com.example.insight_gui")  # TODO somehow set this id
         Gtk.init()
         Adw.init()
 
