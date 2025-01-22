@@ -19,6 +19,7 @@ from insight_gui.widgets.ros2_pages.service_pages import ServiceListPage
 from insight_gui.widgets.ros2_pages.action_pages import ActionListPage
 from insight_gui.widgets.ros2_pages.tf_page import TransformsPage
 from insight_gui.widgets.ros2_pages.log_pages import LoggerPage
+from insight_gui.widgets.ros2_pages.doctor_page import DoctorPage
 
 from insight_gui.utils.adw_colors import AdwAccentColor
 
@@ -104,8 +105,14 @@ class MainWindow(Adw.ApplicationWindow):
             title="Transforms",
             ros2_node=self.ros2_node,
         )
+        # Doctor
+        self.add_stack_page(
+            nav_page_class=DoctorPage,
+            name="doctor",
+            title="Doctor",
+            ros2_node=self.ros2_node,
+        )
 
-        
         # Logger # TODO the logger still needs work
         # self.add_stack_page(
         #     nav_page_class=LoggerPage,
