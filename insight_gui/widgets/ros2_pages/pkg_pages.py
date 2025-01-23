@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import webbrowser
 
 from ros2pkg.api import get_executable_paths
 from ament_index_python.packages import get_packages_with_prefixes
@@ -28,6 +29,12 @@ class PackageListPage(Adw.NavigationPage):
         super().set_child(self.content_page)
 
         self.list_group = self.content_page.pref_page.add_group(empty_msg="No packages found")
+
+        self.content_page.add_header_btn(
+            icon_name="webpage-symbolic",
+            tooltip_text="Open ROS Index",
+            func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
+        )
 
     def refresh(self, *args):
         self.list_group.clear()
@@ -65,14 +72,40 @@ class PackageInfoPage(Adw.NavigationPage):
         self.content_page = ContentPage(search_enabled=True, refresh_enabled=False)
         super().set_child(self.content_page)
 
-        # add open btn
-        self.content_page.add_header_btn(
+        self.link_group = self.content_page.pref_page.add_group(title="Links")
+        self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
             icon_name="folder-symbolic",
-            tooltip_text="Open Package Folder",
             func=self.on_open_pkg_folder,
             pkg_path=pkg_path,
             pkg_name=pkg_name,
         )
+
+        # add index link
+        self.link_group.add_row(PrefRow(title="Open on index.ros.org")).add_suffix_btn(
+            icon_name="webpage-symbolic",
+            func=lambda: webbrowser.open(f"https://index.ros.org/p/{pkg_name}/"),
+        )
+
+        # add api link
+        self.link_group.add_row(PrefRow(title="View API documentation on docs.ros.org")).add_suffix_btn(
+            icon_name="folder-documents-symbolic",
+            func=lambda: webbrowser.open(f"https://docs.ros.org/en/jazzy/p/{pkg_name}/"),
+        )
+
+        # add source code link
+        self.link_group.add_row(PrefRow(title="View source code on repository")).add_suffix_btn(
+            icon_name="git-symbolic",  # TODO make icons work
+            func=lambda: print("TODO"),  # webbrowser.open(f""),
+        )
+
+        # TODO add the xml infos
+        # from here: https://github.com/ros2/ros2cli/blob/jazzy/ros2pkg/ros2pkg/verb/xml.py
+        # - package version number
+        # - description
+        # - authors & maintainers
+        # - license
+        # - urls
+        # - dependencies?
 
         # Executables
         executables_group = self.content_page.pref_page.add_group(
