@@ -6,6 +6,8 @@
     <template class="ContentPage" parent="AdwBin">
         <child>
             <object class="AdwToolbarView" id="toolbar_view">
+                <property name="extend-content-to-bottom-edge">True</property>
+
                 <child type="top">
                     <object class="AdwHeaderBar" id="header_bar">
                         <child>
@@ -83,6 +85,28 @@
                                 </child>
                             </object>
                         </child>
+                    </object>
+                </child>
+
+                <child type="bottom">
+                    <object class="GtkActionBar" id="bottom_bar">
+                        <property name="revealed">false</property>
+                        <!-- <property name="valign">2</property> -->
+                        <!-- <child type="start">
+                            <object class="GtkButton" id="start_widget">
+                                <property name="icon-name">call-start-symbolic</property>
+                            </object>
+                        </child>
+                        <child type="center">
+                            <object class="GtkLabel">
+                                <property name="label" translatable="yes">Action Bar</property>
+                            </object>
+                        </child>
+                        <child type="end">
+                            <object class="GtkButton" id="end_widget">
+                                <property name="icon-name">view-more-symbolic</property>
+                            </object>
+                        </child> -->
                     </object>
                 </child>
             </object>

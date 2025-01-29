@@ -11,6 +11,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
+from insight_gui.widgets.ros2_pages.new_pkg_dialog import NewPkgDialog
 from insight_gui.widgets.helpers.content_page import ContentPage
 from insight_gui.widgets.helpers.pref_row import PrefRow
 
@@ -30,7 +31,13 @@ class PackageListPage(Adw.NavigationPage):
 
         self.list_group = self.content_page.pref_page.add_group(empty_msg="No packages found")
 
-        self.content_page.add_header_btn(
+        self.content_page.add_bottom_left_btn(
+            icon_name="list-add-symbolic",
+            tooltip_text="Create New Package",
+            func=lambda: NewPkgDialog().present(self),
+        )
+
+        self.content_page.add_bottom_right_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Open ROS Index",
             func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),

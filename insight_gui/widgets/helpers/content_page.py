@@ -29,6 +29,8 @@ class ContentPage(Adw.Bin):
     refresh_page: Adw.StatusPage = Gtk.Template.Child()
     empty_search_page: Adw.StatusPage = Gtk.Template.Child()
 
+    bottom_bar: Gtk.ActionBar = Gtk.Template.Child()
+
     def __init__(
         self, refresh_func: Callable = lambda: None, search_enabled: bool = True, refresh_enabled: bool = True, **kwargs
     ):
@@ -88,11 +90,37 @@ class ContentPage(Adw.Bin):
         btn = Gtk.Button.new_from_icon_name(icon_name)
         btn.set_tooltip_text(tooltip_text)
         btn.connect_data("clicked", lambda *_: func(**func_kwargs))
-        self.header_bar.pack_start(btn)
+        self.add_header_widget(btn)
         return btn
 
     def add_header_widget(self, widget: Gtk.Widget) -> Gtk.Widget:
         self.header_bar.pack_start(widget)
+        return widget
+
+    def add_bottom_left_btn(self, icon_name: str, tooltip_text: str, func: Callable, **func_kwargs) -> Gtk.Button:
+        btn = Gtk.Button.new_from_icon_name(icon_name)
+        btn.set_tooltip_text(tooltip_text)
+        btn.connect_data("clicked", lambda *_: func(**func_kwargs))
+        self.add_bottom_widget(btn, position="start")
+        return btn
+
+    def add_bottom_right_btn(self, icon_name: str, tooltip_text: str, func: Callable, **func_kwargs) -> Gtk.Button:
+        btn = Gtk.Button.new_from_icon_name(icon_name)
+        btn.set_tooltip_text(tooltip_text)
+        btn.connect_data("clicked", lambda *_: func(**func_kwargs))
+        self.add_bottom_widget(btn, position="end")
+        return btn
+
+    def add_bottom_widget(self, widget: Gtk.Widget, position: str = "start") -> Gtk.Widget:
+        self.bottom_bar.set_revealed(True)
+        if position == "start":
+            self.bottom_bar.pack_start(widget)
+        elif position == "center":
+            self.bottom_bar.set_center_widget(widget)
+        elif position == "end":
+            self.bottom_bar.pack_end(widget)
+        else:
+            raise ValueError(f"Invalid position: {position}, must be one of 'start', 'center', 'end'")
         return widget
 
     def set_search_entry_placeholder_text(self, text: str):
