@@ -102,19 +102,15 @@ class SettingsDialog(Adw.PreferencesDialog):
 
     def on_map(self, *args):
         env_auto_discovery = os.getenv("ROS_AUTOMATIC_DISCOVERY_RANGE", default="")
-        print(f"{env_auto_discovery=}")
         self.env_auto_discovery_row.set_text(env_auto_discovery)
 
         env_static_peers = os.getenv("ROS_STATIC_PEERS", default="")
-        print(f"{env_static_peers=}")
         self.env_static_peers_row.set_text(env_static_peers)
 
         env_domain_id = os.getenv("ROS_DOMAIN_ID", default="")
-        print(f"{env_domain_id=}")
         self.env_domain_id_row.set_text(env_domain_id)
 
         env_discovery_server = os.getenv("ROS_DISCOVERY_SERVER", default="")
-        print(f"{env_discovery_server=}")
         self.env_discovery_server_row.set_text(env_discovery_server)
 
     def on_apply_env_vars(self, *args):
