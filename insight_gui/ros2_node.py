@@ -13,16 +13,9 @@ from gi.repository import GLib
 class ROS2CommunicationNode:
     def __init__(self):
         super().__init__()
-
-        # init ros2 node thread, and start it
         self.node: Node = None
         self.thread: GLib.Thread = None
         self.is_running = False
-
-    # @property
-    # def is_running(self) -> bool:
-    #     # return self.spin_event.is_set()
-    #     return True
 
     def start_node(self, node_name: str = "insight_gui", *args, **kwargs):
         if not self.is_running:
@@ -34,9 +27,8 @@ class ROS2CommunicationNode:
 
     def stop_node(self):
         if self.is_running:
-            print(f"Stopping ROS2 Node with name '{self.node.get_name()}'")
-            # self.spin_event.clear()
             self.is_running = False
+            print(f"Stopping ROS2 Node with name '{self.node.get_name()}'")
             if self.thread:
                 self.thread.join()
                 self.thread = None
@@ -45,9 +37,8 @@ class ROS2CommunicationNode:
 
     def spin(self, *args, **kwargs):
         try:
-            while rclpy.ok() and self.is_running:  # TODO this somehow causes a problems
-                # if self.spin_event.is_set():
-                rclpy.spin_once(self.node, timeout_sec=0.5)
+            while rclpy.ok() and self.is_running:
+                rclpy.spin_once(self.node, timeout_sec=0.1)
             return True  # Keep the timeout function active
 
         except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
@@ -64,6 +55,7 @@ class ROS2CommunicationNode:
         return sub
 
     def shutdown(self):
+        self.is_running = False
         self.stop_node()
         rclpy.shutdown()
         print("Shutting down ROS2 Node.")

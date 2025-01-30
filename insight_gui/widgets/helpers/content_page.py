@@ -5,7 +5,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GObject
+from gi.repository import Gtk, Adw, GObject, GLib, Gio
 
 from insight_gui.widgets.helpers.pref_page import PrefPage
 
@@ -33,7 +33,7 @@ class ContentPage(Adw.Bin):
         self, refresh_func: Callable = lambda: None, search_enabled: bool = True, refresh_enabled: bool = True, **kwargs
     ):
         super().__init__(**kwargs)
-        self.refresh_func = refresh_func
+        self.set_refresh_func(refresh_func)
 
         self.toggle_search_btn(search_enabled)
         self.toggle_refresh_btn(refresh_enabled)
@@ -57,11 +57,8 @@ class ContentPage(Adw.Bin):
     @Gtk.Template.Callback()
     def on_refresh(self, *args):
         self.search_bar.set_search_mode(False)
-        ret_val = self.refresh_func()
-        if ret_val or bool(self.pref_page.num_groups):
-            self.content_stack.set_visible_child(self.pref_page)
-        else:
-            self.show_toast("Refresh yielded no results")
+        GLib.idle_add(self.refresh_func)
+        self.content_stack.set_visible_child(self.pref_page)
 
     def show_toast(self, toast_text: str):
         self.toast_overlay.add_toast(Adw.Toast(title=str(toast_text)))
@@ -99,7 +96,7 @@ class ContentPage(Adw.Bin):
         self.search_entry.set_placeholder_text(str(text))
 
     def set_refresh_func(self, func: Callable):
-        self.refresh_func = func
+        self.refresh_func = lambda *_: func() and False
 
     def toggle_search_btn(self, enabled: bool):
         self.search_btn.set_visible(enabled)

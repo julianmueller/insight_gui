@@ -71,8 +71,27 @@ class DoctorPage(Adw.NavigationPage):
                     self.platform_info_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
 
             elif report.name == "QOS COMPATIBILITY LIST":
-                for item in report.items:
-                    self.qos_compatibility_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
+                if len(report.items) == 1:
+                    self.qos_compatibility_group.add_row(PrefRow(title=report.items[0][0], subtitle=report.items[0][1]))
+
+                else:
+                    for i in range(0, len(report.items), 4):
+                        print(i)
+                        topic_type = report.items[i]
+                        pub_node = report.items[i + 1]
+                        sub_node = report.items[i + 2]
+                        compatibility_status = report.items[i + 3]
+
+                        row = self.qos_compatibility_group.add_row(PrefRow(title=topic_type[1]))
+                        # TODO make the title/subtitle use markup
+                        row.set_use_markup(True)
+                        row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
+                        if compatibility_status[1] == "OK":
+                            row.set_prefix_icon("check-symbolic")
+                        else:
+                            row.set_prefix_icon("dialog-error-symbolic")
+                # for item in report.items:
+                #     self.qos_compatibility_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
 
             elif report.name == "RMW MIDDLEWARE":
                 for item in report.items:
@@ -98,8 +117,6 @@ class DoctorPage(Adw.NavigationPage):
                         row.set_prefix_icon("check-symbolic")
                     else:
                         row.set_prefix_icon("dialog-error-symbolic")
-
-        return bool(self.content_page.pref_page.num_groups)
 
 
 # TODO add NetworkHelloPage for 'ros2 doctor hello'

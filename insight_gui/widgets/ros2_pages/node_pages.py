@@ -54,7 +54,7 @@ class NodeListPage(Adw.NavigationPage):
 
             self.list_group.add_row(row)
 
-        return bool(self.content_page.pref_page.num_groups)
+        return False  # bool(self.content_page.pref_page.num_groups)
 
 
 class NodeInfoPage(Adw.NavigationPage):
