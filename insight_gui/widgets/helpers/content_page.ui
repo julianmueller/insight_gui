@@ -6,7 +6,9 @@
     <template class="ContentPage" parent="AdwBin">
         <child>
             <object class="AdwToolbarView" id="toolbar_view">
-                <property name="extend-content-to-bottom-edge">True</property>
+                <!-- <property name="top-bar-style">raised</property>
+                <property name="bottom-bar-style">raised</property>
+                <property name="extend-content-to-bottom-edge">True</property> -->
 
                 <child type="top">
                     <object class="AdwHeaderBar" id="header_bar">

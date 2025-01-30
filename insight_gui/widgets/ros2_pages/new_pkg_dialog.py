@@ -2,13 +2,16 @@ import os
 from pathlib import Path
 import webbrowser
 
-from ament_index_python.packages import get_package_share_directory
+import ament_copyright
 from ros2pkg.api.create import (
     create_package_environment,
     populate_ament_cmake,
-    populate_ament_python,
+    # populate_cmake,
     populate_cpp_node,
+    populate_cpp_library,
+    populate_ament_python,
     populate_python_node,
+    populate_python_libary,
 )
 from catkin_pkg.package import Package, Person, Dependency, License, Export
 
@@ -39,6 +42,11 @@ class NewPkgDialog(Adw.PreferencesDialog):
         self.page = PrefPage(title="ROS2 Node", icon_name="applications-other-symbolic")
         super().add(self.page)
 
+        # Get all licenses
+        self.available_licenses = {}
+        for shortname, entry in ament_copyright.get_licenses().items():
+            self.available_licenses[entry.spdx] = entry.license_files
+
         # Group of build type
         build_type_group = self.page.add_group(title="Build Type")
         build_type_group.add_btn(
@@ -57,25 +65,26 @@ class NewPkgDialog(Adw.PreferencesDialog):
         # group with package name
         pkg_group = self.page.add_group(title="Package Info")
         self.pkg_name_row = pkg_group.add_row(Adw.EntryRow(title="Package Name", text="my_package"))
-        self.license_row = pkg_group.add_row(Adw.EntryRow(title="License", text="Apache-2.0"))  # TODO make dropdown
+
+        self.license_row = pkg_group.add_row(Adw.ComboRow(title="License"))
+        self.license_store = Gio.ListStore.new(Gtk.StringObject)
+        for lic in self.available_licenses.keys():
+            self.license_store.append(Gtk.StringObject.new(lic))
+        self.license_store.append(Gtk.StringObject.new("Custom License"))
+        self.license_row.set_model(self.license_store)
+
         self.node_name_row = pkg_group.add_row(Adw.EntryRow(title="Node Name"))
+        self.library_name_row = pkg_group.add_row(Adw.EntryRow(title="Library Name"))
         self.maintainer_name_row = pkg_group.add_row(Adw.EntryRow(title="Maintainer Name"))
         self.maintainer_mail_row = pkg_group.add_row(Adw.EntryRow(title="Maintainer Mail"))
         self.description_row = pkg_group.add_row(Adw.EntryRow(title="Description"))
+        self.dependencies_row = pkg_group.add_row(Adw.EntryRow(title="Dependencies (separated by ';')"))
 
-        self.pkg_path_row: PrefRow = pkg_group.add_row(PrefRow(title="Choose Package Path"))
-        self.pkg_path = None
-        self.pkg_path_row.add_suffix_btn(
+        self.dest_dir_row: PrefRow = pkg_group.add_row(PrefRow(title="Destination Directory"))
+        self.dest_dir = None
+        self.dest_dir_row.add_suffix_btn(
             icon_name="folder-symbolic", tooltip_text="Choose Path", func=self.on_choose_pkg_path
         )
-
-        # TODO add:
-        # - dependencies
-        # - description
-        # - destination-directory
-        # - maintainer-email
-        # - maintainer-name
-        # - library-name
 
         self.apply_btn = pkg_group.add_row(
             ButtonRow(
@@ -102,12 +111,12 @@ class NewPkgDialog(Adw.PreferencesDialog):
             try:
                 folder = file_dialog.select_folder_finish(result)
                 if folder:
-                    self.pkg_path = folder.get_path()
-                    self.pkg_path_row.set_subtitle(self.pkg_path)
+                    self.dest_dir = folder.get_path()
+                    self.dest_dir_row.set_subtitle(self.dest_dir)
             except Exception as e:
                 # print("No folder selected or error:", e)
-                self.pkg_path = None
-                self.pkg_path_row.set_subtitle("")
+                self.dest_dir = None
+                self.dest_dir_row.set_subtitle("")
 
         ros2_ws_src = str((Path(os.getenv("ROS_WS", os.getcwd())) / "src").resolve())
         if os.path.exists(ros2_ws_src):
@@ -119,15 +128,52 @@ class NewPkgDialog(Adw.PreferencesDialog):
             parent=self.get_root(), callback=callback, user_data=None
         )
 
-    # with help from https://github.com/ros2/ros2cli/blob/rolling/ros2pkg/ros2pkg/verb/create.py
+    # adapted from https://github.com/ros2/ros2cli/blob/rolling/ros2pkg/ros2pkg/verb/create.py
     def on_create_pkg(self, *args):
         build_type = "ament_python" if self.python_switch_row.get_active() else "ament_cmake"
         pkg_name = self.pkg_name_row.get_text()
-        license_name = self.license_row.get_text()
+        license_name = self.license_row.get_selected_item().get_string()
         node_name = self.node_name_row.get_text()
+        library_name = self.library_name_row.get_text()
         maintainer_name = self.maintainer_name_row.get_text()
         maintainer_mail = self.maintainer_mail_row.get_text()
         description = self.description_row.get_text()
+        dependencies = [dep.strip() for dep in self.dependencies_row.get_text().split(";")]
+        print(dependencies)
+
+        def show_toast_message(msg):
+            self.add_toast(Adw.Toast(title=msg))
+
+        if self.dest_dir is None or self.dest_dir == "":
+            show_toast_message("Destination directory must not be empty.")
+            return
+
+        if pkg_name == "":
+            show_toast_message("Package name must not be empty.")
+            return
+
+        if library_name == node_name and not library_name == "":
+            show_toast_message("If set, library name and node name must be different.")
+            return
+
+        buildtool_depends = []
+        if build_type == "ament_cmake":
+            if library_name:
+                buildtool_depends = ["ament_cmake_ros"]
+            else:
+                buildtool_depends = ["ament_cmake"]
+
+        test_dependencies = []
+        if build_type == "ament_cmake":
+            test_dependencies = ["ament_lint_auto", "ament_lint_common"]
+        elif build_type == "ament_python":
+            test_dependencies = ["ament_copyright", "ament_flake8", "ament_pep257", "ament_xmllint", "python3-pytest"]
+
+        if build_type == "ament_python" and pkg_name == "test":
+            # If the package name is 'test', there will be a conflict between the directory the source code for the
+            # package goes in and the directory the tests for the package go in.
+            show_toast_message("'ament_python' packages can't be named 'test'")
+            return
 
         maintainer = Person(name=maintainer_name, email=maintainer_mail)
         package = Package(
@@ -137,47 +183,63 @@ class NewPkgDialog(Adw.PreferencesDialog):
             description=description,
             maintainers=[maintainer],
             licenses=[license_name],
-            # buildtool_depends=[Dependency(dep) for dep in buildtool_depends],
-            # build_depends=[Dependency(dep) for dep in args.dependencies],
-            # test_depends=[Dependency(dep) for dep in test_dependencies],
+            buildtool_depends=[Dependency(dep) for dep in buildtool_depends],
+            build_depends=[Dependency(dep) for dep in dependencies],
+            test_depends=[Dependency(dep) for dep in test_dependencies],
             exports=[Export("build_type", content=build_type)],
         )
 
-        # package_path = os.path.join(self.pkg_path, pkg_name)
+        package_path = os.path.join(self.dest_dir, pkg_name)
+        if os.path.exists(package_path):
+            show_toast_message(f"directory '{package_path}' already exists")
+            return
+
         package_directory, source_directory, include_directory = create_package_environment(
-            package=package, destination_directory=self.pkg_path
+            package=package, destination_directory=self.dest_dir
         )
+
+        if not package_directory:
+            show_toast_message(f"unable to create folder '{self.dest_dir}'")
+            return
+
+        # populate the package directories
+        # if build_type == 'cmake':
+        #     populate_cmake(package, package_directory, node_name, library_name)
+
+        if build_type == "ament_cmake":
+            populate_ament_cmake(package, package_directory, node_name, library_name)
 
         if build_type == "ament_python":
             if not source_directory:
-                return "unable to create source folder in " + args.destination_directory
+                show_toast_message(f"unable to create source folder in {self.dest_dir}")
+                return
+
             populate_ament_python(package, package_directory, source_directory, node_name)
+
             if node_name:
                 populate_python_node(package, source_directory, node_name)
-            # if library_name: # TODO
-            #     populate_python_libary(package, source_directory, library_name)
+            if library_name:
+                populate_python_libary(package, source_directory, library_name)
 
-        elif build_type == "ament_cmake":
+        elif build_type == "ament_cmake" or build_type == "cmake":
             populate_ament_cmake(package, package_directory, node_name, None)
 
             if node_name:
                 if not source_directory:
-                    return "unable to create source folder in " + args.destination_directory
+                    show_toast_message(f"unable to create source folder in '{self.dest_dir}'")
+                    return
                 populate_cpp_node(package, source_directory, node_name)
-            # if library_name:
-            #     if not source_directory or not include_directory:
-            #         return "unable to create source or include folder in " + args.destination_directory
-            #     populate_cpp_library(package, source_directory, include_directory, library_name)
+            if library_name:
+                if not source_directory or not include_directory:
+                    show_toast_message(f"unable to create source or include folder in '{self.dest_dir}'")
+                    return
+                populate_cpp_library(package, source_directory, include_directory, library_name)
 
-        # TODO this does not really work yet
-        if license_name:
+        if license_name in self.available_licenses:
             with open(os.path.join(package_directory, "LICENSE"), "w") as outfp:
-                outfp.write(license_name)
+                for lic in self.available_licenses[license_name]:
+                    outfp.write(lic)
         else:
-            print(
-                "\n[WARNING]: Unknown license '%s'.  This has been set in the package.xml, but "
-                "no LICENSE file has been created.\nIt is recommended to use one of the ament "
-                # "license identifiers:\n%s" % (args.license, "\n".join(available_licenses)) # TODO
-            )
+            show_toast_message("Unknown license. So no LICENSE file was created.")
 
         self.close()
