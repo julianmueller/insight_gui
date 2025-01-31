@@ -3,6 +3,7 @@ from operator import itemgetter
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
 from ros2node.api import _is_hidden_name, get_node_names
+from ros2param.api import call_list_parameters
 
 import gi
 
@@ -13,6 +14,7 @@ from gi.repository import Gtk, Adw
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.helpers.content_page import ContentPage
 from insight_gui.widgets.helpers.pref_row import PrefRow
+from insight_gui.widgets.ros2_pages.edit_param_dialog import EditParamDialog
 
 
 class NodeListPage(Adw.NavigationPage):
@@ -83,21 +85,6 @@ class NodeInfoPage(Adw.NavigationPage):
         self.content_page = ContentPage(search_enabled=True, refresh_enabled=False)
         super().set_child(self.content_page)
 
-        # Parameters
-        # TODO this is for the gui node, get it for the 'remote' node
-        # parameters_group = self.content_page.pref_page.add_group(title="Parameters", description="", empty_msg="Node has no Parameters")
-        #
-        # parameter_list = ros2_connector.list_parameters(prefixes=[], depth=5)  # rcl_interfaces.mg.ListParametersResult
-        # parameter_list = list(
-        #     zip(
-        #         parameter_list.names,
-        #         parameter_list.prefixes if len(parameter_list.prefixes) == 0 else [""] * len(parameter_list.names),
-        #     )
-        # )
-        # for param_name, param_prefix in sorted(parameter_list, key=itemgetter(0)):
-        #     row = PrefRow(title=param_name, subtitle=param_prefix)
-        #     parameters_group.add_row(row)
-
         # Imports here, to prevent circular imports # TODO find a nicer way?
         from insight_gui.widgets.ros2_pages.topic_pages import TopicInfoPage
         from insight_gui.widgets.ros2_pages.service_pages import ServiceInfoPage
@@ -122,6 +109,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 ros2_connector=self.ros2_connector,
             )
             publishers_group.add_row(row)
+        publishers_group.set_description_to_row_count()
 
         # Subscribers
         subscribers_group = self.content_page.pref_page.add_group(
@@ -144,6 +132,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 ros2_connector=self.ros2_connector,
             )
             subscribers_group.add_row(row)
+        subscribers_group.set_description_to_row_count()
 
         # Service Servers
         service_servers_group = self.content_page.pref_page.add_group(
@@ -168,6 +157,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 ros2_connector=self.ros2_connector,
             )
             service_servers_group.add_row(row)
+        service_servers_group.set_description_to_row_count()
 
         # Service Clients
         service_clients_group = self.content_page.pref_page.add_group(
@@ -192,6 +182,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 ros2_connector=self.ros2_connector,
             )
             service_clients_group.add_row(row)
+        service_clients_group.set_description_to_row_count()
 
         # Action Servers
         action_servers_group = self.content_page.pref_page.add_group(
@@ -213,6 +204,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 ros2_connector=self.ros2_connector,
             )
             action_servers_group.add_row(row)
+        action_servers_group.set_description_to_row_count()
 
         # Action Clients
         action_clients_group = self.content_page.pref_page.add_group(
@@ -234,11 +226,22 @@ class NodeInfoPage(Adw.NavigationPage):
                 ros2_connector=self.ros2_connector,
             )
             action_clients_group.add_row(row)
-
-        # add the counts as descriptions
-        subscribers_group.set_description_to_row_count()
-        publishers_group.set_description_to_row_count()
-        service_servers_group.set_description_to_row_count()
-        service_clients_group.set_description_to_row_count()
-        action_servers_group.set_description_to_row_count()
         action_clients_group.set_description_to_row_count()
+
+        # Parameters
+        parameters_group = self.content_page.pref_page.add_group(title="Parameters", empty_msg="Node has no parameters")
+        parameter_list = call_list_parameters(node=self.ros2_connector.node, node_name=node_name).result().result.names
+        for param_name in sorted(parameter_list):
+            # TODO add the current value as subtitle
+            row = PrefRow(title=param_name)
+            row.add_suffix_btn(
+                icon_name="document-edit-symbolic",
+                tooltip_text="Edit",
+                func=lambda *_: EditParamDialog(
+                    node_name=self.node_name,
+                    param_name=param_name,
+                    ros2_connector=self.ros2_connector,
+                ).present(self),
+            )
+            parameters_group.add_row(row)
+        parameters_group.set_description_to_row_count()

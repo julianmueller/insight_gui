@@ -16,6 +16,7 @@ from insight_gui.widgets.ros2_pages.pkg_pages import PackageListPage
 from insight_gui.widgets.ros2_pages.topic_pages import TopicListPage
 from insight_gui.widgets.ros2_pages.service_pages import ServiceListPage
 from insight_gui.widgets.ros2_pages.action_pages import ActionListPage
+from insight_gui.widgets.ros2_pages.param_page import ParameterListPage
 from insight_gui.widgets.ros2_pages.tf_page import TransformsPage
 from insight_gui.widgets.ros2_pages.log_pages import LoggerPage
 from insight_gui.widgets.ros2_pages.doctor_page import DoctorPage
@@ -96,6 +97,13 @@ class MainWindow(Adw.ApplicationWindow):
             nav_page_class=ActionTypeBrowserPage,
             name="action_type_browser",
             title="Action Type Browser",
+            ros2_connector=self.ros2_connector,
+        )
+        # Parameters
+        self.add_stack_page(
+            nav_page_class=ParameterListPage,
+            name="param_list",
+            title="Parameters",
             ros2_connector=self.ros2_connector,
         )
         # Transforms

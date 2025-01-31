@@ -21,7 +21,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, Gio
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.helpers.pref_page import PrefPage
 from insight_gui.widgets.helpers.pref_row import PrefRow
 from insight_gui.widgets.helpers.button_row import ButtonRow
@@ -32,14 +31,11 @@ from insight_gui.widgets.helpers.button_row import ButtonRow
 class NewPkgDialog(Adw.PreferencesDialog):
     __gtype_name__ = "NewPkgDialog"
 
-    def __init__(self, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Create New ROS2 Package")
 
-        # self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
-        # Page with ROS2 Settings
-        self.page = PrefPage(title="ROS2 Node", icon_name="applications-other-symbolic")
+        self.page = PrefPage(title="New pkg", icon_name="document-new-symbolic")
         super().add(self.page)
 
         # Get all licenses

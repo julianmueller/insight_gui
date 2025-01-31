@@ -57,8 +57,9 @@ class PrefRow(Adw.ActionRow):
     def filter_text(self) -> str:
         return f"{super().get_title()} {super().get_subtitle()}"
 
-    def set_prefix_icon(self, icon_name: str):
-        self.prefix_icon.set_from_icon_name(icon_name)
+    def set_prefix_icon(self, icon_name: str, tooltip_text: str = ""):
+        self.prefix_icon.set_from_icon_name(str(icon_name))
+        self.prefix_icon.set_tooltip_text(str(tooltip_text))
         self.prefixes.set_visible(True)
 
     def add_suffix_btn(
