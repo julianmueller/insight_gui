@@ -14,7 +14,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio
 
-from insight_gui.ros2_node import ROS2CommunicationNode
+from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.helpers.content_page import ContentPage
 from insight_gui.widgets.helpers.pref_row import PrefRow
 from insight_gui.widgets.helpers.button_row import ButtonRow
@@ -24,12 +24,12 @@ from insight_gui.widgets.helpers.text_view_row import TextViewRow
 class TransformsPage(Adw.NavigationPage):
     __gtype_name__ = "TransformsPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_node: ROS2CommunicationNode = None, **kwargs):
+    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Transforms")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for Frames")
@@ -62,16 +62,18 @@ class TransformsPage(Adw.NavigationPage):
         self.frames_list = []
 
     def refresh(self, *args) -> bool:
-        if not self.ros2_node.is_running:
+        if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            self.content_page.show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_node.start_node)
+            self.content_page.show_toast_w_btn(
+                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
+            )
             return False
 
         self.frames_group.clear()
         self.result_text_row.set_visible(False)
 
         self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self.ros2_node.node)
+        self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
         time.sleep(1.0)
 
         # Get the frames from the buffer as YAML

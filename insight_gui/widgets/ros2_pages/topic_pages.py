@@ -10,7 +10,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_node import ROS2CommunicationNode
+from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
 from insight_gui.widgets.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.helpers.content_page import ContentPage
@@ -20,12 +20,12 @@ from insight_gui.widgets.helpers.pref_row import PrefRow
 class TopicListPage(Adw.NavigationPage):
     __gtype_name__ = "TopicListPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_node: ROS2CommunicationNode = None, **kwargs):
+    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Topic List")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for topics")
@@ -34,13 +34,15 @@ class TopicListPage(Adw.NavigationPage):
         self.list_group = self.content_page.pref_page.add_group(empty_msg="No topics found")
 
     def refresh(self, *args):
-        if not self.ros2_node.is_running:
-            self.content_page.show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_node.start_node)
+        if not self.ros2_connector.is_running:
+            self.content_page.show_toast_w_btn(
+                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
+            )
             return False
 
         self.list_group.clear()
 
-        available_topics = sorted(get_topic_names_and_types(node=self.ros2_node.node, include_hidden_topics=True))
+        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
         for i, (topic_name, topic_types) in enumerate(available_topics):
             # topic_types is a list, as multiple servers can advertise different types to the same topic
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
@@ -55,7 +57,7 @@ class TopicListPage(Adw.NavigationPage):
                 subpage_class=TopicInfoPage,
                 topic_name=topic_name,
                 topic_types=topic_types,
-                ros2_node=self.ros2_node,
+                ros2_connector=self.ros2_connector,
             )
             self.list_group.add_row(row)
 
@@ -70,7 +72,7 @@ class TopicInfoPage(Adw.NavigationPage):
         topic_name: str,
         topic_types: str | list[str],
         nav_view: Adw.NavigationView = None,
-        ros2_node: ROS2CommunicationNode = None,
+        ros2_connector: ROS2Connector = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -78,7 +80,7 @@ class TopicInfoPage(Adw.NavigationPage):
 
         self.topic_name = topic_name
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(search_enabled=True, refresh_enabled=False)
         super().set_child(self.content_page)
@@ -102,7 +104,7 @@ class TopicInfoPage(Adw.NavigationPage):
                 add_msg_type_row(msg_type)
 
         # first, gather all nodes, to check which of them is a pub/sub of this topic
-        available_nodes = get_node_names(node=self.ros2_node.node, include_hidden_nodes=True)
+        available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
         # Publishers
         publishers_group = self.content_page.pref_page.add_group(
@@ -115,9 +117,9 @@ class TopicInfoPage(Adw.NavigationPage):
         )
 
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
-            # TODO maybe use self.ros2_node.node.get_publishers_info_by_topic()
+            # TODO maybe use self.ros2_connector.node.get_publishers_info_by_topic()
             # add those nodes, that publish that topic
-            publishers_list = self.ros2_node.node.get_publisher_names_and_types_by_node(
+            publishers_list = self.ros2_connector.node.get_publisher_names_and_types_by_node(
                 node_name=node_name,
                 node_namespace=node_namespace,
             )
@@ -129,13 +131,13 @@ class TopicInfoPage(Adw.NavigationPage):
                     node_name=node_name,
                     node_namespace=node_namespace,
                     node_full_name=node_full_name,
-                    ros2_node=self.ros2_node,
+                    ros2_connector=self.ros2_connector,
                 )
                 publishers_group.add_row(row)
 
             # add those nodes, that subscribe to that
-            # TODO maybe use self.ros2_node.node.get_subscribers_info_by_topic()
-            subscribers_list = self.ros2_node.node.get_subscriber_names_and_types_by_node(
+            # TODO maybe use self.ros2_connector.node.get_subscribers_info_by_topic()
+            subscribers_list = self.ros2_connector.node.get_subscriber_names_and_types_by_node(
                 node_name=node_name, node_namespace=node_namespace
             )
             if any(self.topic_name in sub for sub in subscribers_list):
@@ -146,7 +148,7 @@ class TopicInfoPage(Adw.NavigationPage):
                     node_name=node_name,
                     node_namespace=node_namespace,
                     node_full_name=node_full_name,
-                    ros2_node=self.ros2_node,
+                    ros2_connector=self.ros2_connector,
                 )
                 subscribers_group.add_row(row)
 

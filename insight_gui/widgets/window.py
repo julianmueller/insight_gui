@@ -42,7 +42,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._setup_accent_colors()
 
         self.app = self.get_application()
-        self.ros2_node.start_node()
+        self.ros2_connector.start_node()
 
         self.refresh_btn.set_visible(False)  # TODO do i still need this?
 
@@ -57,60 +57,60 @@ class MainWindow(Adw.ApplicationWindow):
             nav_page_class=NodeListPage,
             name="node_list",
             title="Node List",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
         # Topics
         self.add_stack_page(
             nav_page_class=TopicListPage,
             name="topic_list",
             title="Topic List",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
         self.add_stack_page(
             nav_page_class=MessageTypeBrowserPage,
             name="msg_type_browser",
             title="Message Type Browser",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
         # Services
         self.add_stack_page(
             nav_page_class=ServiceListPage,
             name="service_list",
             title="Service List",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
         self.add_stack_page(
             nav_page_class=ServiceTypeBrowserPage,
             name="srv_type_browser",
             title="Service Type Browser",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
         # Actions
         self.add_stack_page(
             nav_page_class=ActionListPage,
             name="action_list",
             title="Action List",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
         self.add_stack_page(
             nav_page_class=ActionTypeBrowserPage,
             name="action_type_browser",
             title="Action Type Browser",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
         # Transforms
         self.add_stack_page(
             nav_page_class=TransformsPage,
             name="tf",
             title="Transforms",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
         # Doctor
         self.add_stack_page(
             nav_page_class=DoctorPage,
             name="doctor",
             title="Doctor",
-            ros2_node=self.ros2_node,
+            ros2_connector=self.ros2_connector,
         )
 
         # Logger # TODO the logger still needs work
@@ -118,11 +118,11 @@ class MainWindow(Adw.ApplicationWindow):
         #     nav_page_class=LoggerPage,
         #     name="logger",
         #     title="Logger",
-        #     ros2_node=self.ros2_node,
+        #     ros2_connector=self.ros2_connector,
         # )
 
         # Preferences
-        self.preferences_dialog = PreferencesDialog(ros2_node=self.ros2_node)
+        self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)
         self.about_dialog = Adw.AboutDialog(
             application_name="Insight",
             # application_icon="io.github.julianmueller.Insight",
@@ -149,8 +149,8 @@ class MainWindow(Adw.ApplicationWindow):
         # self.app.add_action(action)
 
     @property
-    def ros2_node(self):
-        return self.app.ros2_node
+    def ros2_connector(self):
+        return self.app.ros2_connector
 
     # @Gtk.Template.Callback()
     # def on_menu_btn_clicked(self, *args):

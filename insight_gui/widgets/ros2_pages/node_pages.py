@@ -10,7 +10,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_node import ROS2CommunicationNode
+from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.helpers.content_page import ContentPage
 from insight_gui.widgets.helpers.pref_row import PrefRow
 
@@ -18,12 +18,12 @@ from insight_gui.widgets.helpers.pref_row import PrefRow
 class NodeListPage(Adw.NavigationPage):
     __gtype_name__ = "NodeListPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_node: ROS2CommunicationNode = None, **kwargs):
+    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Node List")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for nodes")
@@ -32,14 +32,16 @@ class NodeListPage(Adw.NavigationPage):
         self.list_group = self.content_page.pref_page.add_group(empty_msg="No nodes found")
 
     def refresh(self, *args) -> bool:
-        if not self.ros2_node.is_running:
+        if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            self.content_page.show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_node.start_node)
+            self.content_page.show_toast_w_btn(
+                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
+            )
             return False
 
         self.list_group.clear()
 
-        available_nodes = get_node_names(node=self.ros2_node.node, include_hidden_nodes=True)
+        available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
             row = PrefRow(title=node_name, subtitle=node_full_name, is_hidden=_is_hidden_name(node_name))
 
@@ -49,7 +51,7 @@ class NodeListPage(Adw.NavigationPage):
                 node_name=node_name,
                 node_namespace=node_namespace,
                 node_full_name=node_full_name,
-                ros2_node=self.ros2_node,
+                ros2_connector=self.ros2_connector,
             )
 
             self.list_group.add_row(row)
@@ -66,7 +68,7 @@ class NodeInfoPage(Adw.NavigationPage):
         node_namespace: str,
         node_full_name: str,
         nav_view: Adw.NavigationView = None,
-        ros2_node: ROS2CommunicationNode = None,
+        ros2_connector: ROS2Connector = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -76,7 +78,7 @@ class NodeInfoPage(Adw.NavigationPage):
         self.node_namespace = node_namespace
         self.node_full_name = node_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(search_enabled=True, refresh_enabled=False)
         super().set_child(self.content_page)
@@ -85,7 +87,7 @@ class NodeInfoPage(Adw.NavigationPage):
         # TODO this is for the gui node, get it for the 'remote' node
         # parameters_group = self.content_page.pref_page.add_group(title="Parameters", description="", empty_msg="Node has no Parameters")
         #
-        # parameter_list = ros2_node.list_parameters(prefixes=[], depth=5)  # rcl_interfaces.mg.ListParametersResult
+        # parameter_list = ros2_connector.list_parameters(prefixes=[], depth=5)  # rcl_interfaces.mg.ListParametersResult
         # parameter_list = list(
         #     zip(
         #         parameter_list.names,
@@ -104,8 +106,8 @@ class NodeInfoPage(Adw.NavigationPage):
         # Publishers
         publishers_group = self.content_page.pref_page.add_group(title="Publishers", empty_msg="Node has no publishers")
 
-        # publisher_list = get_publisher_info(node=ros2_node, remote_node_name=node_name, include_hidden=True)
-        publisher_list = self.ros2_node.node.get_publisher_names_and_types_by_node(
+        # publisher_list = get_publisher_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
+        publisher_list = self.ros2_connector.node.get_publisher_names_and_types_by_node(
             node_name=node_name, node_namespace=node_namespace
         )
         for topic_name, topic_types in sorted(publisher_list, key=itemgetter(0)):
@@ -117,7 +119,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 subpage_class=TopicInfoPage,
                 topic_name=topic_name,
                 topic_types=topic_types,
-                ros2_node=self.ros2_node,
+                ros2_connector=self.ros2_connector,
             )
             publishers_group.add_row(row)
 
@@ -126,8 +128,8 @@ class NodeInfoPage(Adw.NavigationPage):
             title="Subscribers", empty_msg="Node has no subscribers"
         )
 
-        # subscriber_list = get_subscriber_info(node=ros2_node, remote_node_name=node_name, include_hidden=True)
-        subscriber_list = self.ros2_node.node.get_subscriber_names_and_types_by_node(
+        # subscriber_list = get_subscriber_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
+        subscriber_list = self.ros2_connector.node.get_subscriber_names_and_types_by_node(
             node_name=node_name, node_namespace=node_namespace
         )
         for topic_name, topic_types in sorted(subscriber_list, key=itemgetter(0)):
@@ -139,7 +141,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 subpage_class=TopicInfoPage,
                 topic_name=topic_name,
                 topic_types=topic_types,
-                ros2_node=self.ros2_node,
+                ros2_connector=self.ros2_connector,
             )
             subscribers_group.add_row(row)
 
@@ -148,8 +150,8 @@ class NodeInfoPage(Adw.NavigationPage):
             title="Service Servers", description="", empty_msg="Node has no service servers"
         )
 
-        # service_servers_list = get_service_server_info(node=ros2_node, remote_node_name=node_name, include_hidden=True)
-        service_server_list = self.ros2_node.node.get_service_names_and_types_by_node(
+        # service_servers_list = get_service_server_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
+        service_server_list = self.ros2_connector.node.get_service_names_and_types_by_node(
             node_name=node_name, node_namespace=node_namespace
         )
         for service_name, service_types in sorted(service_server_list, key=itemgetter(0)):
@@ -163,7 +165,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 subpage_class=ServiceInfoPage,
                 service_name=service_name,
                 service_types=service_types,
-                ros2_node=self.ros2_node,
+                ros2_connector=self.ros2_connector,
             )
             service_servers_group.add_row(row)
 
@@ -172,8 +174,8 @@ class NodeInfoPage(Adw.NavigationPage):
             title="Service Clients", empty_msg="Node has no service clients"
         )
 
-        # service_clients_list = get_service_client_info(node=ros2_node, remote_node_name=node_name, include_hidden=True)
-        service_client_list = self.ros2_node.node.get_client_names_and_types_by_node(
+        # service_clients_list = get_service_client_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
+        service_client_list = self.ros2_connector.node.get_client_names_and_types_by_node(
             node_name=node_name, node_namespace=node_namespace
         )
         for service_name, service_types in sorted(service_client_list, key=itemgetter(0)):
@@ -187,7 +189,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 subpage_class=ServiceInfoPage,
                 service_name=service_name,
                 service_types=service_types,
-                ros2_node=self.ros2_node,
+                ros2_connector=self.ros2_connector,
             )
             service_clients_group.add_row(row)
 
@@ -197,7 +199,7 @@ class NodeInfoPage(Adw.NavigationPage):
         )
 
         action_servers_list = get_action_server_names_and_types_by_node(
-            node=self.ros2_node.node, remote_node_name=node_name, remote_node_namespace=node_namespace
+            node=self.ros2_connector.node, remote_node_name=node_name, remote_node_namespace=node_namespace
         )
         for action_name, action_types in sorted(action_servers_list, key=itemgetter(0)):
             row = PrefRow(
@@ -208,7 +210,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 subpage_class=ActionInfoPage,
                 action_name=action_name,
                 action_types=action_types,
-                ros2_node=self.ros2_node,
+                ros2_connector=self.ros2_connector,
             )
             action_servers_group.add_row(row)
 
@@ -218,7 +220,7 @@ class NodeInfoPage(Adw.NavigationPage):
         )
 
         action_clients_list = get_action_client_names_and_types_by_node(
-            node=self.ros2_node.node, remote_node_name=node_name, remote_node_namespace=node_namespace
+            node=self.ros2_connector.node, remote_node_name=node_name, remote_node_namespace=node_namespace
         )
         for action_name, action_types in sorted(action_clients_list, key=itemgetter(0)):
             row = PrefRow(
@@ -229,7 +231,7 @@ class NodeInfoPage(Adw.NavigationPage):
                 subpage_class=ActionInfoPage,
                 action_name=action_name,
                 action_types=action_types,
-                ros2_node=self.ros2_node,
+                ros2_connector=self.ros2_connector,
             )
             action_clients_group.add_row(row)
 

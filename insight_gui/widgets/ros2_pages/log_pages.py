@@ -8,7 +8,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject
 
-from insight_gui.ros2_node import ROS2CommunicationNode
+from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.helpers.content_page import ContentPage
 from insight_gui.widgets.helpers.text_view_row import TextViewRow
 from insight_gui.widgets.helpers.buttons import PlayPauseButton
@@ -35,12 +35,12 @@ class LogLevel(Enum):
 class LoggerPage(Adw.NavigationPage):
     __gtype_name__ = "LoggerPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_node: ROS2CommunicationNode = None, **kwargs):
+    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Logger")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(refresh_enabled=False, search_enabled=True)
         self.content_page.set_search_entry_placeholder_text("Search for log entries")
@@ -84,7 +84,7 @@ class LoggerPage(Adw.NavigationPage):
         self.text_view_row.append_tagged_text("[ERROR]\n", "ERROR")
         self.text_view_row.append_tagged_text("[FATAL]\n", "FATAL")
 
-        self.rosout_sub = self.ros2_node.add_subsciption(Log, "/rosout", self.log_callback)
+        self.rosout_sub = self.ros2_connector.add_subsciption(Log, "/rosout", self.log_callback)
 
     def toggle_logging(self, *args):
         if self.is_logging:

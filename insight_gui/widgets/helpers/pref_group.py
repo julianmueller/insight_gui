@@ -93,9 +93,9 @@ class PrefGroup(Adw.PreferencesGroup):
     #     try:
     #         regex = re.compile(text, re.IGNORECASE)
     #     except re.error as e:
-    #         ros2_node = self.get_root().ros2_node
-    #         if ros2_node:
-    #             ros2_node.get_logger().error(f"Regex error: {e}", once=True)
+    #         ros2_connector = self.get_root().ros2_connector
+    #         if ros2_connector:
+    #             ros2_connector.get_logger().error(f"Regex error: {e}", once=True)
     #         else:
     #             print(f"Regex error: {e}")
 

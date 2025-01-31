@@ -28,7 +28,7 @@ def main(args=None):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     try:
-        gui_app = Ros2GuiApp(share_dir, start_ros2_node=True)
+        gui_app = Ros2GuiApp(share_dir, start_ros2_connector=True)
         signal.signal(signal.SIGINT, lambda *_: gui_app.shutdown())
         gui_app.run(None)
     except Exception as e:

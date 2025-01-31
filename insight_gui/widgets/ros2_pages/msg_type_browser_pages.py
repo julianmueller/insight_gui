@@ -13,7 +13,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_node import ROS2CommunicationNode
+from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.ros2_pages.msg_type_info_pages import (
     MessageTypeInfoPage,
     ServiceTypeInfoPage,
@@ -26,12 +26,12 @@ from insight_gui.widgets.helpers.pref_row import PrefRow
 class MessageTypeBrowserPage(Adw.NavigationPage):
     __gtype_name__ = "MessageTypeBrowserPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_node: ROS2CommunicationNode = None, **kwargs):
+    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Message Type Browser")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for message types")
@@ -76,12 +76,12 @@ class MessageTypeBrowserPage(Adw.NavigationPage):
 class ServiceTypeBrowserPage(Adw.NavigationPage):
     __gtype_name__ = "ServiceTypeBrowserPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_node: ROS2CommunicationNode = None, **kwargs):
+    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Service Type Browser")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for service types")
@@ -127,12 +127,12 @@ class ServiceTypeBrowserPage(Adw.NavigationPage):
 class ActionTypeBrowserPage(Adw.NavigationPage):
     __gtype_name__ = "ActionTypeBrowserPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_node: ROS2CommunicationNode = None, **kwargs):
+    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Action Type Browser")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for action types")

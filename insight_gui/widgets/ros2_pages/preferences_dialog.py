@@ -7,7 +7,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_node import ROS2CommunicationNode
+from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.helpers.pref_page import PrefPage
 from insight_gui.widgets.helpers.pref_row import PrefRow
 from insight_gui.widgets.helpers.button_row import ButtonRow
@@ -18,12 +18,12 @@ from insight_gui.widgets.helpers.button_row import ButtonRow
 class PreferencesDialog(Adw.PreferencesDialog):
     __gtype_name__ = "PreferencesDialog"
 
-    def __init__(self, ros2_node: ROS2CommunicationNode = None, **kwargs):
+    def __init__(self, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Settings")
         super().connect("map", self.on_map)
 
-        self.ros2_node = ros2_node if ros2_node else self.get_root().ros2_node
+        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         # Page with ROS2 Settings
         self.ros2_page = PrefPage(title="ROS2 Node", icon_name="applications-other-symbolic")
@@ -63,30 +63,30 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         # controls_row: PrefRow = env_group.add_row(PrefRow(title="Controls"))
         # controls_row.add_suffix_btn(
-        #     icon_name="media-playback-start-symbolic", tooltip_text="Start", func=self.on_start_ros2_node
+        #     icon_name="media-playback-start-symbolic", tooltip_text="Start", func=self.on_start_ros2_connector
         # )
         # controls_row.add_suffix_btn(
-        #     icon_name="media-playback-stop-symbolic", tooltip_text="Stop", func=self.on_stop_ros2_node
+        #     icon_name="media-playback-stop-symbolic", tooltip_text="Stop", func=self.on_stop_ros2_connector
         # )
         # controls_row = status_group.add_row(PrefRow(title="Controls"))
 
         # status_group = self.ros2_page.add_group(title="ROS2 Node Controls", description="bla")
         # status_row = status_group.add_row(
-        #     PrefRow(title="Status", subtitle="", css_classes=["property"])  # ros2_node.get_status()
+        #     PrefRow(title="Status", subtitle="", css_classes=["property"])  # ros2_connector.get_status()
         # )
         # controls_row: PrefRow = status_group.add_row(PrefRow(title="Controls"))
         # controls_row.add_suffix_btn(
-        #     icon_name="media-playback-start-symbolic", tooltip_text="Start", func=self.on_start_ros2_node
+        #     icon_name="media-playback-start-symbolic", tooltip_text="Start", func=self.on_start_ros2_connector
         # )
         # controls_row.add_suffix_btn(
-        #     icon_name="media-playback-stop-symbolic", tooltip_text="Stop", func=self.on_stop_ros2_node
+        #     icon_name="media-playback-stop-symbolic", tooltip_text="Stop", func=self.on_stop_ros2_connector
         # )
         # controls_row = status_group.add_row(PrefRow(title="Controls"))
 
         # settings_group = self.ros2_page.add_group(title="Settings", description="bla")
         # row_node_name = settings_group.add_row(Adw.EntryRow(title="ros2_gui_node_name", show_apply_button=True))
         # row_hide_node = settings_group.add_row(Adw.SwitchRow(title="Hide Node"))
-        # row_node_namespace = settings_group.add_row(Adw.EntryRow(title="ros2_node_namespace", show_apply_button=True))
+        # row_node_namespace = settings_group.add_row(Adw.EntryRow(title="ros2_connector_namespace", show_apply_button=True))
         # row_network_id = settings_group.add_row(Adw.EntryRow(title="ros2_network_id", show_apply_button=True))
         # row_apply_btn: PrefRow = settings_group.add_row(PrefRow(title="Apply Changes"))  # TODO make a ButtonRow
         # row_apply_btn.add_suffix_btn(
@@ -114,7 +114,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.env_discovery_server_row.set_text(env_discovery_server)
 
     def on_apply_env_vars(self, *args):
-        self.ros2_node.stop_node()
+        self.ros2_connector.stop_node()
 
         os.environ["ROS_AUTOMATIC_DISCOVERY_RANGE"] = self.env_auto_discovery_row.get_text()
         os.environ["ROS_STATIC_PEERS"] = self.env_static_peers_row.get_text()
@@ -122,7 +122,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         os.environ["ROS_DISCOVERY_SERVER"] = self.env_discovery_server_row.get_text()
 
         self.add_toast(Adw.Toast(title="Applied Environment Variables"))
-        self.ros2_node.start_node()
+        self.ros2_connector.start_node()
 
     def on_apply_changes(self, *args):
         # print(row_node_name.get_title())
@@ -130,14 +130,14 @@ class PreferencesDialog(Adw.PreferencesDialog):
         # print(row_node_namespace.get_title())
         # print(row_network_id.get_title())
 
-        is_running_str = "running" if self.ros2_node.is_running else "not running"
+        is_running_str = "running" if self.ros2_connector.is_running else "not running"
 
         self.add_toast(Adw.Toast(title=f"ROS2 Node is {is_running_str}"))
 
-    def on_start_ros2_node(self, *args):
-        self.ros2_node.start_node()
+    def on_start_ros2_connector(self, *args):
+        self.ros2_connector.start_node()
         self.add_toast(Adw.Toast(title="Started ROS2 Node"))
 
-    def on_stop_ros2_node(self, *args):
-        self.ros2_node.stop_node()
+    def on_stop_ros2_connector(self, *args):
+        self.ros2_connector.stop_node()
         self.add_toast(Adw.Toast(title="Stopped ROS2 Node"))

@@ -13,13 +13,13 @@ from gi.repository import Gtk, Adw, GLib
 
 # custom imports
 from insight_gui.widgets.window import MainWindow
-from insight_gui.ros2_node import ROS2CommunicationNode
+from insight_gui.ros2_connector import ROS2Connector
 
 
 class Ros2GuiApp(Adw.Application):
     """The main application singleton class."""
 
-    def __init__(self, share_dir: Path = None, start_ros2_node: bool = True):
+    def __init__(self, share_dir: Path = None, start_ros2_connector: bool = True):
         super().__init__(application_id="com.example.insight_gui")  # TODO somehow set this id
         Gtk.init()
         Adw.init()
@@ -36,8 +36,8 @@ class Ros2GuiApp(Adw.Application):
         # add event handles
         self.connect("activate", self.on_activate)
 
-        if start_ros2_node:
-            self.ros2_node = ROS2CommunicationNode()
+        if start_ros2_connector:
+            self.ros2_connector = ROS2Connector()
 
     def on_activate(self, app):
         if not self.window:
@@ -48,6 +48,6 @@ class Ros2GuiApp(Adw.Application):
 
     def shutdown(self, widget=None):
         print("Shutting down GTK window.")
-        self.ros2_node.shutdown()
+        self.ros2_connector.shutdown()
         Gtk.Application.quit(self)
         return GLib.SOURCE_REMOVE

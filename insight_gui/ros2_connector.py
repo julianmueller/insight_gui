@@ -10,7 +10,7 @@ gi.require_version("GLib", "2.0")
 from gi.repository import GLib
 
 
-class ROS2CommunicationNode:
+class ROS2Connector:
     def __init__(self):
         super().__init__()
         self.node: Node = None
@@ -46,7 +46,8 @@ class ROS2CommunicationNode:
 
         finally:
             self.shutdown()
-            # self.spin_event.clear()
+
+        # self.spin_event.clear()
         return False
 
     def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable):
@@ -57,5 +58,5 @@ class ROS2CommunicationNode:
     def shutdown(self):
         self.is_running = False
         self.stop_node()
-        rclpy.shutdown()
+        # rclpy.shutdown()
         print("Shutting down ROS2 Node.")
