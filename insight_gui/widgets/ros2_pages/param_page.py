@@ -46,10 +46,11 @@ class ParameterListPage(Adw.NavigationPage):
 
         # for every node with params add a group
         for node_name, node_namespace, node_full_name in sorted(available_nodes):
-            parameter_list = (
-                call_list_parameters(node=self.ros2_connector.node, node_name=node_name).result().result.names
-            )
+            future = call_list_parameters(node=self.ros2_connector.node, node_name=node_name)
+            if future is None:
+                continue
 
+            parameter_list = future.result().result.names
             if len(parameter_list) == 0:
                 continue
 
@@ -72,13 +73,18 @@ class ParameterListPage(Adw.NavigationPage):
                 row.add_suffix_btn(
                     icon_name="document-edit-symbolic",
                     tooltip_text="Edit",
-                    func=lambda *_: EditParamDialog(
-                        node_name=node_name,
-                        param_name=param_name,
-                        ros2_connector=self.ros2_connector,
-                    ).present(self),
+                    func=self.on_edit_param,
+                    node_name=node_name,
+                    param_name=param_name,
                 )
                 group.add_row(row)
             group.set_description_to_row_count()
 
         return bool(self.content_page.pref_page.num_groups)
+
+    def on_edit_param(self, *args, node_name: str, param_name: str):
+        EditParamDialog(
+            node_name=node_name,
+            param_name=param_name,
+            ros2_connector=self.ros2_connector,
+        ).present(self)

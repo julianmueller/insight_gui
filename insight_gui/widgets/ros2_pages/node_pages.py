@@ -236,29 +236,36 @@ class NodeInfoPage(Adw.NavigationPage):
 
         # Parameters
         parameters_group = self.content_page.pref_page.add_group(title="Parameters", empty_msg="Node has no parameters")
-        parameter_list = call_list_parameters(node=self.ros2_connector.node, node_name=node_name).result().result.names
-        for param_name in sorted(parameter_list):
-            param_type = get_parameter_type_string(
-                call_describe_parameters(
-                    node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[param_name]
+        future = call_list_parameters(node=self.ros2_connector.node, node_name=node_name)
+        if future is not None:
+            parameter_list = future.result().result.names
+            for param_name in sorted(parameter_list):
+                param_type = get_parameter_type_string(
+                    call_describe_parameters(
+                        node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[param_name]
+                    )
+                    .descriptors[0]
+                    .type
                 )
-                .descriptors[0]
-                .type
-            )
-            param_value = get_value(
-                parameter_value=call_get_parameters(
-                    node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[param_name]
-                ).values[0]
-            )
-            row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
-            row.add_suffix_btn(
-                icon_name="document-edit-symbolic",
-                tooltip_text="Edit",
-                func=lambda *_: EditParamDialog(
-                    node_name=self.node_name,
+                param_value = get_value(
+                    parameter_value=call_get_parameters(
+                        node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[param_name]
+                    ).values[0]
+                )
+                row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
+                row.add_suffix_btn(
+                    icon_name="document-edit-symbolic",
+                    tooltip_text="Edit",
+                    func=self.on_edit_param,
+                    node_name=node_name,
                     param_name=param_name,
-                    ros2_connector=self.ros2_connector,
-                ).present(self),
-            )
-            parameters_group.add_row(row)
+                )
+                parameters_group.add_row(row)
         parameters_group.set_description_to_row_count()
+
+    def on_edit_param(self, *args, node_name: str, param_name: str):
+        EditParamDialog(
+            node_name=node_name,
+            param_name=param_name,
+            ros2_connector=self.ros2_connector,
+        ).present(self)

@@ -134,4 +134,5 @@ class EditParamDialog(Adw.PreferencesDialog):
         #     node=self.ros2_connector.node, node_name=self.node_name, parameters=[self.param_name]
         # )
         # TODO this is not working yet
+        print("changing params not working yet")
         self.close()
