@@ -40,10 +40,12 @@
                                             </object>
                                         </child>
                                         <child type="end">
-                                            <object class="GtkButton" id="pref_btn">
+                                            <object class="GtkMenuButton" id="menu_btn">
                                                 <property name="icon-name">open-menu-symbolic</property>
-                                                <property name="tooltip-text">Open Preferences Dialog</property>
-                                                <signal name="clicked" handler="on_pref_btn_clicked" />
+                                                <property name="menu-model">menu</property>
+                                                <property name="primary">true</property>
+                                                <!-- <property name="tooltip-text">Open Preferences Dialog</property> -->
+                                                <!-- <signal name="clicked" handler="on_menu_btn_clicked" /> -->
                                             </object>
                                         </child>
                                     </object>
@@ -72,4 +74,62 @@
             </object>
         </property>
     </template>
+
+    <menu id="menu">
+        <item>
+            <attribute name="label">Preferences</attribute>
+            <attribute name="action">app.preferences</attribute>
+        </item>
+        <section>
+            <item>
+                <attribute name="label" translatable="yes">Keyboard Shortcuts</attribute>
+                <attribute name="action">app.shortcuts</attribute>
+            </item>
+            <item>
+                <attribute name="label" translatable="yes">About Insight</attribute>
+                <attribute name="action">app.about</attribute>
+            </item>
+        </section>
+        <!-- <section>
+            <item>
+                <attribute name="label">New Terminal</attribute>
+            </item>
+            <item>
+                <attribute name="label">New Build Terminal</attribute>
+            </item>
+            <item>
+                <attribute name="label" translatable="yes">New Runtime Terminal</attribute>
+            </item>
+        </section>
+        <section>
+            <attribute name="label" translatable="yes">Settings</attribute>
+            <submenu>
+                <attribute name="label" translatable="yes">Appearance</attribute>
+                <item>
+                    <attribute name="label" translatable="yes">System Default</attribute>
+                </item>
+                <item>
+                    <attribute name="label" translatable="yes">Force Light Mode</attribute>
+                </item>
+                <item>
+                    <attribute name="label" translatable="yes">Force Dark Mode</attribute>
+                </item>
+            </submenu>
+            <submenu>
+                <attribute name="label" translatable="yes">Accessibility</attribute>
+                <item>
+                    <attribute name="label" translatable="yes">High Contrast</attribute>
+                </item>
+                <section>
+                    <attribute name="label" translatable="yes">Text Direction</attribute>
+                    <item>
+                        <attribute name="label" translatable="yes">Left-to-Right</attribute>
+                    </item>
+                    <item>
+                        <attribute name="label" translatable="yes">Right-to-Left</attribute>
+                    </item>
+                </section>
+            </submenu>
+        </section> -->
+    </menu>
 </interface>

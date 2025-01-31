@@ -31,7 +31,7 @@ def main(args=None):
         gui_app = Ros2GuiApp(share_dir, start_ros2_node=True)
         signal.signal(signal.SIGINT, lambda *_: gui_app.shutdown())
         gui_app.run(None)
-    except:
+    except Exception as e:
         gui_app.shutdown()
 
 

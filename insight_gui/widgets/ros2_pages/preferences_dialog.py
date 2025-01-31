@@ -15,8 +15,8 @@ from insight_gui.widgets.helpers.button_row import ButtonRow
 # TODO add setting to show/hide hidden nodes/topics etc
 
 
-class SettingsDialog(Adw.PreferencesDialog):
-    __gtype_name__ = "SettingsDialog"
+class PreferencesDialog(Adw.PreferencesDialog):
+    __gtype_name__ = "PreferencesDialog"
 
     def __init__(self, ros2_node: ROS2CommunicationNode = None, **kwargs):
         super().__init__(**kwargs)

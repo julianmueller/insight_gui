@@ -4,9 +4,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gdk
+from gi.repository import Gtk, Adw, Gdk, Gio, GLib
 
-from insight_gui.widgets.ros2_pages.settings_dialog import SettingsDialog
 from insight_gui.widgets.ros2_pages.node_pages import NodeListPage
 from insight_gui.widgets.ros2_pages.msg_type_browser_pages import (
     MessageTypeBrowserPage,
@@ -20,6 +19,7 @@ from insight_gui.widgets.ros2_pages.action_pages import ActionListPage
 from insight_gui.widgets.ros2_pages.tf_page import TransformsPage
 from insight_gui.widgets.ros2_pages.log_pages import LoggerPage
 from insight_gui.widgets.ros2_pages.doctor_page import DoctorPage
+from insight_gui.widgets.ros2_pages.preferences_dialog import PreferencesDialog
 
 from insight_gui.utils.adw_colors import AdwAccentColor
 
@@ -32,7 +32,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     nav_header_bar: Adw.HeaderBar = Gtk.Template.Child()
     refresh_btn: Gtk.Button = Gtk.Template.Child()
-    pref_btn: Gtk.Button = Gtk.Template.Child()
+    menu_btn: Gtk.Button = Gtk.Template.Child()
 
     # content_header_bar: Adw.HeaderBar = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
@@ -121,16 +121,40 @@ class MainWindow(Adw.ApplicationWindow):
         #     ros2_node=self.ros2_node,
         # )
 
-        # Settings
-        self.settings_dialog = SettingsDialog(ros2_node=self.ros2_node)
+        # Preferences
+        self.preferences_dialog = PreferencesDialog(ros2_node=self.ros2_node)
+        self.about_dialog = Adw.AboutDialog(
+            application_name="Insight",
+            # application_icon="io.github.julianmueller.Insight",
+            developer_name="Julian Müller",
+            # developer_documentation="https://github.com/julianmueller/insight_gui",
+            license_type=Gtk.License.APACHE_2_0,
+            version="0.0.1",
+            website="https://github.com/julianmueller/insight_gui",
+        )
+        self.about_dialog.add_credit_section("Development", ["Julian Müller"])
+        self.about_dialog.add_credit_section("Inspiration", ["rqt", "ros2cli"])
+
+        # Actions
+        action = Gio.SimpleAction.new("preferences", None)
+        action.connect("activate", lambda *_: self.preferences_dialog.present(self))
+        self.app.add_action(action)
+
+        action = Gio.SimpleAction.new("about", None)
+        action.connect("activate", lambda *_: self.about_dialog.present(self))
+        self.app.add_action(action)
+
+        # action = Gio.SimpleAction.new("quit", None)
+        # action.connect("activate", self.on_quit)
+        # self.app.add_action(action)
 
     @property
     def ros2_node(self):
         return self.app.ros2_node
 
-    @Gtk.Template.Callback()
-    def on_pref_btn_clicked(self, *args):
-        self.settings_dialog.present(self)
+    # @Gtk.Template.Callback()
+    # def on_menu_btn_clicked(self, *args):
+    #     self.preferences_dialog.present(self)
 
     @Gtk.Template.Callback()
     def on_refresh_btn_clicked(self, *args):
