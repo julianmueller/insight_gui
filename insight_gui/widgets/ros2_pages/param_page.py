@@ -1,9 +1,11 @@
-import os
-from pathlib import Path
-import webbrowser
-
 from ros2node.api import get_node_names, _is_hidden_name
-from ros2param.api import call_list_parameters
+from ros2param.api import (
+    call_list_parameters,
+    call_get_parameters,
+    call_describe_parameters,
+    get_value,
+    get_parameter_type_string,
+)
 
 import gi
 
@@ -54,8 +56,19 @@ class ParameterListPage(Adw.NavigationPage):
             # create a group and add all parameters
             group = self.content_page.pref_page.add_group(title=node_name)
             for param_name in sorted(parameter_list):
-                # TODO add the current value as subtitle
-                row = PrefRow(title=param_name)
+                param_type = get_parameter_type_string(
+                    call_describe_parameters(
+                        node=self.ros2_connector.node, node_name=node_name, parameter_names=[param_name]
+                    )
+                    .descriptors[0]
+                    .type
+                )
+                param_value = get_value(
+                    parameter_value=call_get_parameters(
+                        node=self.ros2_connector.node, node_name=node_name, parameter_names=[param_name]
+                    ).values[0]
+                )
+                row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
                 row.add_suffix_btn(
                     icon_name="document-edit-symbolic",
                     tooltip_text="Edit",

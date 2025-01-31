@@ -135,7 +135,6 @@ class NewPkgDialog(Adw.PreferencesDialog):
         maintainer_mail = self.maintainer_mail_row.get_text()
         description = self.description_row.get_text()
         dependencies = [dep.strip() for dep in self.dependencies_row.get_text().split(";")]
-        print(dependencies)
 
         def show_toast_message(msg):
             self.add_toast(Adw.Toast(title=msg))

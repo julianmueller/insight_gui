@@ -3,7 +3,13 @@ from operator import itemgetter
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
 from ros2node.api import _is_hidden_name, get_node_names
-from ros2param.api import call_list_parameters
+from ros2param.api import (
+    call_list_parameters,
+    call_get_parameters,
+    call_describe_parameters,
+    get_value,
+    get_parameter_type_string,
+)
 
 import gi
 
@@ -232,8 +238,19 @@ class NodeInfoPage(Adw.NavigationPage):
         parameters_group = self.content_page.pref_page.add_group(title="Parameters", empty_msg="Node has no parameters")
         parameter_list = call_list_parameters(node=self.ros2_connector.node, node_name=node_name).result().result.names
         for param_name in sorted(parameter_list):
-            # TODO add the current value as subtitle
-            row = PrefRow(title=param_name)
+            param_type = get_parameter_type_string(
+                call_describe_parameters(
+                    node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[param_name]
+                )
+                .descriptors[0]
+                .type
+            )
+            param_value = get_value(
+                parameter_value=call_get_parameters(
+                    node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[param_name]
+                ).values[0]
+            )
+            row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
             row.add_suffix_btn(
                 icon_name="document-edit-symbolic",
                 tooltip_text="Edit",
