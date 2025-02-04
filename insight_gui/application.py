@@ -39,8 +39,6 @@ class Ros2GuiApp(Adw.Application):
         if start_ros2_connector:
             self.ros2_connector = ROS2Connector()
 
-        # TODO add a action to start stop the ros2 node
-
     def on_activate(self, app):
         if not self.window:
             self.window = MainWindow(application=app)

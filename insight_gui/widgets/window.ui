@@ -56,6 +56,102 @@
                                         <property name="stack">content_stack</property>
                                     </object>
                                 </property>
+
+                                <child type="bottom">
+                                    <object class="GtkBox" id="time_box">
+                                        <property name="orientation">vertical</property>
+                                        <property name="spacing">12</property>
+                                        <property name="margin-top">12</property>
+                                        <property name="margin-bottom">12</property>
+                                        <property name="margin-start">12</property>
+                                        <property name="margin-end">12</property>
+
+                                        <child>
+                                            <object class="GtkBox" id="ros_time_box">
+                                                <property name="orientation">horizontal</property>
+                                                <property name="spacing">12</property>
+                                                <property name="tooltip-text">ROS2 Time</property>
+                                                <child>
+                                                    <object class="GtkImage">
+                                                        <property name="icon-name">preferences-system-time-symbolic</property>
+                                                    </object>
+                                                </child>
+                                                <child>
+                                                    <object class="GtkLabel" id="ros_time_lbl">
+                                                        <property name="label">ROS2 Time</property>
+                                                        <property name="hexpand">True</property>
+                                                        <property name="xalign">1.0</property>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                        </child>
+
+                                        <child>
+                                            <object class="GtkBox" id="ros_elapsed_time_box">
+                                                <property name="orientation">horizontal</property>
+                                                <property name="spacing">12</property>
+                                                <property name="tooltip-text">ROS2 Elapsed Time</property>
+                                                <child>
+                                                    <object class="GtkImage">
+                                                        <property name="icon-name">timer-symbolic</property>
+                                                    </object>
+                                                </child>
+
+                                                <child>
+                                                    <object class="GtkLabel" id="ros_elapsed_time_lbl">
+                                                        <property name="label">Elapsed Time</property>
+                                                        <property name="hexpand">True</property>
+                                                        <property name="xalign">1.0</property>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                        </child>
+
+                                        <child>
+                                            <object class="GtkBox" id="wall_time_box">
+                                                <property name="orientation">horizontal</property>
+                                                <property name="spacing">12</property>
+                                                <property name="tooltip-text">Wall Time</property>
+                                                <property name="visible">False</property>
+                                                <child>
+                                                    <object class="GtkImage">
+                                                        <property name="icon-name">preferences-system-time-symbolic</property>
+                                                    </object>
+                                                </child>
+                                                <child>
+                                                    <object class="GtkLabel" id="wall_time_lbl">
+                                                        <property name="label">Wall Time</property>
+                                                        <property name="hexpand">True</property>
+                                                        <property name="xalign">1.0</property>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                        </child>
+
+                                        <child>
+                                            <object class="GtkBox" id="wall_elapsed_time_box">
+                                                <property name="orientation">horizontal</property>
+                                                <property name="spacing">12</property>
+                                                <property name="tooltip-text">Wall Elapsed Time</property>
+                                                <property name="visible">False</property>
+                                                <child>
+                                                    <object class="GtkImage">
+                                                        <property name="icon-name">timer-symbolic</property>
+                                                    </object>
+                                                </child>
+
+                                                <child>
+                                                    <object class="GtkLabel" id="wall_elapsed_time_lbl">
+                                                        <property name="label">Wall Elapsed Time</property>
+                                                        <property name="hexpand">True</property>
+                                                        <property name="xalign">1.0</property>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+
                             </object>
                         </property>
                     </object>

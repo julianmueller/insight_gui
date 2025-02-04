@@ -38,6 +38,13 @@ class MainWindow(Adw.ApplicationWindow):
     # content_header_bar: Adw.HeaderBar = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
 
+    time_box: Gtk.Box = Gtk.Template.Child()
+    ros_time_lbl: Gtk.Label = Gtk.Template.Child()
+    ros_elapsed_time_lbl: Gtk.Label = Gtk.Template.Child()
+    wall_time_lbl: Gtk.Label = Gtk.Template.Child()
+    wall_elapsed_time_lbl: Gtk.Label = Gtk.Template.Child()
+    # TODO also add the boxes?
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._setup_accent_colors()
@@ -152,9 +159,20 @@ class MainWindow(Adw.ApplicationWindow):
         action.connect("activate", lambda *_: self.about_dialog.present(self))
         self.app.add_action(action)
 
+        action = Gio.SimpleAction.new_stateful(
+            "ros2_node_state",  # Action name (used in menus, shortcuts, etc.)
+            None,  # No parameter is needed for a boolean toggle.
+            GLib.Variant.new_boolean(self.ros2_connector.is_running),  # Initial state.
+        )
+        action.connect("change-state", self.ros2_connector.on_node_state_changed)
+        # action.connect("notify::state", self.update_time_labels)
+        self.app.add_action(action)
+
         # action = Gio.SimpleAction.new("quit", None)
         # action.connect("activate", self.on_quit)
         # self.app.add_action(action)
+
+        GLib.idle_add(self.update_time_labels)
 
     @property
     def ros2_connector(self):
@@ -178,6 +196,28 @@ class MainWindow(Adw.ApplicationWindow):
         nav_page = nav_page_class(nav_view=nav_view, **kwargs)
         nav_view.add(nav_page)
         self.content_stack.add_titled(child=nav_view, name=name, title=title)
+
+    def update_time_labels(self):
+        # current_state = action.get_state().get_boolean()
+        # print("current state is", current_state)
+        action = self.app.lookup_action("ros2_node_state")
+        node_is_running = action.get_state().get_boolean() if action is not None else False
+
+        if not node_is_running:
+            self.time_box.set_visible(False)
+        else:
+            self.time_box.set_visible(True)
+            current_time = self.ros2_connector.node.get_clock().now()
+            elapsed = current_time - self.ros2_connector.start_time
+
+            self.ros_time_lbl.set_text(f"{(current_time.nanoseconds / 1e9):.2f} s")
+            self.ros_elapsed_time_lbl.set_text(f"{(elapsed.nanoseconds / 1e9):.2f} s")
+
+            # TODO if use_sim_time is true, show the simulation time
+            # self.wall_time_lbl.set_text(f"{(current_time.nanoseconds / 1e9):.2f} s")
+            # self.wall_elapsed_time_lbl.set_text(f"{(elapsed.nanoseconds / 1e9):.2f} s")
+
+        return True
 
     # add accent colors
     def _setup_accent_colors(self):
