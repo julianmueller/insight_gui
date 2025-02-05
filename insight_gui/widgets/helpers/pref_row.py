@@ -107,10 +107,13 @@ class PrefRow(Adw.ActionRow):
     def set_subpage_link(
         self, *, nav_view: Adw.NavigationView, subpage_class: type[Adw.NavigationPage], **subpage_kwargs
     ):
-        def on_activate(*args):
+        def _on_activate(*args):
             nav_view.push(subpage_class(nav_view=nav_view, **subpage_kwargs))
 
-        super().connect("activated", on_activate)
+        if hasattr(self, "subpage_signal_handler"):
+            super().disconnect(self.subpage_signal_handler)
+
+        self.subpage_signal_handler = super().connect("activated", _on_activate)
         super().set_activatable(True)
         self.next_page_icon.set_visible(True)
 

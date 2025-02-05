@@ -90,12 +90,12 @@ class ActionInfoPage(Adw.NavigationPage):
         # Action Type
         action_type_group = self.content_page.pref_page.add_group(title="Action Type")
 
-        def add_act_type_row(msg_full_name: str):
-            msg_row = PrefRow(title=msg_full_name)  # , subtitle=node_full_name)
+        def add_act_type_row(msg_type_full_name: str):
+            msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
             msg_row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionTypeInfoPage,
-                act_full_name=msg_full_name,
+                act_type_full_name=msg_type_full_name,
             )
             action_type_group.add_row(msg_row)
 

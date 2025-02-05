@@ -68,7 +68,6 @@ class LoggerPage(Adw.NavigationPage):
             TextViewRow(
                 title="Log of '/rosout'",
                 subtitle="press start to see incoming logs",
-                min_height=300,
                 show_copy_btn=True,
             )
         )

@@ -38,23 +38,22 @@ class TransformsPage(Adw.NavigationPage):
         self.calc_group = self.content_page.pref_page.add_group(title="Calculate Transform", filterable=False)
 
         # TODO use prefix_icons left-large-symbolic and right-large-symbolic
-        self.source_frame_row = self.calc_group.add_row(Adw.ComboRow(title="Source Frame"))
+        self.source_frame_row = self.calc_group.add_row(Adw.ComboRow(title="Source Frame", enable_search=True))
         self.source_frame_row.connect("notify::selected-item", self.on_source_frame_changed)
-        self.target_frame_row = self.calc_group.add_row(Adw.ComboRow(title="Target Frame"))
+        self.target_frame_row = self.calc_group.add_row(Adw.ComboRow(title="Target Frame", enable_search=True))
         self.target_frame_row.connect("notify::selected-item", self.on_target_frame_changed)
 
         self.calc_button: ButtonRow = self.calc_group.add_row(
             ButtonRow(
                 title="Calculate transform",
-                # start_icon_name="gnome-calculator-symbolic",
+                btn_icon_name="gnome-calculator-symbolic",
                 tooltip_text="Calculate transformation from source to target",
                 func=self.on_calc_transform,
+                sensitive=False,
             )
         )
 
-        self.result_text_row = self.calc_group.add_row(
-            TextViewRow(title="Result", show_copy_btn=True, min_height=200, visible=False)
-        )
+        self.result_text_row = self.calc_group.add_row(TextViewRow(title="Result", show_copy_btn=True, visible=False))
 
         # self.list_group = self.content_page.pref_page.add_group(empty_msg="No transforms found")
 
@@ -106,10 +105,12 @@ class TransformsPage(Adw.NavigationPage):
         self.target_frame_row.set_selected(0)
 
     def on_source_frame_changed(self, *args):
-        self.source_frame = self.source_frame_row.get_selected_item().get_string()
+        # self.source_frame = self.source_frame_row.get_selected_item().get_string()
+        pass
 
     def on_target_frame_changed(self, *args):
-        self.target_frame = self.target_frame_row.get_selected_item().get_string()
+        # self.target_frame = self.target_frame_row.get_selected_item().get_string()
+        pass
 
     def on_calc_transform(self, *args):
         source_frame = self.source_frame_row.get_selected_item().get_string()
@@ -138,7 +139,7 @@ class TransformsPage(Adw.NavigationPage):
                 + f"  w: {transform.transform.rotation.w:.8f}"
             )
 
-            self.result_text_row.set_subtitle(f"from '{self.source_frame}' to '{self.target_frame}'")
+            self.result_text_row.set_subtitle(f"from '{source_frame}' to '{target_frame}'")
             self.result_text_row.set_text(text)
             self.result_text_row.set_visible(True)
 

@@ -46,27 +46,27 @@ class MessageTypeBrowserPage(Adw.NavigationPage):
             msg_group = self.content_page.pref_page.add_group(title=pkg_name)
 
             for msg in sorted(msgs_list):
-                msg_full_name = f"{pkg_name}/{msg}"
+                msg_type_full_name = f"{pkg_name}/{msg}"
                 msg_type = msg.removeprefix("msg/")  # remove namespace
 
-                row = PrefRow(title=msg_type, subtitle=msg_full_name)
+                row = PrefRow(title=msg_type, subtitle=msg_type_full_name)
 
                 # row.add_suffix_btn(
                 #     icon_name="info-symbolic",
                 #     tooltip_text="Message Info",
                 #     func=self.on_get_msg_info,
-                #     msg_full_name=msg_full_name,
+                #     msg_type_full_name=msg_type_full_name,
                 # )
                 # row.add_suffix_btn(
                 #     icon_name="folder-symbolic",
                 #     tooltip_text="Open Message File",
                 #     func=_on_open_msg_file,
-                #     msg_full_name=msg_full_name,
+                #     msg_type_full_name=msg_type_full_name,
                 # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=MessageTypeInfoPage,
-                    msg_full_name=msg_full_name,
+                    msg_type_full_name=msg_type_full_name,
                 )
                 msg_group.add_row(row)
 
@@ -97,27 +97,27 @@ class ServiceTypeBrowserPage(Adw.NavigationPage):
             srv_group = self.content_page.pref_page.add_group(title=pkg_name)
 
             for srv in sorted(srvs_list):
-                srv_full_name = f"{pkg_name}/{srv}"
+                srv_type_full_name = f"{pkg_name}/{srv}"
                 srv_type = srv.removeprefix("srv/")  # remove namespace
 
-                row = PrefRow(title=srv_type, subtitle=srv_full_name)
+                row = PrefRow(title=srv_type, subtitle=srv_type_full_name)
 
                 # row.add_suffix_btn(
                 #     icon_name="info-symbolic",
                 #     tooltip_text="Message Info",
                 #     func=self.on_get_msg_info,
-                #     msg_full_name=msg_full_name,
+                #     msg_type_full_name=msg_type_full_name,
                 # )
                 # row.add_suffix_btn(
                 #     icon_name="folder-symbolic",
                 #     tooltip_text="Open Message File",
                 #     func=_on_open_msg_file,
-                #     msg_full_name=srv_full_name,
+                #     msg_type_full_name=srv_type_full_name,
                 # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ServiceTypeInfoPage,
-                    srv_full_name=srv_full_name,
+                    srv_type_full_name=srv_type_full_name,
                 )
                 srv_group.add_row(row)
 
@@ -146,35 +146,35 @@ class ActionTypeBrowserPage(Adw.NavigationPage):
             actions_group = self.content_page.pref_page.add_group(title=pkg_name)
 
             for act in sorted(actions_list):
-                act_full_name = f"{pkg_name}/{act}"
+                act_type_full_name = f"{pkg_name}/{act}"
                 act_type = act.removeprefix("msg/")  # remove namespace
 
-                row = PrefRow(title=act_type, subtitle=act_full_name)
+                row = PrefRow(title=act_type, subtitle=act_type_full_name)
 
                 # row.add_suffix_btn(
                 #     icon_name="info-symbolic",
                 #     tooltip_text="Message Info",
                 #     func=self.on_get_msg_info,
-                #     msg_full_name=msg_full_name,
+                #     msg_type_full_name=msg_type_full_name,
                 # )
                 # row.add_suffix_btn(
                 #     icon_name="folder-symbolic",
                 #     tooltip_text="Open Message File",
                 #     func=_on_open_msg_file,
-                #     msg_full_name=act_full_name,
+                #     msg_type_full_name=act_type_full_name,
                 # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ActionTypeInfoPage,
-                    act_full_name=act_full_name,
+                    act_type_full_name=act_type_full_name,
                 )
                 actions_group.add_row(row)
 
         return bool(self.content_page.pref_page.num_groups)
 
 
-def _on_open_msg_file(btn: Gtk.Button = None, *, msg_full_name: str):
-    msg_file_path = get_interface_path(msg_full_name)
+def _on_open_msg_file(btn: Gtk.Button = None, *, msg_type_full_name: str):
+    msg_file_path = get_interface_path(msg_type_full_name)
     # i: ignore session
     subprocess.Popen(["gnome-text-editor", msg_file_path, "--ignore-session"])
     # os.system(f"gnome-text-editor {msg_file_path} -ins")

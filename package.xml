@@ -8,7 +8,6 @@
     <license>Apache-2.0</license>
 
     <exec_depend>rclpy</exec_depend>
-    <exec_depend>std_msgs</exec_depend>
     <!-- <exec_depend>python-gi</exec_depend> -->
     <!-- <exec_depend>python-gi-cairo</exec_depend> -->
     <!-- <exec_depend>libadwaita</exec_depend> -->

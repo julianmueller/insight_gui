@@ -68,8 +68,9 @@
                     <object class="GtkFrame" id="frame">
                         <child>
                             <object class="GtkScrolledWindow" id="scrolled">
-                                <property name="hexpand">true</property>
-                                <property name="vexpand">true</property>
+                                <!-- <property name="hexpand">true</property>
+                                <property name="vexpand">true</property> -->
+                                <property name="propagate-natural-height">true</property>
 
                                 <child>
                                     <object class="GtkTextView" id="text_view">
@@ -77,6 +78,7 @@
                                         <property name="cursor-visible">false</property>
                                         <property name="editable">false</property>
                                         <property name="monospace">true</property>
+                                        <property name="vexpand">true</property>
                                         <property name="left-margin">12</property>
                                         <property name="right-margin">12</property>
                                         <property name="top-margin">12</property>

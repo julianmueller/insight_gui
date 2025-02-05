@@ -52,7 +52,7 @@ class ServiceListPage(Adw.NavigationPage):
             if len(service_types) == 1:
                 service_types = service_types[0]
             else:
-                service_types = ", ".join(service_types)
+                service_types = ", ".join(service_types)  # TODO this might cause problems in the info page
 
             row = PrefRow(
                 title=service_name, subtitle=service_types, is_hidden=topic_or_service_is_hidden(service_name)
@@ -98,7 +98,7 @@ class ServiceInfoPage(Adw.NavigationPage):
             srv_type_row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceTypeInfoPage,
-                srv_full_name=srv_type,
+                srv_type_full_name=srv_type,
             )
             service_type_group.add_row(srv_type_row)
 

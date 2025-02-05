@@ -15,6 +15,7 @@ from insight_gui.widgets.ros2_pages.msg_type_browser_pages import (
 from insight_gui.widgets.ros2_pages.pkg_pages import PackageListPage
 from insight_gui.widgets.ros2_pages.topic_pages import TopicListPage
 from insight_gui.widgets.ros2_pages.service_pages import ServiceListPage
+from insight_gui.widgets.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.widgets.ros2_pages.action_pages import ActionListPage
 from insight_gui.widgets.ros2_pages.param_page import ParameterListPage
 from insight_gui.widgets.ros2_pages.tf_page import TransformsPage
@@ -91,6 +92,12 @@ class MainWindow(Adw.ApplicationWindow):
             nav_page_class=ServiceTypeBrowserPage,
             name="srv_type_browser",
             title="Service Type Browser",
+            ros2_connector=self.ros2_connector,
+        )
+        self.add_stack_page(
+            nav_page_class=ServiceCallPage,
+            name="srv_caller",
+            title="Service Caller",
             ros2_connector=self.ros2_connector,
         )
         # Actions
@@ -207,7 +214,11 @@ class MainWindow(Adw.ApplicationWindow):
             self.time_box.set_visible(False)
         else:
             self.time_box.set_visible(True)
-            current_time = self.ros2_connector.node.get_clock().now()
+            current_time = 0
+            try:
+                current_time = self.ros2_connector.node.get_clock().now()
+            except AttributeError as e:
+                return True
             elapsed = current_time - self.ros2_connector.start_time
 
             self.ros_time_lbl.set_text(f"{(current_time.nanoseconds / 1e9):.2f} s")

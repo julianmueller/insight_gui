@@ -5,7 +5,7 @@
 
     <!-- based on https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.1/class.ButtonRow.html -->
 
-    <template class="ButtonRow" parent="AdwPreferencesRow">
+    <template class="SearchRow" parent="AdwPreferencesRow">
         <property name="activatable">True</property>
 
         <child>
@@ -19,7 +19,6 @@
                 <property name="margin-start">12</property>
                 <property name="margin-end">12</property>
 
-
                 <child>
                     <object class="GtkImage" id="start_icon">
                         <property name="icon-name">go-prev-symbolic</property>
@@ -29,17 +28,14 @@
                 </child>
 
                 <child>
-                    <object class="GtkButton" id="btn">
+                    <object class="GtkSearchEntry" id="search_entry">
+                        <property name="placeholder-text">Search</property>
+                        <property name="search-delay">100</property>
                         <property name="halign">fill</property>
                         <property name="valign">center</property>
                         <property name="hexpand">true</property>
-                        <property name="child">
-                            <object class="AdwButtonContent" id="btn_content">
-                                <property name="label">Button</property>
-                                <property name="icon-name"></property>
-                            </object>
-                        </property>
-                        <signal name="clicked" handler="on_clicked" />
+
+                        <signal name="search-changed" handler="on_search_changed" />
                     </object>
                 </child>
 

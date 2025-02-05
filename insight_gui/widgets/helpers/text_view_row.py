@@ -5,7 +5,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, GLib
 
 
 @Gtk.Template(filename=str(Path(__file__).with_suffix(".ui")))
@@ -27,8 +27,7 @@ class TextViewRow(Adw.PreferencesRow):
         *,
         title: str = "",
         subtitle: str = "",
-        min_height: int = -1,
-        max_height: int = -1,
+        max_height: int = 200,
         show_copy_btn: bool = False,
         filterable: bool = True,
         editable: bool = False,
@@ -36,6 +35,8 @@ class TextViewRow(Adw.PreferencesRow):
     ):
         super().__init__(**kwargs)
         self.text_buffer = self.text_view.get_buffer()
+        self.max_height = max_height
+        self.filterable = filterable
 
         # Add title label if provided
         if title:
@@ -54,11 +55,10 @@ class TextViewRow(Adw.PreferencesRow):
 
         if editable:
             self.text_view.set_editable(True)
+            self.text_view.set_cursor_visible(True)
 
-        self.filterable = filterable
         self.toggle_copy_button_visibility(show_copy_btn)
-        self.scrolled.set_min_content_height(min_height)
-        self.scrolled.set_max_content_height(max_height)
+        self.text_buffer.connect("changed", self.on_text_changed)
 
     @property
     def line_count(self) -> int:
@@ -67,6 +67,10 @@ class TextViewRow(Adw.PreferencesRow):
     @property
     def filter_text(self) -> str:
         return f"{self.title_label.get_text()} {self.subtitle_label.get_text()} {self.get_text()}"
+
+    def on_text_changed(self, *args):
+        # TODO add that tabs are replaced with spaces
+        GLib.idle_add(self.update_height)
 
     def set_title(self, title: str):
         self.title_label.set_label(str(title))
@@ -114,10 +118,13 @@ class TextViewRow(Adw.PreferencesRow):
     def scroll_to_end(self):
         self.text_view.scroll_to_iter(self.text_buffer.get_end_iter(), 0, False, 0, 1)
 
-    def fit_height_to_text(self):
-        _, natural_size = self.text_view.get_preferred_size()
-        self.scrolled.set_min_content_height(natural_size.height)
-        self.scrolled.set_max_content_height(natural_size.height)
+    def update_height(self):
+        natural_height = self.text_view.get_preferred_size().natural_size.height
+        if self.max_height == -1:
+            updated_height = natural_height
+        else:
+            updated_height = min(self.max_height, natural_height)
+        self.scrolled.set_min_content_height(updated_height)
 
     # TODO do the filtering with GtkTextTags
     def filter(self, filter_snippets: list[str]):

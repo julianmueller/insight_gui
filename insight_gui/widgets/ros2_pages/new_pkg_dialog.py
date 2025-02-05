@@ -62,7 +62,7 @@ class NewPkgDialog(Adw.PreferencesDialog):
         pkg_group = self.page.add_group(title="Package Info")
         self.pkg_name_row = pkg_group.add_row(Adw.EntryRow(title="Package Name", text="my_package"))
 
-        self.license_row = pkg_group.add_row(Adw.ComboRow(title="License"))
+        self.license_row = pkg_group.add_row(Adw.ComboRow(title="License", enable_search=True))
         self.license_store = Gio.ListStore.new(Gtk.StringObject)
         for lic in self.available_licenses.keys():
             self.license_store.append(Gtk.StringObject.new(lic))

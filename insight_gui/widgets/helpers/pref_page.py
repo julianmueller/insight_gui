@@ -62,7 +62,7 @@ class PrefPage(Adw.PreferencesPage):
                     continue
                 group.set_visible(True)
                 for row in group.rows:
-                    if not row.filterable:
+                    if not hasattr(row, "filterable") or not row.filterable:
                         continue
                     row.set_visible(True)
 
@@ -90,14 +90,14 @@ class PrefPage(Adw.PreferencesPage):
                 # If group matches, show all rows in the group
                 group.set_visible(True)
                 for row in group.rows:
-                    if not row.filterable:
+                    if not hasattr(row, "filterable") or not row.filterable:
                         continue
                     row.set_visible(True)
             else:
                 # If group does not match, filter rows individually
                 group_visible = False
                 for row in group.rows:
-                    if not row.filterable:
+                    if not hasattr(row, "filterable") or not row.filterable:
                         continue
 
                     if row.filter_text and regex.search(row.filter_text):

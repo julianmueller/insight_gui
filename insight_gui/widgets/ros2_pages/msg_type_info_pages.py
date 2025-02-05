@@ -31,11 +31,11 @@ from insight_gui.widgets.helpers.text_view_row import TextViewRow
 class MessageTypeInfoPage(Adw.NavigationPage):
     __gtype_name__ = "MessageTypeInfoPage"
 
-    def __init__(self, msg_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
+    def __init__(self, msg_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(f"Message Type '{msg_full_name}'")
+        super().set_title(f"Message Type '{msg_type_full_name}'")
 
-        self.msg_full_name = msg_full_name
+        self.msg_type_full_name = msg_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
 
         self.content_page = ContentPage(search_enabled=False, refresh_enabled=False)
@@ -43,14 +43,14 @@ class MessageTypeInfoPage(Adw.NavigationPage):
         super().set_child(self.content_page)
 
         # Load the message parent class
-        msg_class = get_message(msg_full_name)
+        msg_class = get_message(msg_type_full_name)
 
         # Btn for opening the online link to msg definition
         self.content_page.add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
-            msg_full_name=msg_full_name,
+            msg_type_full_name=msg_type_full_name,
         )
 
         # Message Type
@@ -63,7 +63,7 @@ class MessageTypeInfoPage(Adw.NavigationPage):
             tooltip_text="Raw Message Text",
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_full_name=msg_full_name,
+            msg_type_full_name=msg_type_full_name,
             msg_class=msg_class,
         )
 
@@ -71,11 +71,11 @@ class MessageTypeInfoPage(Adw.NavigationPage):
 class ServiceTypeInfoPage(Adw.NavigationPage):
     __gtype_name__ = "ServiceTypeInfoPage"
 
-    def __init__(self, srv_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
+    def __init__(self, srv_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(f"Service Type '{srv_full_name}'")
+        super().set_title(f"Service Type '{srv_type_full_name}'")
 
-        self.srv_full_name = srv_full_name
+        self.srv_type_full_name = srv_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
 
         self.content_page = ContentPage(search_enabled=False, refresh_enabled=False)
@@ -83,14 +83,14 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         super().set_child(self.content_page)
 
         # Load the service parent class
-        srv_class = get_service(srv_full_name)
+        srv_class = get_service(srv_type_full_name)
 
         # Btn for opening the online link to msg definition
         self.content_page.add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
-            msg_full_name=srv_full_name,
+            msg_type_full_name=srv_type_full_name,
         )
 
         # Service Message Request
@@ -105,7 +105,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
             visible=not request_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_full_name=f"{srv_full_name} - Request",
+            msg_type_full_name=f"{srv_type_full_name} - Request",
             msg_class=request_class,
         )
 
@@ -121,7 +121,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
             visible=not response_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_full_name=f"{srv_full_name} - Response",
+            msg_type_full_name=f"{srv_type_full_name} - Response",
             msg_class=response_class,
         )
 
@@ -137,7 +137,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
             visible=not event_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_full_name=f"{srv_full_name} - Event",
+            msg_type_full_name=f"{srv_type_full_name} - Event",
             msg_class=event_class,
         )
 
@@ -145,11 +145,11 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
 class ActionTypeInfoPage(Adw.NavigationPage):
     __gtype_name__ = "ActionTypeInfoPage"
 
-    def __init__(self, act_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
+    def __init__(self, act_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(f"Action Type '{act_full_name}'")
+        super().set_title(f"Action Type '{act_type_full_name}'")
 
-        self.act_full_name = act_full_name
+        self.act_type_full_name = act_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
 
         self.content_page = ContentPage(search_enabled=False, refresh_enabled=False)
@@ -157,14 +157,14 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         super().set_child(self.content_page)
 
         # Load the action parent class
-        act_class = get_action(act_full_name)
+        act_class = get_action(act_type_full_name)
 
         # Btn for opening the online link to msg definition
         self.content_page.add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
-            msg_full_name=act_full_name,
+            msg_type_full_name=act_type_full_name,
         )
 
         # Action Message Goal
@@ -179,7 +179,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
             visible=not goal_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_full_name=f"{act_full_name} - Goal",
+            msg_type_full_name=f"{act_type_full_name} - Goal",
             msg_class=goal_class,
         )
 
@@ -195,7 +195,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
             visible=not feedback_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_full_name=f"{act_full_name} - Feedback",
+            msg_type_full_name=f"{act_type_full_name} - Feedback",
             msg_class=feedback_class,
         )
 
@@ -211,7 +211,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
             visible=not result_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_full_name=f"{act_full_name} - Result",
+            msg_type_full_name=f"{act_type_full_name} - Result",
             msg_class=result_class,
         )
 
@@ -227,19 +227,19 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         #     visible=not impl_group.is_empty,
         #     func=_on_open_msg_type_dialog,
         #     parent=self,
-        #     msg_full_name=f"{act_full_name} - Impl",
+        #     msg_type_full_name=f"{act_type_full_name} - Impl",
         #     msg_class=impl_class,
         # )
 
 
-def _on_open_msg_type_dialog(btn: Gtk.Button = None, *, parent: Gtk.Widget, msg_full_name: str, msg_class):
-    dialog = MessageTypeDialog(msg_full_name=msg_full_name, msg_class=msg_class)
+def _on_open_msg_type_dialog(btn: Gtk.Button = None, *, parent: Gtk.Widget, msg_type_full_name: str, msg_class):
+    dialog = MessageTypeDialog(msg_type_full_name=msg_type_full_name, msg_class=msg_class)
     dialog.present(parent=parent.get_root())
 
 
-def _on_open_msg_webpage(btn: Gtk.Button = None, *, msg_full_name: str):
+def _on_open_msg_webpage(btn: Gtk.Button = None, *, msg_type_full_name: str):
     # TODO jazzy uses this: https://docs.ros.org/en/ros2_packages/jazzy/api/example_interfaces/
-    webbrowser.open(f"https://docs.ros2.org/foxy/api/{msg_full_name}.html")
+    webbrowser.open(f"https://docs.ros2.org/foxy/api/{msg_type_full_name}.html")
 
 
 # TODO this can be improved, especially the nested messages
@@ -255,12 +255,12 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
 
         # for nested messages
         if isinstance(slot_type, NamespacedType):
-            nested_msg_full_name = "/".join(slot_type.namespaced_name())
-            row = PrefRow(title=field_name, subtitle=nested_msg_full_name)
+            nested_msg_type_full_name = "/".join(slot_type.namespaced_name())
+            row = PrefRow(title=field_name, subtitle=nested_msg_type_full_name)
             row.set_subpage_link(
                 nav_view=nav_view,
                 subpage_class=MessageTypeInfoPage,
-                msg_full_name=nested_msg_full_name,
+                msg_type_full_name=nested_msg_type_full_name,
             )
 
         # for numpy arrays
@@ -278,12 +278,12 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
             if not isinstance(
                 slot_type.value_type, (BasicType, BoundedString, UnboundedString, BoundedWString, UnboundedWString)
             ):
-                nested_msg_full_name = "/".join(slot_type.value_type.namespaced_name())
-                row = PrefRow(title=field_name, subtitle=f"sequence of <{nested_msg_full_name}>")
+                nested_msg_type_full_name = "/".join(slot_type.value_type.namespaced_name())
+                row = PrefRow(title=field_name, subtitle=f"sequence of <{nested_msg_type_full_name}>")
                 row.set_subpage_link(
                     nav_view=nav_view,
                     subpage_class=MessageTypeInfoPage,
-                    msg_full_name=nested_msg_full_name,
+                    msg_type_full_name=nested_msg_type_full_name,
                 )
             else:
                 if isinstance(slot_type.value_type, BasicType):
@@ -336,9 +336,9 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
 class MessageTypeDialog(Adw.PreferencesDialog):
     __gtype_name__ = "MessageTypeDialog"
 
-    def __init__(self, msg_full_name: str, msg_class, **kwargs):
+    def __init__(self, msg_type_full_name: str, msg_class, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(str(msg_full_name))
+        super().set_title(str(msg_type_full_name))
         super().set_size_request(width=300, height=500)
 
         pref_page = PrefPage()
@@ -359,7 +359,7 @@ class MessageTypeDialog(Adw.PreferencesDialog):
             text=yaml_text,
             text_type="YAML",
         )
-        yaml_text_view = yaml_group.add_row(TextViewRow(min_height=30))
+        yaml_text_view = yaml_group.add_row(TextViewRow())
         yaml_text_view.set_text(yaml_text)
 
         # CSV Message Text
@@ -372,7 +372,7 @@ class MessageTypeDialog(Adw.PreferencesDialog):
             text=csv_text,
             text_type="CSV",
         )
-        csv_text_view = csv_group.add_row(TextViewRow(min_height=30))
+        csv_text_view = csv_group.add_row(TextViewRow())
         csv_text_view.set_text(csv_text)
 
         # JSON Message Text
@@ -385,7 +385,7 @@ class MessageTypeDialog(Adw.PreferencesDialog):
             text=json_text,
             text_type="JSON",
         )
-        json_text_view = json_group.add_row(TextViewRow(min_height=30))
+        json_text_view = json_group.add_row(TextViewRow())
         json_text_view.set_text(json_text)
 
     def on_text_to_clipboard(self, text: str, text_type: str):

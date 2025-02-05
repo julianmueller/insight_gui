@@ -3,6 +3,7 @@ from typing import Callable, Type
 # ros2 specific imports
 import rclpy
 from rclpy.node import Node
+from rclpy.service import SrvType, SrvTypeRequest, SrvTypeResponse
 
 import gi
 
@@ -21,22 +22,26 @@ class ROS2Connector:
         rclpy.init(args=None)
 
     def start_node(self, node_name: str = "insight_gui", *args, **kwargs):
-        if not self.is_running:
-            print(f"Starting ROS2 Node with name '{node_name}'")
-            self.node = Node(node_name=node_name)
-            self.start_time = self.node.get_clock().now()
-            self.thread = GLib.Thread.new("ros2-thread", self.spin, None)
-            self.is_running = True
+        if self.is_running:
+            return
+
+        print(f"Starting ROS2 Node with name '{node_name}'")
+        self.node = Node(node_name=node_name)
+        self.start_time = self.node.get_clock().now()
+        self.thread = GLib.Thread.new("ros2-thread", self.spin, None)
+        self.is_running = True
 
     def stop_node(self):
-        if self.is_running:
-            self.is_running = False
-            print(f"Stopping ROS2 Node with name '{self.node.get_name()}'")
-            if self.thread:
-                self.thread.join()
-                self.thread = None
-            self.node.destroy_node()
-            self.node = None
+        if not self.is_running:
+            return
+
+        self.is_running = False
+        print(f"Stopping ROS2 Node with name '{self.node.get_name()}'")
+        if self.thread:
+            self.thread.join()
+            self.thread = None
+        self.node.destroy_node()
+        self.node = None
 
     def spin(self, *args, **kwargs):
         try:
@@ -65,10 +70,30 @@ class ROS2Connector:
         else:
             self.stop_node()
 
+    # TODO
     def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable):
         print("adding subsciption")
         sub = self.node.create_subscription(msg_type, topic_name, callback, 10)
         return sub
+
+    # TODO this needs some refactoring and threading
+    # from ros2service.verb.call import requester  # could also be used for that
+    def call_service(self, srv_name: str, srv_type: SrvType, request: SrvTypeRequest) -> SrvTypeResponse:
+        if not self.is_running:
+            return
+
+        client = self.node.create_client(srv_type, srv_name)
+
+        if not client.service_is_ready():
+            print("waiting for service to become available...")
+            client.wait_for_service()
+
+        future = client.call_async(request)
+        rclpy.spin_until_future_complete(self.node, future)
+        if future.result() is not None:
+            return future.result()
+        else:
+            raise RuntimeError("Exception while calling service: %r" % future.exception())
 
     def shutdown(self):
         # self.is_running = False

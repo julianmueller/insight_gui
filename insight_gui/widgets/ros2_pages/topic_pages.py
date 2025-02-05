@@ -88,12 +88,12 @@ class TopicInfoPage(Adw.NavigationPage):
         # Message Type
         message_type_group = self.content_page.pref_page.add_group(title="Message Type")
 
-        def add_msg_type_row(msg_full_name: str):
-            msg_row = PrefRow(title=msg_full_name)  # , subtitle=node_full_name)
+        def add_msg_type_row(msg_type_full_name: str):
+            msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
             msg_row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=MessageTypeInfoPage,
-                msg_full_name=msg_full_name,
+                msg_type_full_name=msg_type_full_name,
             )
             message_type_group.add_row(msg_row)
 
