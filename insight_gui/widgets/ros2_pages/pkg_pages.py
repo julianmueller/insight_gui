@@ -101,7 +101,7 @@ class PackageInfoPage(Adw.NavigationPage):
 
         # add source code link
         self.link_group.add_row(PrefRow(title="View source code on repository")).add_suffix_btn(
-            icon_name="git-symbolic",  # TODO make icons work
+            icon_name="git-symbolic",
             func=lambda: print("TODO"),  # webbrowser.open(f""),
         )
 

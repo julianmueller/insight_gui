@@ -8,9 +8,11 @@
     <license>Apache-2.0</license>
 
     <exec_depend>rclpy</exec_depend>
-    <!-- <exec_depend>python-gi</exec_depend> -->
-    <!-- <exec_depend>python-gi-cairo</exec_depend> -->
+    <!-- <exec_depend>python3-gi</exec_depend> -->
+    <!-- <exec_depend>python3-gi-cairo</exec_depend> -->
     <!-- <exec_depend>libadwaita</exec_depend> -->
+    <!-- <exec_depend>gir1.2-gtk-4.0</exec_depend> -->
+    <!-- <exec_depend>gir1.2-adw-1</exec_depend> -->
 
     <test_depend>ament_copyright</test_depend>
     <test_depend>ament_flake8</test_depend>

@@ -20,7 +20,7 @@ class Ros2GuiApp(Adw.Application):
     """The main application singleton class."""
 
     def __init__(self, share_dir: Path = None, start_ros2_connector: bool = True):
-        super().__init__(application_id="com.example.insight_gui")  # TODO somehow set this id
+        super().__init__(application_id="com.github.julianmueller.insight_gui")
         Gtk.init()
         Adw.init()
 

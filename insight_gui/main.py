@@ -5,6 +5,7 @@ import os
 import sys
 import threading
 import signal
+import subprocess
 
 # import queue
 from pathlib import Path
@@ -12,6 +13,11 @@ from pathlib import Path
 # ros2 specific imports
 import rclpy
 from ament_index_python import get_package_share_directory
+
+import gi
+
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio
 
 # custom imports
 from insight_gui.application import Ros2GuiApp
@@ -21,11 +27,12 @@ def main(args=None):
     # Set the global variable for all code to find the shared data directory
     share_dir = Path(get_package_share_directory("insight_gui")) / "data"
 
-    # Create a queue to share data between the ROS2 and GUI threads
-    # data_queue = queue.Queue()
-
-    # Create instances of the ROS node and GTK application
+    # Enable Ctrl+C handling
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    # Load the compiled GResource file
+    resource = Gio.Resource.load(str(share_dir / "resources.gresource"))
+    Gio.Resource._register(resource)
 
     try:
         gui_app = Ros2GuiApp(share_dir, start_ros2_connector=True)
