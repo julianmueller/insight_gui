@@ -7,6 +7,7 @@
         <file preprocess="xml-stripblanks">icons/git-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/arrow4-left-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/arrow4-right-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/vertical-arrows-symbolic.svg</file>
 
     </gresource>
 </gresources>

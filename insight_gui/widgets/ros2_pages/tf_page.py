@@ -36,6 +36,9 @@ class TransformsPage(Adw.NavigationPage):
         super().set_child(self.content_page)
 
         self.calc_group = self.content_page.pref_page.add_group(title="Calculate Transform", filterable=False)
+        self.calc_group.add_btn(
+            icon_name="vertical-arrows-symbolic", tooltip_text="Switch source/target", func=self.on_switch_frames
+        )
 
         # TODO use prefix_icons left-large-symbolic and right-large-symbolic
         self.source_frame_row = self.calc_group.add_row(Adw.ComboRow(title="Source Frame", enable_search=True))
@@ -103,6 +106,15 @@ class TransformsPage(Adw.NavigationPage):
         self.source_frame_row.set_selected(0)
         self.target_frame_row.set_model(self.list_store)
         self.target_frame_row.set_selected(0)
+
+    def on_switch_frames(self, *args):
+        if len(self.frames_list) <= 1:
+            self.content_page.show_toast("not enough frames to switch")
+        current_source_index = self.source_frame_row.get_selected()
+        current_target_index = self.target_frame_row.get_selected()
+
+        self.source_frame_row.set_selected(current_target_index)
+        self.target_frame_row.set_selected(current_source_index)
 
     def on_source_frame_changed(self, *args):
         # self.source_frame = self.source_frame_row.get_selected_item().get_string()
