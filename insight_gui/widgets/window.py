@@ -21,6 +21,7 @@ from insight_gui.widgets.ros2_pages.param_page import ParameterListPage
 from insight_gui.widgets.ros2_pages.tf_page import TransformsPage
 from insight_gui.widgets.ros2_pages.log_pages import LoggerPage
 from insight_gui.widgets.ros2_pages.doctor_page import DoctorPage
+from insight_gui.widgets.ros2_pages.img_viewer_page import ImageViewerPage
 from insight_gui.widgets.ros2_pages.preferences_dialog import PreferencesDialog
 
 from insight_gui.utils.adw_colors import AdwAccentColor
@@ -125,6 +126,13 @@ class MainWindow(Adw.ApplicationWindow):
             nav_page_class=TransformsPage,
             name="tf",
             title="Transforms",
+            ros2_connector=self.ros2_connector,
+        )
+        # Images
+        self.add_stack_page(
+            nav_page_class=ImageViewerPage,
+            name="img_viewer",
+            title="Image Viewer",
             ros2_connector=self.ros2_connector,
         )
         # Doctor

@@ -110,6 +110,8 @@ class TransformsPage(Adw.NavigationPage):
     def on_switch_frames(self, *args):
         if len(self.frames_list) <= 1:
             self.content_page.show_toast("not enough frames to switch")
+            return
+
         current_source_index = self.source_frame_row.get_selected()
         current_target_index = self.target_frame_row.get_selected()
 

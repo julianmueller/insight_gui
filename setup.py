@@ -92,6 +92,7 @@ setup(
     entry_points={
         "console_scripts": [
             "main = insight_gui.main:main",
+            "dummy_img_pub = insight_gui.dummy_img_pub:main",
         ]
     },
     cmdclass={

@@ -16,7 +16,7 @@ class TextViewRow(Adw.PreferencesRow):
     header_box: Gtk.Box = Gtk.Template.Child()
     title_label: Gtk.Label = Gtk.Template.Child()
     subtitle_label: Gtk.Label = Gtk.Template.Child()
-    copy_button: Gtk.Button = Gtk.Template.Child()
+    copy_btn: Gtk.Button = Gtk.Template.Child()
 
     frame: Gtk.Frame = Gtk.Template.Child()
     scrolled: Gtk.ScrolledWindow = Gtk.Template.Child()
@@ -57,7 +57,7 @@ class TextViewRow(Adw.PreferencesRow):
             self.text_view.set_editable(True)
             self.text_view.set_cursor_visible(True)
 
-        self.toggle_copy_button_visibility(show_copy_btn)
+        self.toggle_copy_btn_visibility(show_copy_btn)
         self.text_buffer.connect("changed", self.on_text_changed)
 
     @property
@@ -166,10 +166,10 @@ class TextViewRow(Adw.PreferencesRow):
 
         tag_table.foreach(lambda tag: toggle_tag_visibility(tag))
 
-    def toggle_copy_button_visibility(self, visible: bool):
-        self.copy_button.set_visible(visible)
+    def toggle_copy_btn_visibility(self, visible: bool):
+        self.copy_btn.set_visible(visible)
 
     @Gtk.Template.Callback()
-    def on_copy_button_clicked(self, button):
+    def on_copy_btn_clicked(self, btn):
         clip = self.get_clipboard()
         clip.set(str(self.get_text()))

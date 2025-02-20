@@ -69,7 +69,7 @@ class PrefRow(Adw.ActionRow):
         tooltip_text: str | None = None,
         func: Callable = None,
         **func_kwargs,
-    ):
+    ) -> Gtk.Button:
         btn = Gtk.Button()
         if label:
             btn.set_label(label)
@@ -80,8 +80,10 @@ class PrefRow(Adw.ActionRow):
 
         btn.connect("clicked", lambda *_: func(**func_kwargs))
         self._add_suffix_widget(btn)
+        return btn
 
     def add_copy_btn(self, copy_text: str = "", tooltip_text: str = "Copy to clipboard", toast_host: Gtk.Widget = None):
+        # TODO ?
         if not copy_text or copy_text is None:
             copy_text = super().get_title()
 
@@ -93,16 +95,18 @@ class PrefRow(Adw.ActionRow):
             toast_host=toast_host,
         )
 
-    def add_suffix_label(self, label_text: str):
+    def add_suffix_label(self, label_text: str) -> Gtk.Label:
         if len(label_text) == 0:
             label_text = "<i>empty string</i>"
         label = Gtk.Label(label=label_text, use_markup=True)
         self._add_suffix_widget(label)
+        return label
 
-    def _add_suffix_widget(self, widget: Gtk.Widget):
+    def _add_suffix_widget(self, widget: Gtk.Widget) -> Gtk.Widget:
         self.suffix_list.append(widget)
         self.suffix_box.append(widget)
         self.suffix_box.reorder_child_after(self.next_page_icon, widget)
+        return widget
 
     def set_subpage_link(
         self, *, nav_view: Adw.NavigationView, subpage_class: type[Adw.NavigationPage], **subpage_kwargs

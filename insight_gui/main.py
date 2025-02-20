@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 
 # standard imports
-import os
-import sys
-import threading
 import signal
-import subprocess
 
 # import queue
 from pathlib import Path
@@ -14,10 +10,6 @@ from pathlib import Path
 import rclpy
 from ament_index_python import get_package_share_directory
 
-import gi
-
-gi.require_version("Gio", "2.0")
-from gi.repository import Gio
 
 # custom imports
 from insight_gui.application import Ros2GuiApp
