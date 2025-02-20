@@ -147,7 +147,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)
         self.about_dialog = Adw.AboutDialog(
             application_name="Insight",
-            # application_icon="io.github.julianmueller.Insight",
+            application_icon="insight-logo",
             developer_name="Julian Müller",
             # developer_documentation="https://github.com/julianmueller/insight_gui",
             license_type=Gtk.License.APACHE_2_0,

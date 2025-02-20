@@ -9,7 +9,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GLib", "2.0")
-from gi.repository import Gtk, Adw, GLib
+from gi.repository import Gtk, Adw, GLib, Gio, Gdk
 
 # custom imports
 from insight_gui.widgets.window import MainWindow
@@ -17,19 +17,22 @@ from insight_gui.ros2_connector import ROS2Connector
 
 
 class Ros2GuiApp(Adw.Application):
-    """The main application singleton class."""
+    __gtype_name__ = "InsightApplication"
 
     def __init__(self, share_dir: Path = None, start_ros2_connector: bool = True):
-        super().__init__(application_id="com.github.julianmueller.insight_gui")
+        super().__init__(application_id="com.github.julianmueller.Insight")
         Gtk.init()
         Adw.init()
 
         self.share_dir = share_dir
 
         # Load the compiled GResource file
-        # resource_path = Path(get_package_share_directory("insight_gui")) / "data" / "resources.gresource.xml"
-        # resource = Gio.resource_load(str(resource_path))  # TODO compile the gresource
-        # Gio.Resource._register(resource)
+        resource = Gio.Resource.load(str(share_dir / "resources.gresource"))
+        Gio.Resource._register(resource)
+
+        # set the application icon
+        theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+        theme.add_resource_path("/com/github/julianmueller/Insight/logo")
 
         self.window = None
 
@@ -41,7 +44,7 @@ class Ros2GuiApp(Adw.Application):
 
     def on_activate(self, app):
         if not self.window:
-            self.window = MainWindow(application=app)
+            self.window = MainWindow(application=app, title="Insight", icon_name="insight-logo")
 
         self.window.connect("close-request", self.shutdown)
         self.window.present()

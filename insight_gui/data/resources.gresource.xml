@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-    <gresource prefix="/com/github/julianmueller/insight_gui/">
+    <gresource prefix="/com/github/julianmueller/Insight">
+        <file preprocess="xml-stripblanks">logo/insight-logo.svg</file>
+        <file preprocess="xml-stripblanks">logo/insight-symbolic.svg</file>
+
         <file preprocess="xml-stripblanks">icons/git-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/arrow4-left-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/arrow4-right-symbolic.svg</file>

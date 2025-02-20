@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Insight
+Comment=My GTK4 + ROS2 app
+Exec=ros2 run insight_gui main
+Icon=insight-logo
+Terminal=false
+StartupWMClass=com.github.julianmueller.Insight
