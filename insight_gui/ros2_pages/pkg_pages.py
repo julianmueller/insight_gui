@@ -11,9 +11,9 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.widgets.ros2_pages.new_pkg_dialog import NewPkgDialog
-from insight_gui.widgets.helpers.content_page import ContentPage
-from insight_gui.widgets.helpers.pref_row import PrefRow
+from insight_gui.ros2_pages.new_pkg_dialog import NewPkgDialog
+from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_row import PrefRow
 
 
 class PackageListPage(Adw.NavigationPage):

@@ -7,7 +7,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.widgets.helpers.pref_group import PrefGroup
+from insight_gui.widgets.pref_group import PrefGroup
 
 
 @Gtk.Template(filename=str(Path(__file__).with_suffix(".ui")))

@@ -9,9 +9,9 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject
 
 from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.widgets.helpers.content_page import ContentPage
-from insight_gui.widgets.helpers.text_view_row import TextViewRow
-from insight_gui.widgets.helpers.buttons import PlayPauseButton
+from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.text_view_row import TextViewRow
+from insight_gui.widgets.buttons import PlayPauseButton
 
 
 class LogLevel(Enum):

@@ -11,10 +11,10 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.widgets.ros2_pages.msg_type_info_pages import ActionTypeInfoPage
-from insight_gui.widgets.ros2_pages.node_pages import NodeInfoPage
-from insight_gui.widgets.helpers.content_page import ContentPage
-from insight_gui.widgets.helpers.pref_row import PrefRow
+from insight_gui.ros2_pages.msg_type_info_pages import ActionTypeInfoPage
+from insight_gui.ros2_pages.node_pages import NodeInfoPage
+from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_row import PrefRow
 
 
 class ActionListPage(Adw.NavigationPage):

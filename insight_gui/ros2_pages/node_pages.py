@@ -18,9 +18,9 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.widgets.helpers.content_page import ContentPage
-from insight_gui.widgets.helpers.pref_row import PrefRow
-from insight_gui.widgets.ros2_pages.edit_param_dialog import EditParamDialog
+from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.ros2_pages.edit_param_dialog import EditParamDialog
 
 
 class NodeListPage(Adw.NavigationPage):
@@ -92,9 +92,9 @@ class NodeInfoPage(Adw.NavigationPage):
         super().set_child(self.content_page)
 
         # Imports here, to prevent circular imports # TODO find a nicer way?
-        from insight_gui.widgets.ros2_pages.topic_pages import TopicInfoPage
-        from insight_gui.widgets.ros2_pages.service_pages import ServiceInfoPage
-        from insight_gui.widgets.ros2_pages.action_pages import ActionInfoPage
+        from insight_gui.ros2_pages.topic_pages import TopicInfoPage
+        from insight_gui.ros2_pages.service_pages import ServiceInfoPage
+        from insight_gui.ros2_pages.action_pages import ActionInfoPage
 
         # Publishers
         publishers_group = self.content_page.pref_page.add_group(title="Publishers", empty_msg="Node has no publishers")

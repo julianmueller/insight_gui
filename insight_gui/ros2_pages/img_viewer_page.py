@@ -10,10 +10,10 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, Gdk, GLib
 
 from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.widgets.helpers.content_page import ContentPage
-from insight_gui.widgets.helpers.pref_row import PrefRow
-from insight_gui.widgets.helpers.button_row import ButtonRow
-from insight_gui.widgets.helpers.img_view_row import ImageViewRow
+from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.button_row import ButtonRow
+from insight_gui.widgets.img_view_row import ImageViewRow
 
 
 class ImageViewerPage(Adw.NavigationPage):
@@ -34,6 +34,7 @@ class ImageViewerPage(Adw.NavigationPage):
         self.img_topic_row = self.img_group.add_row(Adw.ComboRow(title="Image Topic", enable_search=True))
         self.img_topic_row.connect("notify::selected-item", self.on_image_topic_changed)
         self.img_row: ImageViewRow = self.img_group.add_row(ImageViewRow())
+        self.img_group.add_row(Adw.ActionRow(title="test"))
 
         # self.calc_button: ButtonRow = self.img_group.add_row(
         #     ButtonRow(

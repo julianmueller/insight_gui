@@ -14,9 +14,9 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.widgets.helpers.pref_page import PrefPage
-from insight_gui.widgets.helpers.pref_row import PrefRow
-from insight_gui.widgets.helpers.button_row import ButtonRow
+from insight_gui.widgets.pref_page import PrefPage
+from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.button_row import ButtonRow
 
 # TODO add setting to show/hide hidden nodes/topics etc
 

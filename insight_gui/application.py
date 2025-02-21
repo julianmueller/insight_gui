@@ -12,7 +12,7 @@ gi.require_version("GLib", "2.0")
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk
 
 # custom imports
-from insight_gui.widgets.window import MainWindow
+from insight_gui.window import MainWindow
 from insight_gui.ros2_connector import ROS2Connector
 
 

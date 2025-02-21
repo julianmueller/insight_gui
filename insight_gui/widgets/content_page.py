@@ -7,7 +7,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, GLib, Gio
 
-from insight_gui.widgets.helpers.pref_page import PrefPage
+from insight_gui.widgets.pref_page import PrefPage
 
 
 @Gtk.Template(filename=str(Path(__file__).with_suffix(".ui")))

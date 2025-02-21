@@ -21,11 +21,11 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.widgets.helpers.content_page import ContentPage
-from insight_gui.widgets.helpers.pref_page import PrefPage
-from insight_gui.widgets.helpers.pref_group import PrefGroup
-from insight_gui.widgets.helpers.pref_row import PrefRow
-from insight_gui.widgets.helpers.text_view_row import TextViewRow
+from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_page import PrefPage
+from insight_gui.widgets.pref_group import PrefGroup
+from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.text_view_row import TextViewRow
 
 
 class MessageTypeInfoPage(Adw.NavigationPage):
