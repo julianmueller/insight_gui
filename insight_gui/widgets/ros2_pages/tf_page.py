@@ -102,10 +102,11 @@ class TransformsPage(Adw.NavigationPage):
             self.list_store.append(Gtk.StringObject.new(frame_name))
 
         # Set the Gio.ListModel on the ComboRow
-        self.source_frame_row.set_model(self.list_store)
-        self.source_frame_row.set_selected(0)
-        self.target_frame_row.set_model(self.list_store)
-        self.target_frame_row.set_selected(0)
+        if self.list_store.get_n_items() > 0:
+            self.source_frame_row.set_model(self.list_store)
+            self.source_frame_row.set_selected(0)
+            self.target_frame_row.set_model(self.list_store)
+            self.target_frame_row.set_selected(0)
 
     def on_switch_frames(self, *args):
         if len(self.frames_list) <= 1:

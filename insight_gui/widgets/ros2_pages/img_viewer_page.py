@@ -88,8 +88,12 @@ class ImageViewerPage(Adw.NavigationPage):
         for img_topic in self.topic_list:
             self.list_store.append(Gtk.StringObject.new(img_topic))
 
-        self.img_topic_row.set_model(self.list_store)
-        self.img_topic_row.set_selected(0)
+        if self.list_store.get_n_items() > 0:
+            self.img_topic_row.set_model(self.list_store)
+            self.img_topic_row.set_selected(0)
+        else:
+            self.content_page.show_toast("No topic with images found")
+            self.img_row.set_visible(False)
 
     def on_image_topic_changed(self, *args):
         topic_name = self.img_topic_row.get_selected_item().get_string()
