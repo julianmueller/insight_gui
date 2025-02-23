@@ -14,7 +14,8 @@ from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
 from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 # TODO group by package names
@@ -54,9 +55,10 @@ class ServiceListPage(Adw.NavigationPage):
             else:
                 service_types = ", ".join(service_types)  # TODO this might cause problems in the info page
 
-            row = PrefRow(
-                title=service_name, subtitle=service_types, is_hidden=topic_or_service_is_hidden(service_name)
-            )
+            row = PrefRow(title=service_name, subtitle=service_types)
+            if topic_or_service_is_hidden(service_name):
+                row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
@@ -81,7 +83,7 @@ class ServiceInfoPage(Adw.NavigationPage):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        super().set_title(f"Service '{service_name}'")
+        super().set_title(f"Service <{service_name}>")
 
         self.service_name = service_name
         self.nav_view = nav_view if nav_view else self.get_parent()
@@ -128,7 +130,10 @@ class ServiceInfoPage(Adw.NavigationPage):
                 node_namespace=node_namespace,
             )
             if any(self.service_name in service for service in service_server_list):
-                row = PrefRow(title=node_name, subtitle=node_full_name, is_hidden=_is_hidden_name(node_name))
+                row = PrefRow(title=node_name, subtitle=node_full_name)
+                if _is_hidden_name(node_name):
+                    row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
+
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
@@ -144,7 +149,10 @@ class ServiceInfoPage(Adw.NavigationPage):
                 node_name=node_name, node_namespace=node_namespace
             )
             if any(self.service_name in service for service in service_client_list):
-                row = PrefRow(title=node_name, subtitle=node_full_name, is_hidden=_is_hidden_name(node_name))
+                row = PrefRow(title=node_name, subtitle=node_full_name)
+                if _is_hidden_name(node_name):
+                    row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
+
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,

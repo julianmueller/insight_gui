@@ -9,8 +9,7 @@ from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
-from insight_gui.widgets.pref_row import PrefRow
-from insight_gui.widgets.button_row import ButtonRow
+from insight_gui.widgets.pref_rows import PrefRow, ButtonRow
 
 # TODO add setting to show/hide hidden nodes/topics etc
 
@@ -31,7 +30,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         # Group with ENV variables
         env_group = self.ros2_page.add_group(title="Environment Variables")
-        env_group.add_btn(
+        env_group.add_suffix_btn(
             icon_name="info-symbolic",
             tooltip_text="ROS Documentation",
             func=lambda: webbrowser.open(
@@ -55,7 +54,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.env_discovery_server_row = env_group.add_row(Adw.EntryRow(title="ROS_DISCOVERY_SERVER", tooltip_text=""))
         self.env_apply_row = env_group.add_row(
             ButtonRow(
-                title="Apply",
+                label="Apply",
                 tooltip_text="Apply Environment Variables",
                 func=self.on_apply_env_vars,
             )

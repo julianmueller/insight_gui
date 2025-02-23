@@ -24,8 +24,7 @@ from gi.repository import Gtk, Adw
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.pref_group import PrefGroup
-from insight_gui.widgets.pref_row import PrefRow
-from insight_gui.widgets.text_view_row import TextViewRow
+from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 
 
 class MessageTypeInfoPage(Adw.NavigationPage):
@@ -33,7 +32,7 @@ class MessageTypeInfoPage(Adw.NavigationPage):
 
     def __init__(self, msg_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(f"Message Type '{msg_type_full_name}'")
+        super().set_title(f"Message Type <{msg_type_full_name}>")
 
         self.msg_type_full_name = msg_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
@@ -58,7 +57,7 @@ class MessageTypeInfoPage(Adw.NavigationPage):
         _populate_group_w_msg_rows(msg_class=msg_class, pref_group=msg_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
-        msg_group.add_btn(
+        msg_group.add_suffix_btn(
             icon_name="notes-app-symbolic",
             tooltip_text="Raw Message Text",
             func=_on_open_msg_type_dialog,
@@ -73,7 +72,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
 
     def __init__(self, srv_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(f"Service Type '{srv_type_full_name}'")
+        super().set_title(f"Service Type <{srv_type_full_name}>")
 
         self.srv_type_full_name = srv_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
@@ -99,7 +98,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         _populate_group_w_msg_rows(msg_class=request_class, pref_group=request_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
-        request_group.add_btn(
+        request_group.add_suffix_btn(
             icon_name="notes-app-symbolic",
             tooltip_text="Raw Message Text",
             visible=not request_group.is_empty,
@@ -115,7 +114,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         _populate_group_w_msg_rows(msg_class=response_class, pref_group=response_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
-        response_group.add_btn(
+        response_group.add_suffix_btn(
             icon_name="notes-app-symbolic",
             tooltip_text="Raw Message Text",
             visible=not response_group.is_empty,
@@ -131,7 +130,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         _populate_group_w_msg_rows(msg_class=event_class, pref_group=event_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
-        event_group.add_btn(
+        event_group.add_suffix_btn(
             icon_name="notes-app-symbolic",
             tooltip_text="Raw Message Text",
             visible=not event_group.is_empty,
@@ -147,7 +146,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
 
     def __init__(self, act_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(f"Action Type '{act_type_full_name}'")
+        super().set_title(f"Action Type <{act_type_full_name}>")
 
         self.act_type_full_name = act_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
@@ -173,7 +172,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         _populate_group_w_msg_rows(msg_class=goal_class, pref_group=goal_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
-        goal_group.add_btn(
+        goal_group.add_suffix_btn(
             icon_name="notes-app-symbolic",
             tooltip_text="Raw Message Text",
             visible=not goal_group.is_empty,
@@ -189,7 +188,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         _populate_group_w_msg_rows(msg_class=feedback_class, pref_group=feedback_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
-        feedback_group.add_btn(
+        feedback_group.add_suffix_btn(
             icon_name="notes-app-symbolic",
             tooltip_text="Raw Message Text",
             visible=not feedback_group.is_empty,
@@ -205,7 +204,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         _populate_group_w_msg_rows(msg_class=result_class, pref_group=result_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
-        result_group.add_btn(
+        result_group.add_suffix_btn(
             icon_name="notes-app-symbolic",
             tooltip_text="Raw Message Text",
             visible=not result_group.is_empty,
@@ -221,7 +220,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         # _populate_group_w_msg_rows(msg_class=impl_class, pref_group=impl_group, nav_view=self.nav_view)
         #
         # # Btn for opening the raw msg text dialog
-        # result_group.add_btn(
+        # result_group.add_suffix_btn(
         #     icon_name="notes-app-symbolic",
         #     tooltip_text="Raw Message Text",
         #     visible=not impl_group.is_empty,
@@ -291,12 +290,9 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
                 else:
                     subtitle = "sequence of <string>"
 
-                row = PrefRow(
-                    title=field_name,
-                    subtitle=subtitle,
-                    prefix_icon="sudoku-app-symbolic",
-                    suffix_lbl="<i>empty list</i>",
-                )
+                row = PrefRow(title=field_name, subtitle=subtitle)
+                row.add_prefix_icon("sudoku-app-symbolic")
+                row.add_suffix_lbl("<i>empty list</i>", use_markup=True)
             # field_value = field_value if field_value else "<i>empty list</i>"
 
         # for arrays
@@ -310,24 +306,21 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
             else:
                 field_value = f"[{content[0]} {content[1]} ... {content[-2]} {content[-1]}] <i>x{total_count}</i>"
 
-            row = PrefRow(
-                title=field_name, subtitle=field_type, prefix_icon="sudoku-app-symbolic", suffix_lbl=field_value
-            )
+            row = PrefRow(title=field_name, subtitle=field_type)
+            row.add_prefix_icon("sudoku-app-symbolic")
+            row.add_suffix_lbl(field_value, use_markup=True)
 
         # for strings
         elif isinstance(slot_type, (BoundedString, UnboundedString, BoundedWString, UnboundedWString)):
-            row = PrefRow(
-                title=field_name,
-                subtitle=field_type,
-                prefix_icon="sudoku-app-symbolic",
-                suffix_lbl="<i>empty string</i>",
-            )
+            row = PrefRow(title=field_name, subtitle=field_type)
+            row.add_prefix_icon("sudoku-app-symbolic")
+            row.add_suffix_lbl("<i>empty list</i>", use_markup=True)
 
-            # for basic types
+        # for basic types
         elif isinstance(slot_type, BasicType):
-            row = PrefRow(
-                title=field_name, subtitle=field_type, prefix_icon="sudoku-app-symbolic", suffix_lbl=field_value
-            )
+            row = PrefRow(title=field_name, subtitle=field_type)
+            row.add_prefix_icon("sudoku-app-symbolic")
+            row.add_suffix_lbl(field_value)
 
         # add row to group
         pref_group.add_row(row)
@@ -352,40 +345,40 @@ class MessageTypeDialog(Adw.PreferencesDialog):
         # TODO make it, that the scroll window shriks, when content is smaller than "max size"
         # TODO test it with "action_tutorials_interfaces/action/Fibonacci" that a min hight is show, even with no content
         yaml_group = pref_page.add_group(title="YAML")
-        yaml_group.add_btn(
+        yaml_group.add_suffix_btn(
             icon_name="edit-copy-symbolic",
             tooltip_text="Copy YAML",
             func=self.on_text_to_clipboard,
             text=yaml_text,
             text_type="YAML",
         )
-        yaml_text_view = yaml_group.add_row(TextViewRow())
+        yaml_text_view = yaml_group.add_row(TextViewRow(editable=False))
         yaml_text_view.set_text(yaml_text)
 
         # CSV Message Text
         csv_text = message_to_csv(msg_instance)
         csv_group = pref_page.add_group(title="CSV")
-        csv_group.add_btn(
+        csv_group.add_suffix_btn(
             icon_name="edit-copy-symbolic",
             tooltip_text="Copy CSV",
             func=self.on_text_to_clipboard,
             text=csv_text,
             text_type="CSV",
         )
-        csv_text_view = csv_group.add_row(TextViewRow())
+        csv_text_view = csv_group.add_row(TextViewRow(editable=False))
         csv_text_view.set_text(csv_text)
 
         # JSON Message Text
         json_text = str(json.dumps(message_to_ordereddict(msg_instance))).replace('"', "'")
         json_group = pref_page.add_group(title="JSON")
-        json_group.add_btn(
+        json_group.add_suffix_btn(
             icon_name="edit-copy-symbolic",
             tooltip_text="Copy JSON",
             func=self.on_text_to_clipboard,
             text=json_text,
             text_type="JSON",
         )
-        json_text_view = json_group.add_row(TextViewRow())
+        json_text_view = json_group.add_row(TextViewRow(editable=False))
         json_text_view.set_text(json_text)
 
     def on_text_to_clipboard(self, text: str, text_type: str):

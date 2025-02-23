@@ -14,7 +14,8 @@ from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
 from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 class TopicListPage(Adw.NavigationPage):
@@ -51,7 +52,10 @@ class TopicListPage(Adw.NavigationPage):
             else:
                 topic_types = ", ".join(topic_types)
 
-            row = PrefRow(title=topic_name, subtitle=topic_types, is_hidden=topic_or_service_is_hidden(topic_name))
+            row = PrefRow(title=topic_name, subtitle=topic_types)
+            if topic_or_service_is_hidden(topic_name):
+                row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
@@ -76,7 +80,7 @@ class TopicInfoPage(Adw.NavigationPage):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        super().set_title(f"Topic '{topic_name}'")
+        super().set_title(f"Topic <{topic_name}>")
 
         self.topic_name = topic_name
         self.nav_view = nav_view if nav_view else self.get_parent()
@@ -124,7 +128,10 @@ class TopicInfoPage(Adw.NavigationPage):
                 node_namespace=node_namespace,
             )
             if any(self.topic_name in pub for pub in publishers_list):
-                row = PrefRow(title=node_name, subtitle=node_full_name, is_hidden=_is_hidden_name(node_name))
+                row = PrefRow(title=node_name, subtitle=node_full_name)
+                if _is_hidden_name(node_name):
+                    row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
+
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
@@ -141,7 +148,10 @@ class TopicInfoPage(Adw.NavigationPage):
                 node_name=node_name, node_namespace=node_namespace
             )
             if any(self.topic_name in sub for sub in subscribers_list):
-                row = PrefRow(title=node_name, subtitle=node_full_name, is_hidden=_is_hidden_name(node_name))
+                row = PrefRow(title=node_name, subtitle=node_full_name)
+                if _is_hidden_name(node_name):
+                    row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
+
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,

@@ -48,14 +48,14 @@ def hex_to_rgba(color: AdwAccentColor) -> Gdk.RGBA:
         return None
 
 
-def get_luminance(hex_color):
-    color = hex_color[1:]
+# def get_luminance(hex_color):
+#     color = hex_color[1:]
 
-    hex_red = int(color[0:2], base=16)
-    hex_green = int(color[2:4], base=16)
-    hex_blue = int(color[4:6], base=16)
+#     hex_red = int(color[0:2], base=16)
+#     hex_green = int(color[2:4], base=16)
+#     hex_blue = int(color[4:6], base=16)
 
-    return hex_red * 0.2126 + hex_green * 0.7152 + hex_blue * 0.0722
+#     return hex_red * 0.2126 + hex_green * 0.7152 + hex_blue * 0.0722
 
 
 # see https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef

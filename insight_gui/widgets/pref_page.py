@@ -10,7 +10,6 @@ from gi.repository import Gtk, Adw
 from insight_gui.widgets.pref_group import PrefGroup
 
 
-@Gtk.Template(filename=str(Path(__file__).with_suffix(".ui")))
 class PrefPage(Adw.PreferencesPage):
     __gtype_name__ = "PrefPage"
 
@@ -21,12 +20,11 @@ class PrefPage(Adw.PreferencesPage):
         super().set_title(str(title))
         super().set_icon_name(icon_name)
 
+        # NOTE a pref page can also have a description!
         if description:
             super().set_description(str(description))
 
         self.groups: list[PrefGroup] = []
-
-        # NOTE a pref page can also have a description!
 
     @property
     def num_groups(self) -> int:
@@ -54,55 +52,50 @@ class PrefPage(Adw.PreferencesPage):
             self.remove_group(pref_group)
         # self.groups = []
 
-    # TODO this causes some hidden rows to be shown
+    # TODO this causes some groups to reap
     def apply_filter(self, text: str):
-        def unfilter():
+        """Filters groups and rows based on a search query."""
+
+        def reset_filtering():
+            """Resets all groups and rows to their original visibility."""
             for group in self.groups:
                 if not group.filterable:
                     continue
-                group.set_visible(True)
+                group.set_unfiltered()
                 for row in group.rows:
-                    if not hasattr(row, "filterable") or not row.filterable:
-                        continue
-                    row.set_visible(True)
+                    if getattr(row, "filterable", False):
+                        row.set_unfiltered()
 
-        # Check for empty search input
+        # If the search text is empty, restore original visibility
         if not text.strip():
-            # Show all groups and rows if no text is provided
-            unfilter()
+            reset_filtering()
             return
 
-        # Compile the regex once for efficiency
         try:
             regex = re.compile(text, re.IGNORECASE)
         except re.error as e:
             print(f"Regex error: {e}")
-            # If the regex is invalid, show all groups and rows
-            unfilter()
+            reset_filtering()
             return
 
-        # Filter groups and their rows
+        # Filtering process
         for group in self.groups:
             if not group.filterable:
                 continue
 
-            if group.filter_text and regex.search(group.filter_text):
-                # If group matches, show all rows in the group
-                group.set_visible(True)
-                for row in group.rows:
-                    if not hasattr(row, "filterable") or not row.filterable:
-                        continue
-                    row.set_visible(True)
-            else:
-                # If group does not match, filter rows individually
-                group_visible = False
-                for row in group.rows:
-                    if not hasattr(row, "filterable") or not row.filterable:
-                        continue
+            group_matches = bool(group.filter_text and regex.search(group.filter_text))
+            any_row_matches = False
 
-                    if row.filter_text and regex.search(row.filter_text):
-                        row.set_visible(True)
-                        group_visible = True  # Show the group if any row matches
-                    else:
-                        row.set_visible(False)
-                group.set_visible(group_visible)
+            for row in group.rows:
+                if not getattr(row, "filterable", False):
+                    continue
+
+                row_matches = bool(row.filter_text and regex.search(row.filter_text))
+                if row_matches:
+                    row.set_filtered(True)  # Show matching row
+                    any_row_matches = True
+                else:
+                    row.set_filtered(False)  # Hide non-matching row
+
+            # Show group if it matches or any row inside it matches
+            group.set_filtered(group_matches or any_row_matches)

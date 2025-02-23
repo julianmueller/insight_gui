@@ -15,8 +15,7 @@ from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
-from insight_gui.widgets.pref_row import PrefRow
-from insight_gui.widgets.button_row import ButtonRow
+from insight_gui.widgets.pref_rows import PrefRow, ButtonRow
 
 # TODO add setting to show/hide hidden nodes/topics etc
 
@@ -110,7 +109,7 @@ class EditParamDialog(Adw.PreferencesDialog):
 
         self.apply_btn = group.add_row(
             ButtonRow(
-                title="Apply change",
+                label="Apply change",
                 func=self.on_apply_change,
                 sensitive=False,
             )

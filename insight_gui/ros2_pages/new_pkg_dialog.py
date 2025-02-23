@@ -22,8 +22,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, Gio
 
 from insight_gui.widgets.pref_page import PrefPage
-from insight_gui.widgets.pref_row import PrefRow
-from insight_gui.widgets.button_row import ButtonRow
+from insight_gui.widgets.pref_rows import PrefRow, ButtonRow
 
 # TODO add setting to show/hide hidden nodes/topics etc
 
@@ -45,7 +44,7 @@ class NewPkgDialog(Adw.PreferencesDialog):
 
         # Group of build type
         build_type_group = self.page.add_group(title="Build Type")
-        build_type_group.add_btn(
+        build_type_group.add_suffix_btn(
             icon_name="info-symbolic",
             tooltip_text="ROS Documentation",
             func=lambda: webbrowser.open(
@@ -84,7 +83,7 @@ class NewPkgDialog(Adw.PreferencesDialog):
 
         self.apply_btn = pkg_group.add_row(
             ButtonRow(
-                title="Create",
+                label="Create",
                 tooltip_text="Create ROS2 Package",
                 func=self.on_create_pkg,
             )

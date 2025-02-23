@@ -10,7 +10,7 @@ from gi.repository import Gtk, Adw, GObject
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.text_view_row import TextViewRow
+from insight_gui.widgets.pref_rows import TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
@@ -69,6 +69,7 @@ class LoggerPage(Adw.NavigationPage):
                 title="Log of '/rosout'",
                 subtitle="press start to see incoming logs",
                 show_copy_btn=True,
+                editable=False,
             )
         )
         self.text_view_row.add_tag(LogLevel.DEBUG, background="lightblue")

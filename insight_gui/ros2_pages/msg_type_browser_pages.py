@@ -20,7 +20,7 @@ from insight_gui.ros2_pages.msg_type_info_pages import (
     ActionTypeInfoPage,
 )
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.pref_rows import PrefRow
 
 
 class MessageTypeBrowserPage(Adw.NavigationPage):
@@ -55,13 +55,13 @@ class MessageTypeBrowserPage(Adw.NavigationPage):
                 #     icon_name="info-symbolic",
                 #     tooltip_text="Message Info",
                 #     func=self.on_get_msg_info,
-                #     msg_type_full_name=msg_type_full_name,
+                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
                 # )
                 # row.add_suffix_btn(
                 #     icon_name="folder-symbolic",
                 #     tooltip_text="Open Message File",
                 #     func=_on_open_msg_file,
-                #     msg_type_full_name=msg_type_full_name,
+                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
                 # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,
@@ -106,13 +106,13 @@ class ServiceTypeBrowserPage(Adw.NavigationPage):
                 #     icon_name="info-symbolic",
                 #     tooltip_text="Message Info",
                 #     func=self.on_get_msg_info,
-                #     msg_type_full_name=msg_type_full_name,
+                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
                 # )
                 # row.add_suffix_btn(
                 #     icon_name="folder-symbolic",
                 #     tooltip_text="Open Message File",
                 #     func=_on_open_msg_file,
-                #     msg_type_full_name=srv_type_full_name,
+                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
                 # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,
@@ -155,13 +155,13 @@ class ActionTypeBrowserPage(Adw.NavigationPage):
                 #     icon_name="info-symbolic",
                 #     tooltip_text="Message Info",
                 #     func=self.on_get_msg_info,
-                #     msg_type_full_name=msg_type_full_name,
+                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
                 # )
                 # row.add_suffix_btn(
                 #     icon_name="folder-symbolic",
                 #     tooltip_text="Open Message File",
                 #     func=_on_open_msg_file,
-                #     msg_type_full_name=act_type_full_name,
+                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
                 # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,

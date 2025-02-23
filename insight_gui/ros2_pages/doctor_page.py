@@ -10,7 +10,8 @@ from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.buttons import CopyButton
 
 
 class DoctorPage(Adw.NavigationPage):
@@ -66,7 +67,7 @@ class DoctorPage(Adw.NavigationPage):
                     latest_version = re_match.group(1).strip()
                     local_version = re_match.group(2).strip()
                     if latest_version != local_version:
-                        row.set_prefix_icon("software-update-available-symbolic")
+                        row.add_prefix_icon("software-update-available-symbolic", tooltip_text="Update available")
 
             elif report.name == "PLATFORM INFORMATION":
                 for item in report.items:
@@ -85,13 +86,12 @@ class DoctorPage(Adw.NavigationPage):
                         compatibility_status = report.items[i + 3]
 
                         row = self.qos_compatibility_group.add_row(PrefRow(title=topic_type[1]))
-                        # TODO make the title/subtitle use markup
                         row.set_use_markup(True)
                         row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
                         if compatibility_status[1] == "OK":
-                            row.set_prefix_icon("check-symbolic")
+                            row.add_prefix_icon("check-symbolic")
                         else:
-                            row.set_prefix_icon("dialog-error-symbolic")
+                            row.add_prefix_icon("dialog-error-symbolic")
                 # for item in report.items:
                 #     self.qos_compatibility_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
 
@@ -102,7 +102,7 @@ class DoctorPage(Adw.NavigationPage):
             elif report.name == "ROS 2 INFORMATION":
                 for item in report.items:
                     row = self.ros2_info_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
-                    row.add_copy_btn(copy_text=row.get_subtitle(), toast_host=self.content_page.toast_overlay)
+                    row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.content_page.toast_overlay))
 
             elif report.name == "TOPIC LIST":
                 for i in range(0, len(report.items), 4):
@@ -112,13 +112,12 @@ class DoctorPage(Adw.NavigationPage):
                     compatibility_status = report.items[i + 3]
 
                     row = self.topic_list_group.add_row(PrefRow(title=topic_type[1]))
-                    # TODO make the title/subtitle use markup
                     row.set_use_markup(True)
                     row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
                     if compatibility_status[1] == "OK":
-                        row.set_prefix_icon("check-symbolic")
+                        row.add_prefix_icon("check-symbolic")
                     else:
-                        row.set_prefix_icon("dialog-error-symbolic")
+                        row.add_prefix_icon("dialog-error-symbolic")
 
 
 # TODO add NetworkHelloPage for 'ros2 doctor hello'

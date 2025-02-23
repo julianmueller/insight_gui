@@ -14,7 +14,8 @@ from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import ActionTypeInfoPage
 from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 class ActionListPage(Adw.NavigationPage):
@@ -78,7 +79,7 @@ class ActionInfoPage(Adw.NavigationPage):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        super().set_title(f"Action '{action_name}'")
+        super().set_title(f"Action <{action_name}>")
 
         self.action_name = action_name
         self.nav_view = nav_view if nav_view else self.get_parent()
@@ -125,7 +126,10 @@ class ActionInfoPage(Adw.NavigationPage):
                 node=self.ros2_connector.node, remote_node_name=node_name, remote_node_namespace=node_namespace
             )
             if any(self.action_name in server for server in action_servers_list):
-                row = PrefRow(title=node_name, subtitle=node_full_name, is_hidden=_is_hidden_name(node_name))
+                row = PrefRow(title=node_name, subtitle=node_full_name)
+                if _is_hidden_name(node_name):
+                    row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
@@ -141,7 +145,10 @@ class ActionInfoPage(Adw.NavigationPage):
                 node=self.ros2_connector.node, remote_node_name=node_name, remote_node_namespace=node_namespace
             )
             if any(self.action_name in client for client in action_clients_list):
-                row = PrefRow(title=node_name, subtitle=node_full_name, is_hidden=_is_hidden_name(node_name))
+                row = PrefRow(title=node_name, subtitle=node_full_name)
+                if _is_hidden_name(node_name):
+                    row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,

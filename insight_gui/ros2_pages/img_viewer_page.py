@@ -11,9 +11,8 @@ from gi.repository import Gtk, Adw, Gio, Gdk, GLib
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
-from insight_gui.widgets.button_row import ButtonRow
-from insight_gui.widgets.img_view_row import ImageViewRow
+from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, TextViewRow
+from insight_gui.widgets.buttons import PlayPauseButton
 
 
 class ImageViewerPage(Adw.NavigationPage):
@@ -34,12 +33,39 @@ class ImageViewerPage(Adw.NavigationPage):
         self.img_topic_row = self.img_group.add_row(Adw.ComboRow(title="Image Topic", enable_search=True))
         self.img_topic_row.connect("notify::selected-item", self.on_image_topic_changed)
         self.img_row: ImageViewRow = self.img_group.add_row(ImageViewRow())
-        self.img_group.add_row(Adw.ActionRow(title="test"))
+
+        test_row = self.img_group.add_row(PrefRow(title="test", subtitle="asdasdasd"))
+        test3_row = self.img_group.add_row(
+            ButtonRow(
+                label="test",
+                start_icon_name="update",
+                func=lambda x: print(f"clicked: {x}"),
+                func_kwargs={"x": 3},
+                btn_css_classes=["destructive-action"],
+            )
+        )
+        img_row: ImageViewRow = self.img_group.add_row(
+            ImageViewRow(
+                title="title",
+                subtitle="subtitle",
+            )
+        )
+        # TODO implement
+        img_row.add_footer_widget(
+            PlayPauseButton(default_play=False, play_label="Toggle Stream", func=self.on_toggle_img_stream),
+            prepend=True,
+        )
+        text_row = self.img_group.add_row(
+            TextViewRow(title="title", text="test", max_height=100, editable=True, show_copy_btn=False)
+        )
+
+        # TODO add control buttons for the image:
+        # - pause the image stream
 
         # self.calc_button: ButtonRow = self.img_group.add_row(
         #     ButtonRow(
-        #         title="Calculate transform",
-        #         btn_icon_name="gnome-calculator-symbolic",
+        #         label="Calculate transform",
+        #         start_icon_name="gnome-calculator-symbolic",
         #         tooltip_text="Calculate transformation from source to target",
         #         func=self.on_calc_transform,
         #         sensitive=False,
@@ -48,13 +74,13 @@ class ImageViewerPage(Adw.NavigationPage):
 
         # rows to display infos about the image
         self.info_group = self.content_page.pref_page.add_group(title="Infos", filterable=False)
-        self.width_row = self.info_group.add_row(PrefRow(title="Image Width"))
+        self.width_row: PrefRow = self.info_group.add_row(PrefRow(title="Image Width"))
         self.height_row = self.info_group.add_row(PrefRow(title="Image Height"))
         self.encoding_row = self.info_group.add_row(PrefRow(title="Image Encoding"))
 
-        self.width_lbl = self.width_row.add_suffix_label("")
-        self.height_lbl = self.height_row.add_suffix_label("")
-        self.encoding_lbl = self.encoding_row.add_suffix_label("")
+        self.width_lbl = self.width_row.add_suffix_lbl("")
+        self.height_lbl = self.height_row.add_suffix_lbl("")
+        self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
 
     def refresh(self, *args) -> bool:
         if not self.ros2_connector.is_running:
@@ -111,3 +137,8 @@ class ImageViewerPage(Adw.NavigationPage):
         self.width_lbl.set_label(str(msg.width))
         self.height_lbl.set_label(str(msg.height))
         self.encoding_lbl.set_label(str(msg.encoding))
+
+    def on_toggle_img_stream(self, playing: bool, *args):
+        # TODO implement toggle image stream
+        print(f"playing: {playing}")
+        pass

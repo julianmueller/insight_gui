@@ -16,9 +16,7 @@ from gi.repository import Gtk, Adw, Gio
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
-from insight_gui.widgets.button_row import ButtonRow
-from insight_gui.widgets.text_view_row import TextViewRow
+from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 
 
 class TransformsPage(Adw.NavigationPage):
@@ -36,7 +34,7 @@ class TransformsPage(Adw.NavigationPage):
         super().set_child(self.content_page)
 
         self.calc_group = self.content_page.pref_page.add_group(title="Calculate Transform", filterable=False)
-        self.calc_group.add_btn(
+        self.calc_group.add_suffix_btn(
             icon_name="vertical-arrows-symbolic", tooltip_text="Switch source/target", func=self.on_switch_frames
         )
 
@@ -48,8 +46,8 @@ class TransformsPage(Adw.NavigationPage):
 
         self.calc_button: ButtonRow = self.calc_group.add_row(
             ButtonRow(
-                title="Calculate transform",
-                btn_icon_name="gnome-calculator-symbolic",
+                label="Calculate transform",
+                start_icon_name="gnome-calculator-symbolic",
                 tooltip_text="Calculate transformation from source to target",
                 func=self.on_calc_transform,
                 sensitive=False,
@@ -154,7 +152,7 @@ class TransformsPage(Adw.NavigationPage):
                 + f"  w: {transform.transform.rotation.w:.8f}"
             )
 
-            self.result_text_row.set_subtitle(f"from '{source_frame}' to '{target_frame}'")
+            self.result_text_row.set_subtitle(f"from <{source_frame}> to <{target_frame}>")
             self.result_text_row.set_text(text)
             self.result_text_row.set_visible(True)
 

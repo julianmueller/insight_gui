@@ -15,7 +15,7 @@ from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.ros2_pages.edit_param_dialog import EditParamDialog
 
 
@@ -74,8 +74,7 @@ class ParameterListPage(Adw.NavigationPage):
                     icon_name="document-edit-symbolic",
                     tooltip_text="Edit",
                     func=self.on_edit_param,
-                    node_name=node_name,
-                    param_name=param_name,
+                    func_kwargs={"node_name": node_name, "param_name": param_name},
                 )
                 group.add_row(row)
             group.set_description_to_row_count()

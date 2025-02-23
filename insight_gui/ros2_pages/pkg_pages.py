@@ -13,7 +13,8 @@ from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_pages.new_pkg_dialog import NewPkgDialog
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.buttons import CopyButton
 
 
 class PackageListPage(Adw.NavigationPage):
@@ -71,7 +72,7 @@ class PackageInfoPage(Adw.NavigationPage):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        super().set_title(f"Package '{pkg_name}'")
+        super().set_title(f"Package <{pkg_name}>")
 
         self.pkg_name = pkg_name
         self.nav_view = nav_view if nav_view else self.get_parent()
@@ -83,8 +84,7 @@ class PackageInfoPage(Adw.NavigationPage):
         self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
             icon_name="folder-symbolic",
             func=self.on_open_pkg_folder,
-            pkg_path=pkg_path,
-            pkg_name=pkg_name,
+            func_kwargs={"pkg_path": pkg_path, "pkg_name": pkg_name},
         )
 
         # add index link
@@ -122,11 +122,13 @@ class PackageInfoPage(Adw.NavigationPage):
 
         for path in sorted(executable_paths):
             executable_name = Path(path).name
-            row: PrefRow = executables_group.add_row(PrefRow(title=executable_name))
-            row.add_copy_btn(
-                copy_text=f"ros2 run {pkg_name} {executable_name}",
-                tooltip_text="Copy 'ros2 run' command",
-                toast_host=self.content_page.toast_overlay,
+            row = executables_group.add_row(PrefRow(title=executable_name))
+            row.add_suffix(
+                CopyButton(
+                    copy_text=f"ros2 run {pkg_name} {executable_name}",
+                    tooltip_text="Copy 'ros2 run' command",
+                    toast_host=self.content_page.toast_overlay,
+                )
             )
 
         # add the counts as descriptions

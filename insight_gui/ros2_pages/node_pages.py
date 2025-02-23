@@ -18,9 +18,10 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_row import PrefRow
 from insight_gui.ros2_pages.edit_param_dialog import EditParamDialog
+from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 class NodeListPage(Adw.NavigationPage):
@@ -51,7 +52,9 @@ class NodeListPage(Adw.NavigationPage):
 
         available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
-            row = PrefRow(title=node_name, subtitle=node_full_name, is_hidden=_is_hidden_name(node_name))
+            row = PrefRow(title=node_name, subtitle=node_full_name)
+            if _is_hidden_name(node_name):
+                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -80,7 +83,7 @@ class NodeInfoPage(Adw.NavigationPage):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        super().set_title(f"Node '{node_full_name}'")
+        super().set_title(f"Node <{node_full_name}>")
 
         self.node_name = node_name
         self.node_namespace = node_namespace
@@ -104,9 +107,10 @@ class NodeInfoPage(Adw.NavigationPage):
             node_name=node_name, node_namespace=node_namespace
         )
         for topic_name, topic_types in sorted(publisher_list, key=itemgetter(0)):
-            row = PrefRow(
-                title=topic_name, subtitle=", ".join(topic_types), is_hidden=topic_or_service_is_hidden(topic_name)
-            )
+            row = PrefRow(title=topic_name, subtitle=", ".join(topic_types))
+            if topic_or_service_is_hidden(topic_name):
+                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
@@ -127,9 +131,10 @@ class NodeInfoPage(Adw.NavigationPage):
             node_name=node_name, node_namespace=node_namespace
         )
         for topic_name, topic_types in sorted(subscriber_list, key=itemgetter(0)):
-            row = PrefRow(
-                title=topic_name, subtitle=", ".join(topic_types), is_hidden=topic_or_service_is_hidden(topic_name)
-            )
+            row = PrefRow(title=topic_name, subtitle=", ".join(topic_types))
+            if topic_or_service_is_hidden(topic_name):
+                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
@@ -150,11 +155,10 @@ class NodeInfoPage(Adw.NavigationPage):
             node_name=node_name, node_namespace=node_namespace
         )
         for service_name, service_types in sorted(service_server_list, key=itemgetter(0)):
-            row = PrefRow(
-                title=service_name,
-                subtitle=", ".join(service_types),
-                is_hidden=topic_or_service_is_hidden(service_name),
-            )
+            row = PrefRow(title=service_name, subtitle=", ".join(service_types))
+            if topic_or_service_is_hidden(service_name):
+                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
@@ -175,11 +179,10 @@ class NodeInfoPage(Adw.NavigationPage):
             node_name=node_name, node_namespace=node_namespace
         )
         for service_name, service_types in sorted(service_client_list, key=itemgetter(0)):
-            row = PrefRow(
-                title=service_name,
-                subtitle=", ".join(service_types),
-                is_hidden=topic_or_service_is_hidden(service_name),
-            )
+            row = PrefRow(title=service_name, subtitle=", ".join(service_types))
+            if topic_or_service_is_hidden(service_name):
+                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
@@ -199,9 +202,10 @@ class NodeInfoPage(Adw.NavigationPage):
             node=self.ros2_connector.node, remote_node_name=node_name, remote_node_namespace=node_namespace
         )
         for action_name, action_types in sorted(action_servers_list, key=itemgetter(0)):
-            row = PrefRow(
-                title=action_name, subtitle=", ".join(action_types), is_hidden=topic_or_service_is_hidden(action_name)
-            )
+            row = PrefRow(title=action_name, subtitle=", ".join(action_types))
+            # if topic_or_service_is_hidden(action_name): # TODO is_hidden possible for actions?
+            #     row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,
@@ -221,9 +225,10 @@ class NodeInfoPage(Adw.NavigationPage):
             node=self.ros2_connector.node, remote_node_name=node_name, remote_node_namespace=node_namespace
         )
         for action_name, action_types in sorted(action_clients_list, key=itemgetter(0)):
-            row = PrefRow(
-                title=action_name, subtitle=", ".join(action_types), is_hidden=topic_or_service_is_hidden(action_name)
-            )
+            row = PrefRow(title=action_name, subtitle=", ".join(action_types))
+            # if topic_or_service_is_hidden(action_name): # TODO is_hidden possible for actions?
+            #     row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,
@@ -257,8 +262,7 @@ class NodeInfoPage(Adw.NavigationPage):
                     icon_name="document-edit-symbolic",
                     tooltip_text="Edit",
                     func=self.on_edit_param,
-                    node_name=node_name,
-                    param_name=param_name,
+                    func_kwargs={"node_name": node_name, "param_name": param_name},
                 )
                 parameters_group.add_row(row)
         parameters_group.set_description_to_row_count()

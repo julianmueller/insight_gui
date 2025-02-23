@@ -14,12 +14,9 @@ from gi.repository import Gtk, Adw, Gio
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_page import PrefPage
-from insight_gui.widgets.pref_row import PrefRow
+from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, SearchRow, TextViewRow
 
 # from insight_gui.widgets.entry_row import EntryRow
-from insight_gui.widgets.button_row import ButtonRow
-from insight_gui.widgets.search_row import SearchRow
-from insight_gui.widgets.text_view_row import TextViewRow
 
 from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
 
@@ -51,15 +48,15 @@ class ServiceCallPage(Adw.NavigationPage):
 
         # request group
         self.request_group = self.content_page.pref_page.add_group(title="Request")
-        self.request_group.add_btn(
+        self.request_group.add_suffix_btn(
             icon_name="edit-undo-symbolic", tooltip_text="Reset Request Text", func=self.on_service_selected
         )
         self.request_text_row = self.request_group.add_row(TextViewRow(editable=True))
 
         self.call_btn = self.request_group.add_row(
             ButtonRow(
-                title="Call Service",
-                btn_icon_name="call-start-symbolic",
+                label="Call Service",
+                start_icon_name="call-start-symbolic",
                 func=self.on_call_service,
                 sensitive=False,
             )
