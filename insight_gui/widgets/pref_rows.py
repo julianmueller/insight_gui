@@ -428,7 +428,7 @@ class ImageViewRow(AdditionalContentRow):
         self.content_box.append(self.frame)
 
         if image is None:
-            self.set_image_from_icon_name(icon_name="dialog-error-symbolic", tooltip_text="No image available")
+            self.reset_image_to_default_icon()
             # self.footer_box.set_sensitive(False) # TODO
         else:
             self.frame.set_child(self.image)
@@ -474,6 +474,13 @@ class ImageViewRow(AdditionalContentRow):
         )
         self.footer_box.set_visible(True)
 
+        self.current_texture = None  # Track the last texture
+        self.pending_frame = None  # Store the next frame to be displayed
+        self.updating = False  # Prevent redundant updates
+
+    def reset_image_to_default_icon(self, tooltip_text: str = "No image selected"):
+        self.set_image_from_icon_name(icon_name="dialog-error-symbolic", tooltip_text=tooltip_text)
+
     def set_image_from_icon_name(self, *, icon_name: str, tooltip_text: str = "", size: int = 100):
         display = Gdk.Display.get_default()
         if not display:
@@ -502,15 +509,16 @@ class ImageViewRow(AdditionalContentRow):
             self.frame.set_child(self.icon_image)
 
     def set_image_from_opencv(self, cv_image):
-        self.image = Gtk.Picture()
-        self.frame.set_child(self.image)
+        if self.image is None:
+            self.image = Gtk.Picture()
+            self.frame.set_child(self.image)
 
         # TODO also check for other datatypes
         # If necessary, convert BGR -> RGB (depends on your data format).
         # cv_image is shape (height, width, channels).
-        cv_image_rgb = cv_image[:, :, ::-1]
+        cv_image_rgb = cv_image[:, :, ::-1] if cv_image.shape[-1] == 3 else cv_image
         height, width, channels = cv_image_rgb.shape
-        rowstride = channels * width
+        rowstride = width * 3  # 3 bytes per pixel (RGB)
 
         # resize the image accordingly
         natural_width = self.frame.get_allocated_width()
@@ -525,15 +533,26 @@ class ImageViewRow(AdditionalContentRow):
 
         # Create a MemoryTexture directly from the image data (RGB8).
         # Alternatively, for RGBA data, use Gdk.MemoryFormat.RGBA8, etc.
-        self.texture = Gdk.MemoryTexture.new(width, height, Gdk.MemoryFormat.R8G8B8, bytes_data, rowstride)
+        new_texture = Gdk.MemoryTexture.new(width, height, Gdk.MemoryFormat.R8G8B8, bytes_data, rowstride)
+
+        # Queue the frame for display
+        self.pending_frame = new_texture
 
         # Thread-safe update of the widget's content on the GTK main loop.
-        def update_texture(texture: Gdk.Texture) -> bool:
-            self.image.set_paintable(texture)
-            return False  # Returning False removes the idle callback
+        def update_texture():
+            if self.pending_frame:
+                self.current_texture = self.pending_frame
+                self.image.set_paintable(self.current_texture)
+                self.pending_frame = None  # Clear the pending frame
+
+            self.updating = False  # Allow new frames to be processed
+            return False  # Remove the callback
 
         # Schedule widget update on the GTK main thread.
-        GLib.idle_add(update_texture, self.texture)
+        # Schedule an update (ensuring it's only called once per GTK frame cycle)
+        if not self.updating:
+            self.updating = True
+            GLib.idle_add(update_texture)
 
     def on_save_image(self, *args):
         # TODO implement saving behaviour

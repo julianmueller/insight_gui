@@ -32,45 +32,20 @@ class ImageViewerPage(Adw.NavigationPage):
         self.img_group = self.content_page.pref_page.add_group(title="View Image", filterable=False)
         self.img_topic_row = self.img_group.add_row(Adw.ComboRow(title="Image Topic", enable_search=True))
         self.img_topic_row.connect("notify::selected-item", self.on_image_topic_changed)
-        self.img_row: ImageViewRow = self.img_group.add_row(ImageViewRow())
+        self.img_row: ImageViewRow = self.img_group.add_row(ImageViewRow(title="Image"))
 
-        test_row = self.img_group.add_row(PrefRow(title="test", subtitle="asdasdasd"))
-        test3_row = self.img_group.add_row(
-            ButtonRow(
-                label="test",
-                start_icon_name="update",
-                func=lambda x: print(f"clicked: {x}"),
-                func_kwargs={"x": 3},
-                btn_css_classes=["destructive-action"],
-            )
-        )
-        img_row: ImageViewRow = self.img_group.add_row(
-            ImageViewRow(
-                title="title",
-                subtitle="subtitle",
-            )
-        )
-        # TODO implement
-        img_row.add_footer_widget(
-            PlayPauseButton(default_play=False, play_label="Toggle Stream", func=self.on_toggle_img_stream),
+        self.continuous_img_stream = False
+        self.single_img_done = False
+        self.play_pause_btn = self.img_row.add_suffix(
+            PlayPauseButton(
+                default_play=self.continuous_img_stream,
+                play_label="Continuous",
+                pause_label="Single",
+                func=self.on_toggle_img_stream,
+                width_request=150,
+            ),
             prepend=True,
         )
-        text_row = self.img_group.add_row(
-            TextViewRow(title="title", text="test", max_height=100, editable=True, show_copy_btn=False)
-        )
-
-        # TODO add control buttons for the image:
-        # - pause the image stream
-
-        # self.calc_button: ButtonRow = self.img_group.add_row(
-        #     ButtonRow(
-        #         label="Calculate transform",
-        #         start_icon_name="gnome-calculator-symbolic",
-        #         tooltip_text="Calculate transformation from source to target",
-        #         func=self.on_calc_transform,
-        #         sensitive=False,
-        #     )
-        # )
 
         # rows to display infos about the image
         self.info_group = self.content_page.pref_page.add_group(title="Infos", filterable=False)
@@ -90,11 +65,6 @@ class ImageViewerPage(Adw.NavigationPage):
             )
             return False
 
-        # TODO:
-        # 1. look for all available topics
-        # 2. filter those, that publish the message type Image
-        # 3. fill the combo box with these topics
-        # 4.
         self.topic_list = []
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
@@ -109,7 +79,7 @@ class ImageViewerPage(Adw.NavigationPage):
             if topic_types == "sensor_msgs/msg/Image":
                 self.topic_list.append(topic_name)
 
-        # Create a Gio.ListStore
+        # Create a Gio.ListStore to fill the ComboBox with
         self.list_store = Gio.ListStore.new(Gtk.StringObject)
 
         for img_topic in self.topic_list:
@@ -120,25 +90,30 @@ class ImageViewerPage(Adw.NavigationPage):
             self.img_topic_row.set_selected(0)
         else:
             self.content_page.show_toast("No topic with images found")
-            self.img_row.set_visible(False)
 
     def on_image_topic_changed(self, *args):
         topic_name = self.img_topic_row.get_selected_item().get_string()
-        self.sub = self.ros2_connector.add_subsciption(Image, topic_name, self.on_ros_img_callback)
+        if topic_name:
+            self.sub = self.ros2_connector.add_subsciption(Image, topic_name, self.on_ros_img_callback)
+            self.single_img_done = False
+            self.img_row.reset_image_to_default_icon()
 
-        # TODO add an option to pause the continuous update of the image stream/texture
-
+    # TODO implement some rate limeting
+    # TODO also pause, when the "tab" aka nav page is switched
     def on_ros_img_callback(self, msg: Image, *args):
-        # Convert sensor_msgs/Image to a BGR8 numpy array (default behavior).
-        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        self.img_row.set_picture_from_opencv(cv_image)
+        if self.continuous_img_stream or not self.single_img_done:
+            # Convert sensor_msgs/Image to a BGR8 numpy array (default behavior).
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            self.img_row.set_image_from_opencv(cv_image)
 
-        # TODO fill the info rows
-        self.width_lbl.set_label(str(msg.width))
-        self.height_lbl.set_label(str(msg.height))
-        self.encoding_lbl.set_label(str(msg.encoding))
+            # TODO fill the info rows
+            self.width_lbl.set_label(str(msg.width))
+            self.height_lbl.set_label(str(msg.height))
+            self.encoding_lbl.set_label(str(msg.encoding))
+
+            self.single_img_done = True
 
     def on_toggle_img_stream(self, playing: bool, *args):
-        # TODO implement toggle image stream
+        self.continuous_img_stream = playing
+        self.single_img_done = False
         print(f"playing: {playing}")
-        pass
