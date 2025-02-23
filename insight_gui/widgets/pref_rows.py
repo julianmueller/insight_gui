@@ -99,7 +99,7 @@ class PrefRow(Adw.ActionRow, GenericRow):
     def filter_text(self) -> str:
         return f"{super().get_title()} {super().get_subtitle()}".lower()
 
-    def add_prefix(self, widget: Gtk.Widget, *, prepend: bool = False):
+    def add_prefix(self, widget: Gtk.Widget, *, prepend: bool = False) -> Gtk.Widget:
         if prepend:
             self.prefixes_box.prepend(widget)
         else:
@@ -107,10 +107,10 @@ class PrefRow(Adw.ActionRow, GenericRow):
         self.prefixes_box.set_visible(True)
         return widget
 
-    def add_prefix_lbl(self, label: str, *, prepend: bool = False, **kwargs):
+    def add_prefix_lbl(self, label: str, *, prepend: bool = False, **kwargs) -> Gtk.Label:
         return self.add_prefix(Gtk.Label(label=label, **kwargs), prepend=prepend)
 
-    def add_prefix_icon(self, icon_name: str, *, tooltip_text: str = "", prepend: bool = False, **kwargs):
+    def add_prefix_icon(self, icon_name: str, *, tooltip_text: str = "", prepend: bool = False, **kwargs) -> Gtk.Image:
         return self.add_prefix(Gtk.Image(icon_name=icon_name, tooltip_text=tooltip_text, **kwargs), prepend=prepend)
 
     def add_prefix_btn(
@@ -122,14 +122,14 @@ class PrefRow(Adw.ActionRow, GenericRow):
         tooltip_text: str = "",
         prepend: bool = False,
         **kwargs,
-    ):
+    ) -> Gtk.Button:
         btn = Gtk.Button(
             icon_name=icon_name, tooltip_text=tooltip_text, vexpand=False, valign=Gtk.Align.CENTER, **kwargs
         )
         btn.connect("clicked", lambda *_: func(**func_kwargs))
         return self.add_prefix(btn, prepend=prepend)
 
-    def add_suffix(self, widget: Gtk.Widget, *, prepend: bool = False):
+    def add_suffix(self, widget: Gtk.Widget, *, prepend: bool = False) -> Gtk.Widget:
         if prepend:
             self.suffixes_box.prepend(widget)
         else:
@@ -139,10 +139,10 @@ class PrefRow(Adw.ActionRow, GenericRow):
         self.suffixes_box.set_visible(True)
         return widget
 
-    def add_suffix_lbl(self, label: str, *, prepend: bool = False, **kwargs):
+    def add_suffix_lbl(self, label: str, *, prepend: bool = False, **kwargs) -> Gtk.Label:
         return self.add_suffix(Gtk.Label(label=label, **kwargs), prepend=prepend)
 
-    def add_suffix_icon(self, icon_name: str, *, tooltip_text: str = "", prepend: bool = False, **kwargs):
+    def add_suffix_icon(self, icon_name: str, *, tooltip_text: str = "", prepend: bool = False, **kwargs) -> Gtk.Image:
         return self.add_suffix(Gtk.Image(icon_name=icon_name, tooltip_text=tooltip_text, **kwargs), prepend=prepend)
 
     def add_suffix_btn(
@@ -154,7 +154,7 @@ class PrefRow(Adw.ActionRow, GenericRow):
         tooltip_text: str = "",
         prepend: bool = False,
         **kwargs,
-    ):
+    ) -> Gtk.Button:
         btn = Gtk.Button(
             icon_name=icon_name, tooltip_text=tooltip_text, vexpand=False, valign=Gtk.Align.CENTER, **kwargs
         )
@@ -239,7 +239,7 @@ class AdditionalContentRow(PrefRow):
         else:
             self.subtitle_lbl.set_visible(True)
 
-    def add_footer_widget(self, widget: Gtk.Widget, prepend: bool = False):
+    def add_footer_widget(self, widget: Gtk.Widget, prepend: bool = False) -> Gtk.Widget:
         if prepend:
             self.footer_box.prepend(widget)
         else:
@@ -256,7 +256,7 @@ class AdditionalContentRow(PrefRow):
         prepend: bool = False,
         css_classes: list[str] = [],
         **kwargs,
-    ):
+    ) -> Gtk.Button:
         btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon_name), **kwargs)
         btn.connect("clicked", lambda *_: func(**func_kwargs))
         for css_class in css_classes:
@@ -502,6 +502,9 @@ class ImageViewRow(AdditionalContentRow):
             self.frame.set_child(self.icon_image)
 
     def set_image_from_opencv(self, cv_image):
+        self.image = Gtk.Picture()
+        self.frame.set_child(self.image)
+
         # TODO also check for other datatypes
         # If necessary, convert BGR -> RGB (depends on your data format).
         # cv_image is shape (height, width, channels).
@@ -510,10 +513,10 @@ class ImageViewRow(AdditionalContentRow):
         rowstride = channels * width
 
         # resize the image accordingly
-        natural_width = self.image.get_allocated_width()
+        natural_width = self.frame.get_allocated_width()
         scale_factor = natural_width / width
         new_height = int(height * scale_factor)
-        self.image.set_size_request(width=natural_width, height=new_height)
+        self.frame.set_size_request(width=natural_width, height=new_height)
 
         # Convert the numpy image to bytes
         data = cv_image_rgb.tobytes()
@@ -525,7 +528,7 @@ class ImageViewRow(AdditionalContentRow):
         self.texture = Gdk.MemoryTexture.new(width, height, Gdk.MemoryFormat.R8G8B8, bytes_data, rowstride)
 
         # Thread-safe update of the widget's content on the GTK main loop.
-        def update_texture(texture: Gdk.Texture):
+        def update_texture(texture: Gdk.Texture) -> bool:
             self.image.set_paintable(texture)
             return False  # Returning False removes the idle callback
 
