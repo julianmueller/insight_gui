@@ -92,6 +92,9 @@ class ImageViewerPage(Adw.NavigationPage):
             self.content_page.show_toast("No topic with images found")
 
     def on_image_topic_changed(self, *args):
+        if self.list_store.get_n_items() == 0:
+            return
+
         topic_name = self.img_topic_row.get_selected_item().get_string()
         if topic_name:
             self.sub = self.ros2_connector.add_subsciption(Image, topic_name, self.on_ros_img_callback)

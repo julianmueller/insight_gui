@@ -142,14 +142,13 @@ class MainWindow(Adw.ApplicationWindow):
             title="Doctor",
             ros2_connector=self.ros2_connector,
         )
-
-        # Logger # TODO the logger still needs work
-        # self.add_stack_page(
-        #     nav_page_class=LoggerPage,
-        #     name="logger",
-        #     title="Logger",
-        #     ros2_connector=self.ros2_connector,
-        # )
+        # Logger
+        self.add_stack_page(
+            nav_page_class=LoggerPage,
+            name="logger",
+            title="Logger",
+            ros2_connector=self.ros2_connector,
+        )
 
         # Preferences
         self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)

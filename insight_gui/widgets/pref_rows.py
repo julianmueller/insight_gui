@@ -7,7 +7,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import GObject, Gtk, Adw, Gdk, GLib
 
-from insight_gui.widgets.buttons import CopyButton
+from insight_gui.widgets.buttons import ToggleButton, CopyButton
 
 
 class GenericRow(GObject.GObject):
@@ -190,10 +190,12 @@ class AdditionalContentRow(PrefRow):
         self.box.remove(self.suffixes_box)
 
         # restyle the header
-        self.box.set_orientation(Gtk.Orientation.VERTICAL)
-        self.box.set_spacing(6)
-        self.box.set_margin_top(8)
-        self.box.set_margin_bottom(8)
+        self.box.set_properties(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=2,
+            margin_top=8,
+            margin_bottom=8,
+        )
 
         # create new containers
         self.header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -271,13 +273,15 @@ class TextViewRow(AdditionalContentRow):
         self,
         *,
         text: str = "",
-        max_height: int = 200,
+        min_height: int = -1,
+        max_height: int = -1,
         editable: bool = True,
         show_copy_btn: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
+        self.min_height = min_height
         self.max_height = max_height
         self.frame: Gtk.Frame = Gtk.Frame(hexpand=True, vexpand=True)
         self.scroll: Gtk.ScrolledWindow = Gtk.ScrolledWindow(propagate_natural_height=True)
@@ -368,11 +372,16 @@ class TextViewRow(AdditionalContentRow):
 
     def update_height(self):
         natural_height = self.text_view.get_preferred_size().natural_size.height
-        if self.max_height == -1:
-            updated_height = natural_height
+        if self.min_height != -1:
+            self.scroll.set_min_content_height(self.min_height)
         else:
-            updated_height = min(self.max_height, natural_height)
-        self.scroll.set_min_content_height(updated_height)
+            if self.max_height == -1:
+                updated_height = natural_height
+            else:
+                updated_height = min(self.max_height, natural_height)
+            self.scroll.set_min_content_height(updated_height)
+
+        return False
 
     # TODO do the filtering with GtkTextTags
     def filter(self, filter_snippets: list[str]):
@@ -583,6 +592,46 @@ class ImageViewRow(AdditionalContentRow):
         # TODO implement open image
         print("open image")
         pass
+
+
+class MultiToggleButtonRow(AdditionalContentRow):
+    __gtype_name__ = "MultiToggleButtonRow"
+    __gsignals__ = {"buttons-changed": (GObject.SignalFlags.RUN_FIRST, None, ())}
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        super().set_activatable(False)
+
+        self.content_box.set_properties(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=0,
+            homogeneous=True,
+            css_classes=["linked"],
+        )
+
+        self.buttons = dict()
+
+    def add_toggle_btn(self, unique_id: str | int, **kwargs):
+        if not unique_id:
+            raise ValueError("unique_id for ToggleButton must not be empty")
+        for btn_id in self.buttons.keys():
+            if btn_id == unique_id:
+                raise ValueError(f"ToggleButton with unique_id '{unique_id}' already exists, but they must be unique")
+
+        toggle_btn = ToggleButton(func=self.on_btn_toggled, **kwargs)
+        # toggle_btn.connect("toggled", self.on_btn_toggled)
+        self.content_box.append(toggle_btn)
+        self.buttons[unique_id] = toggle_btn
+        return toggle_btn
+
+    def get_active_buttons(self) -> dict:
+        return {btn_id: btn for btn_id, btn in self.buttons.items() if btn.get_active()}
+
+    def get_all_btn_states(self) -> dict:
+        return {btn_id: (btn, btn.get_active()) for btn_id, btn in self.buttons.items()}
+
+    def on_btn_toggled(self, *args):
+        super().emit("buttons-changed")
 
 
 # somewhat based on

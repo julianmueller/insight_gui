@@ -8,6 +8,8 @@
         <file preprocess="xml-stripblanks">icons/arrow4-left-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/arrow4-right-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/vertical-arrows-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/check-round-outline-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/cross-small-circle-outline-symbolic.svg</file>
 
     </gresource>
 </gresources>

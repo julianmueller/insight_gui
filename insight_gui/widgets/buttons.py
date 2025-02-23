@@ -6,6 +6,97 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
+from insight_gui.utils.constants import ON_ICON, OFF_ICON
+
+
+class ToggleButton(Gtk.ToggleButton):
+    __gtype_name__ = "MyToggleButton"
+
+    def __init__(
+        self,
+        func: Callable,
+        func_kwargs: dict = {},
+        default_active: bool = False,
+        labels: tuple[str, str] | str = None,
+        show_default_icons: bool = True,
+        icon_names: tuple[str, str] | str = None,
+        tooltip_texts: tuple[str, str] | str = None,
+        css_classes: tuple[list[str], list[str]] | list[str] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        super().set_active(default_active)
+
+        self.btn_content = Adw.ButtonContent()
+        super().set_child(self.btn_content)
+
+        if isinstance(icon_names, tuple):
+            self.icon_names = icon_names
+        elif isinstance(icon_names, str):
+            self.icon_names = (icon_names, icon_names)
+        else:
+            self.icon_names = None
+
+        if isinstance(labels, tuple):
+            self.labels = labels
+        elif isinstance(labels, str):
+            self.labels = (labels, labels)
+        else:
+            self.labels = None
+
+        if isinstance(tooltip_texts, tuple):
+            self.tooltip_texts = tooltip_texts
+        elif isinstance(tooltip_texts, str):
+            self.tooltip_texts = (tooltip_texts, tooltip_texts)
+        else:
+            self.tooltip_texts = None
+
+        if isinstance(css_classes, tuple):
+            self.css_classes = css_classes
+        elif isinstance(css_classes, list):
+            self.css_classes = (css_classes, css_classes)
+        else:
+            self.css_classes = None
+
+        if show_default_icons and self.icon_names is None:
+            self.icon_names = (ON_ICON, OFF_ICON)
+
+        self.func = func
+        self.func_kwargs = func_kwargs
+        super().connect("toggled", self._on_toggle)
+        self.update_button()
+
+    @property
+    def is_active(self) -> bool:
+        return super().get_active()
+
+    def _on_toggle(self, *args):
+        self.func(**self.func_kwargs)
+        self.update_button()
+
+    def update_button(self):
+        # Update icon if a tuple was provided
+        if self.icon_names:
+            self.btn_content.set_icon_name(self.icon_names[0] if self.is_active else self.icon_names[1])
+
+        # Update label if a tuple was provided
+        if self.labels:
+            self.btn_content.set_label(self.labels[0] if self.is_active else self.labels[1])
+
+        # Update tooltip if a tuple was provided
+        if self.tooltip_texts:
+            self.btn_content.set_tooltip_text(self.tooltip_texts[0] if self.is_active else self.tooltip_texts[1])
+
+        # Update css classes if a tuple was provided
+        if self.css_classes:
+            add_classes_list = self.css_classes[0] if self.is_active else self.css_classes[1]
+            remove_classes_list = self.css_classes[1] if self.is_active else self.css_classes[0]
+
+            for css_class in remove_classes_list:
+                self.remove_css_class(css_class)
+            for css_class in add_classes_list:
+                self.add_css_class(css_class)
+
 
 class PlayPauseButton(Gtk.Button):
     __gtype_name__ = "PlayPauseButton"

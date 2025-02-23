@@ -36,8 +36,12 @@ class PrefPage(Adw.PreferencesPage):
     def add(self, *args, **kwargs):
         raise NotImplementedError("use 'add_group' instead")
 
-    def add_group(self, **kwargs) -> PrefGroup:
-        pref_group = PrefGroup(**kwargs)
+    def add_group(
+        self, title: str = "", description: str = "", empty_msg: str = "empty list", filterable: bool = True, **kwargs
+    ) -> PrefGroup:
+        pref_group = PrefGroup(
+            title=title, description=description, empty_msg=empty_msg, filterable=filterable, **kwargs
+        )
         super().add(pref_group)
         self.groups.append(pref_group)
         return pref_group

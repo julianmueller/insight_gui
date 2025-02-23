@@ -93,6 +93,7 @@ setup(
         "console_scripts": [
             "main = insight_gui.main:main",
             "dummy_img_pub = insight_gui.dummy_img_pub:main",
+            "dummy_logger = insight_gui.dummy_log_pub:main",
         ]
     },
     cmdclass={

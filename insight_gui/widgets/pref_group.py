@@ -30,9 +30,8 @@ class PrefGroup(Adw.PreferencesGroup):
         self.suffix_box: Gtk.Box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         super().set_header_suffix(self.suffix_box)
 
-        # self.rows_box: Gtk.Box = self.title_box.get_next_sibling()
-        # self.listbox: Gtk.ListBox = self.rows_box.get_first_child()
-        # self.listbox.set_filter_func(self.filter_func)
+        self.rows_box: Gtk.Box = self.title_box.get_next_sibling()
+        self.listbox: Gtk.ListBox = self.rows_box.get_first_child()
 
         # keep track of all rows
         self.rows: list[Adw.ActionRow] = []
