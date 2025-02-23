@@ -46,8 +46,8 @@ class PlayPauseButton(Gtk.Button):
         self._update_btn_state()
 
     def _on_clicked(self, button):
-        self._update_btn_state()
         self.func(playing=self.playing, **self.func_kwargs)
+        self._update_btn_state()
 
     @property
     def is_playing(self):
@@ -64,6 +64,11 @@ class PlayPauseButton(Gtk.Button):
             self.btn_content.set_icon_name(self.play_icon_name)
             super().set_tooltip_text(self.pause_tooltip)
             self.playing = True
+
+
+# TODO this is just copy/past of the one above, adapt it for toggle functionality
+# class PlayPauseToggleButton(Gtk.ToggleButton):
+#     __gtype_name__ = "PlayPauseToggleButton"
 
 
 class CopyButton(Gtk.Button):
