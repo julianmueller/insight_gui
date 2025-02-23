@@ -30,7 +30,7 @@ cd ros2_ws/src
 git clone https://github.com/julianmueller/insight_gui
 ```
 
-If you want the `jazzy-dev` branch, where I', curretnly working on the latest features use:
+If you want the `jazzy-dev` branch, where I'm currently working on the latest features, use:
 
 ```bash
 git clone -b jazzy-dev https://github.com/julianmueller/insight_gui
