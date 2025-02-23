@@ -1,4 +1,3 @@
-from pathlib import Path
 import re
 
 import gi
@@ -52,7 +51,6 @@ class PrefPage(Adw.PreferencesPage):
             self.remove_group(pref_group)
         # self.groups = []
 
-    # TODO this causes some groups to reap
     def apply_filter(self, text: str):
         """Filters groups and rows based on a search query."""
 
