@@ -1,4 +1,8 @@
-# ros2_insight
+<h1 align="center">
+  <img src="insight_gui/data/logo/insight-logo.svg" alt="Insight" height="170"/>
+  <br>
+  Insight - a minimalist GUI for ROS2
+</h1>
 
 Insight is a minimalist GUI alternative to rqt. It is a GTK4-based tool for exploring ROS2 topics, services, and messages, featuring the GNOME Adwaita style.
 
@@ -56,3 +60,38 @@ Like every other ros2 node, the GUI is started by:
 ```bash
 ros2 run insight_gui main
 ```
+
+## List of Feature
+
+- show and filter lists of:
+    - all packages on the system and their respective info,
+    - all running nodes with their topics/services/actions/parameters etc,
+    - all available topics with their respective msg types and publishers/subscribers,
+    - all available services with their respective msg types and servers/clients,
+    - all available actions with their respective msg types and servers/clients,
+    - all msg types of messages/services/actions,
+- inspect packages with their executables
+- create new packages via a dialog
+- inspect nodes with their subscribers, publishers, parameters etc
+- inspect message definitions (with names and data types) and copy raw contents
+- traverse through msg definitions (like PoseArray > Pose > Position > x)
+- filter all lists where it is useful
+- call services and specify the request data
+- calcualte tf transforms between two frames
+- get parameters from nodes
+- show images from topics (as single or continuous stream)
+- show current ros2 clock/time
+- manipulate ros2 env variables like ROS_DOMAIN_ID for the running GUI session
+- show ros2 doctor inspection with available package updates etc
+
+
+## TODO List
+
+- make a proper logo (help!)
+- make parameter setting work
+- make btns of img viewer work
+- check continuous img stream
+- redo all screenshots before release
+- check preferences dialog
+- make shortcuts (eg CTRL+F) work
+- make the Logger with filtering work
