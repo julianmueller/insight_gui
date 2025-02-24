@@ -32,7 +32,7 @@ class ActionListPage(Adw.NavigationPage):
         self.content_page.set_search_entry_placeholder_text("Search for actions")
         super().set_child(self.content_page)
 
-        self.list_group = self.content_page.pref_page.add_group(empty_msg="No actions found")
+        self.action_list_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show actions")
 
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
@@ -41,7 +41,7 @@ class ActionListPage(Adw.NavigationPage):
             )
             return False
 
-        self.list_group.clear()
+        self.action_list_group.clear()
 
         available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node))
         for i, (action_name, action_types) in enumerate(available_actions):
@@ -61,7 +61,10 @@ class ActionListPage(Adw.NavigationPage):
                 action_types=action_types,
                 ros2_connector=self.ros2_connector,
             )
-            self.list_group.add_row(row)
+            self.action_list_group.add_row(row)
+
+        if self.action_list_group.num_rows == 0:
+            self.action_list_group.set_empty_group_text("No actions found. Refresh to try again.")
 
         return bool(self.content_page.pref_page.num_groups)
 
@@ -111,12 +114,12 @@ class ActionInfoPage(Adw.NavigationPage):
 
         # Action Servers
         action_servers_group = self.content_page.pref_page.add_group(
-            title="Action Servers", empty_msg="action has no servers"
+            title="Action Servers", empty_group_text="action has no servers"
         )
 
         # Subscribers
         action_clients_group = self.content_page.pref_page.add_group(
-            title="Action Clients", empty_msg="action has no clients"
+            title="Action Clients", empty_group_text="action has no clients"
         )
 
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):

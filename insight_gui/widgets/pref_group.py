@@ -17,7 +17,7 @@ class PrefGroup(Adw.PreferencesGroup):
         *,
         title: str = "",
         description: str = "",
-        empty_msg: str = "empty list",
+        empty_group_text: str = "empty list",
         filterable: bool = True,
         **kwargs,
     ):
@@ -40,7 +40,7 @@ class PrefGroup(Adw.PreferencesGroup):
             self.title_box.set_visible(False)  # disable group header
 
         self.filterable = filterable
-        self.empty_row = PrefRow(title=str(empty_msg), sensitive=False)
+        self.empty_row = PrefRow(title=str(empty_group_text), sensitive=False)
         self.empty_row.add_prefix_icon("dialog-error-symbolic")
         super().add(self.empty_row)
 
@@ -105,3 +105,6 @@ class PrefGroup(Adw.PreferencesGroup):
 
     def set_description_to_row_count(self):
         super().set_description(f"Count: {self.num_rows}")
+
+    def set_empty_group_text(self, text: str):
+        self.empty_row.set_title(str(text))

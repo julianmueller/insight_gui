@@ -33,7 +33,7 @@ class MessageTypeBrowserPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(refresh_func=self.refresh)
+        self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show message types")
         self.content_page.set_search_entry_placeholder_text("Search for message types")
         super().set_child(self.content_page)
 
@@ -70,6 +70,9 @@ class MessageTypeBrowserPage(Adw.NavigationPage):
                 )
                 msg_group.add_row(row)
 
+        if len(available_msgs) == 0:
+            self.content_page.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
+
         return bool(self.content_page.pref_page.num_groups)
 
 
@@ -83,7 +86,7 @@ class ServiceTypeBrowserPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(refresh_func=self.refresh)
+        self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show service types")
         self.content_page.set_search_entry_placeholder_text("Search for service types")
         super().set_child(self.content_page)
 
@@ -121,6 +124,9 @@ class ServiceTypeBrowserPage(Adw.NavigationPage):
                 )
                 srv_group.add_row(row)
 
+        if len(available_srvs) == 0:
+            self.content_page.pref_page.set_empty_page_text("No Services found. Refresh to try again.")
+
         return bool(self.content_page.pref_page.num_groups)
 
 
@@ -134,7 +140,7 @@ class ActionTypeBrowserPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(refresh_func=self.refresh)
+        self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show action types")
         self.content_page.set_search_entry_placeholder_text("Search for action types")
         super().set_child(self.content_page)
 
@@ -169,6 +175,9 @@ class ActionTypeBrowserPage(Adw.NavigationPage):
                     act_type_full_name=act_type_full_name,
                 )
                 actions_group.add_row(row)
+
+        if len(available_action_msgs) == 0:
+            self.content_page.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
 
         return bool(self.content_page.pref_page.num_groups)
 

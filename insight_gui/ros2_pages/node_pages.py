@@ -38,7 +38,7 @@ class NodeListPage(Adw.NavigationPage):
         self.content_page.set_search_entry_placeholder_text("Search for nodes")
         super().set_child(self.content_page)
 
-        self.list_group = self.content_page.pref_page.add_group(empty_msg="No nodes found")
+        self.node_list_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show nodes")
 
     def refresh(self, *args) -> bool:
         if not self.ros2_connector.is_running:
@@ -48,7 +48,7 @@ class NodeListPage(Adw.NavigationPage):
             )
             return False
 
-        self.list_group.clear()
+        self.node_list_group.clear()
 
         available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
@@ -65,7 +65,10 @@ class NodeListPage(Adw.NavigationPage):
                 ros2_connector=self.ros2_connector,
             )
 
-            self.list_group.add_row(row)
+            self.node_list_group.add_row(row)
+
+        if self.node_list_group.num_rows == 0:
+            self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
 
         return False  # bool(self.content_page.pref_page.num_groups)
 
@@ -100,7 +103,9 @@ class NodeInfoPage(Adw.NavigationPage):
         from insight_gui.ros2_pages.action_pages import ActionInfoPage
 
         # Publishers
-        publishers_group = self.content_page.pref_page.add_group(title="Publishers", empty_msg="Node has no publishers")
+        publishers_group = self.content_page.pref_page.add_group(
+            title="Publishers", empty_group_text="Node has no publishers"
+        )
 
         # publisher_list = get_publisher_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
         publisher_list = self.ros2_connector.node.get_publisher_names_and_types_by_node(
@@ -123,7 +128,7 @@ class NodeInfoPage(Adw.NavigationPage):
 
         # Subscribers
         subscribers_group = self.content_page.pref_page.add_group(
-            title="Subscribers", empty_msg="Node has no subscribers"
+            title="Subscribers", empty_group_text="Node has no subscribers"
         )
 
         # subscriber_list = get_subscriber_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
@@ -147,7 +152,7 @@ class NodeInfoPage(Adw.NavigationPage):
 
         # Service Servers
         service_servers_group = self.content_page.pref_page.add_group(
-            title="Service Servers", description="", empty_msg="Node has no service servers"
+            title="Service Servers", description="", empty_group_text="Node has no service servers"
         )
 
         # service_servers_list = get_service_server_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
@@ -171,7 +176,7 @@ class NodeInfoPage(Adw.NavigationPage):
 
         # Service Clients
         service_clients_group = self.content_page.pref_page.add_group(
-            title="Service Clients", empty_msg="Node has no service clients"
+            title="Service Clients", empty_group_text="Node has no service clients"
         )
 
         # service_clients_list = get_service_client_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
@@ -195,7 +200,7 @@ class NodeInfoPage(Adw.NavigationPage):
 
         # Action Servers
         action_servers_group = self.content_page.pref_page.add_group(
-            title="Action Servers", empty_msg="Node has no action servers"
+            title="Action Servers", empty_group_text="Node has no action servers"
         )
 
         action_servers_list = get_action_server_names_and_types_by_node(
@@ -218,7 +223,7 @@ class NodeInfoPage(Adw.NavigationPage):
 
         # Action Clients
         action_clients_group = self.content_page.pref_page.add_group(
-            title="Action Clients", empty_msg="Node has no action clients"
+            title="Action Clients", empty_group_text="Node has no action clients"
         )
 
         action_clients_list = get_action_client_names_and_types_by_node(
@@ -240,7 +245,9 @@ class NodeInfoPage(Adw.NavigationPage):
         action_clients_group.set_description_to_row_count()
 
         # Parameters
-        parameters_group = self.content_page.pref_page.add_group(title="Parameters", empty_msg="Node has no parameters")
+        parameters_group = self.content_page.pref_page.add_group(
+            title="Parameters", empty_group_text="Node has no parameters"
+        )
         future = call_list_parameters(node=self.ros2_connector.node, node_name=node_name)
         if future is not None:
             parameter_list = future.result().result.names

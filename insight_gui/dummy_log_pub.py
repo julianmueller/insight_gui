@@ -8,6 +8,7 @@ class RandomLoggerNode(Node):
 
     def __init__(self):
         super().__init__("random_logger_node")
+        self.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         self.log_messages = [
             "System is running smoothly.",
@@ -32,15 +33,15 @@ class RandomLoggerNode(Node):
         log_level = random.choice(self.log_levels)
 
         if log_level == "debug":
-            self.get_logger().debug(f"[DEBUG] {message}")
+            self.get_logger().debug(f"{message}")
         elif log_level == "info":
-            self.get_logger().info(f"[INFO] {message}")
+            self.get_logger().info(f"{message}")
         elif log_level == "warn":
-            self.get_logger().warn(f"[WARN] {message}")
+            self.get_logger().warn(f"{message}")
         elif log_level == "error":
-            self.get_logger().error(f"[ERROR] {message}")
+            self.get_logger().error(f"{message}")
         elif log_level == "fatal":
-            self.get_logger().fatal(f"[FATAL] {message}")
+            self.get_logger().fatal(f"{message}")
 
 
 def main(args=None):

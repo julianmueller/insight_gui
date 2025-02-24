@@ -32,7 +32,7 @@ class TopicListPage(Adw.NavigationPage):
         self.content_page.set_search_entry_placeholder_text("Search for topics")
         super().set_child(self.content_page)
 
-        self.list_group = self.content_page.pref_page.add_group(empty_msg="No topics found")
+        self.topic_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show topics")
 
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
@@ -41,7 +41,7 @@ class TopicListPage(Adw.NavigationPage):
             )
             return False
 
-        self.list_group.clear()
+        self.topic_group.clear()
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
         for i, (topic_name, topic_types) in enumerate(available_topics):
@@ -63,7 +63,10 @@ class TopicListPage(Adw.NavigationPage):
                 topic_types=topic_types,
                 ros2_connector=self.ros2_connector,
             )
-            self.list_group.add_row(row)
+            self.topic_group.add_row(row)
+
+        if self.topic_group.num_rows == 0:
+            self.topic_group.set_empty_group_text("No topics found. Refresh to try again.")
 
         return bool(self.content_page.pref_page.num_groups)
 
@@ -112,12 +115,12 @@ class TopicInfoPage(Adw.NavigationPage):
 
         # Publishers
         publishers_group = self.content_page.pref_page.add_group(
-            title="Publishers", empty_msg="Topic has no publishers"
+            title="Publishers", empty_group_text="Topic has no publishers"
         )
 
         # Subscribers
         subscribers_group = self.content_page.pref_page.add_group(
-            title="Subscribers", empty_msg="Topic has no subscribers"
+            title="Subscribers", empty_group_text="Topic has no subscribers"
         )
 
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):

@@ -5,9 +5,10 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import GObject, Gtk, Adw, Gdk, GLib
+from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio
 
 from insight_gui.widgets.buttons import ToggleButton, CopyButton
+from insight_gui.utils.constants import ON_ICON, OFF_ICON
 
 
 class GenericRow(GObject.GObject):
@@ -111,7 +112,10 @@ class PrefRow(Adw.ActionRow, GenericRow):
         return self.add_prefix(Gtk.Label(label=label, **kwargs), prepend=prepend)
 
     def add_prefix_icon(self, icon_name: str, *, tooltip_text: str = "", prepend: bool = False, **kwargs) -> Gtk.Image:
-        return self.add_prefix(Gtk.Image(icon_name=icon_name, tooltip_text=tooltip_text, **kwargs), prepend=prepend)
+        return self.add_prefix(
+            Gtk.Image(icon_name=icon_name, tooltip_text=tooltip_text, **kwargs),
+            prepend=prepend,
+        )
 
     def add_prefix_btn(
         self,
@@ -124,7 +128,11 @@ class PrefRow(Adw.ActionRow, GenericRow):
         **kwargs,
     ) -> Gtk.Button:
         btn = Gtk.Button(
-            icon_name=icon_name, tooltip_text=tooltip_text, vexpand=False, valign=Gtk.Align.CENTER, **kwargs
+            icon_name=icon_name,
+            tooltip_text=tooltip_text,
+            vexpand=False,
+            valign=Gtk.Align.CENTER,
+            **kwargs,
         )
         btn.connect("clicked", lambda *_: func(**func_kwargs))
         return self.add_prefix(btn, prepend=prepend)
@@ -143,7 +151,10 @@ class PrefRow(Adw.ActionRow, GenericRow):
         return self.add_suffix(Gtk.Label(label=label, **kwargs), prepend=prepend)
 
     def add_suffix_icon(self, icon_name: str, *, tooltip_text: str = "", prepend: bool = False, **kwargs) -> Gtk.Image:
-        return self.add_suffix(Gtk.Image(icon_name=icon_name, tooltip_text=tooltip_text, **kwargs), prepend=prepend)
+        return self.add_suffix(
+            Gtk.Image(icon_name=icon_name, tooltip_text=tooltip_text, **kwargs),
+            prepend=prepend,
+        )
 
     def add_suffix_btn(
         self,
@@ -156,13 +167,21 @@ class PrefRow(Adw.ActionRow, GenericRow):
         **kwargs,
     ) -> Gtk.Button:
         btn = Gtk.Button(
-            icon_name=icon_name, tooltip_text=tooltip_text, vexpand=False, valign=Gtk.Align.CENTER, **kwargs
+            icon_name=icon_name,
+            tooltip_text=tooltip_text,
+            vexpand=False,
+            valign=Gtk.Align.CENTER,
+            **kwargs,
         )
         btn.connect("clicked", lambda *_: func(**func_kwargs))
         return self.add_suffix(btn, prepend=prepend)
 
     def set_subpage_link(
-        self, *, nav_view: Adw.NavigationView, subpage_class: type[Adw.NavigationPage], **subpage_kwargs
+        self,
+        *,
+        nav_view: Adw.NavigationView,
+        subpage_class: type[Adw.NavigationPage],
+        **subpage_kwargs,
     ):
         def _on_activate(*args):
             nav_view.push(subpage_class(nav_view=nav_view, **subpage_kwargs))
@@ -280,6 +299,7 @@ class TextViewRow(AdditionalContentRow):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        # self.filterable = False
 
         self.min_height = min_height
         self.max_height = max_height
@@ -430,6 +450,7 @@ class ImageViewRow(AdditionalContentRow):
 
     def __init__(self, *, image: Gtk.Picture = None, max_height: int = 200, **kwargs):
         super().__init__(**kwargs)
+        # self.filterable = False
 
         self.max_height = max_height
         self.image: Gtk.Picture = image
@@ -594,11 +615,150 @@ class ImageViewRow(AdditionalContentRow):
         pass
 
 
+class ColumnViewRow(AdditionalContentRow):
+    __gtype_name__ = "ColumnViewRow"
+
+    def __init__(self, row_object: GObject.GObject, **kwargs):
+        super().__init__(**kwargs)
+        super().set_activatable(False)
+        # self.filterable = False
+
+        self.column_view = Gtk.ColumnView(show_column_separators=True, show_row_separators=True)
+        self.frame: Gtk.Frame = Gtk.Frame(hexpand=True, vexpand=True)
+        self.scroll: Gtk.ScrolledWindow = Gtk.ScrolledWindow(
+            propagate_natural_height=True, height_request=500
+        )  # TODO make this configurable
+        self.scroll.set_child(self.column_view)
+        self.frame.set_child(self.scroll)
+        self.content_box.append(self.frame)
+
+        # Data Model for Log Messages
+        self.row_object = row_object
+        self.data_model = Gio.ListStore(item_type=row_object)
+
+        # Filtering
+        self.filter_conditions = {}
+        self.filter = Gtk.CustomFilter.new(self._filter_func)
+        self.filter_model = Gtk.FilterListModel(model=self.data_model, filter=self.filter)
+
+        # Sorting model
+        self.sorter_model = Gtk.SortListModel.new(model=self.filter_model, sorter=None)
+        self.selection_model = Gtk.SingleSelection.new(model=self.sorter_model)
+        self.column_view.set_model(self.selection_model)
+
+        # Store column references
+        self.columns = []
+        # self._reset_model()
+
+    def add_column(
+        self,
+        title: str,
+        property_name: str,
+        is_sortable: bool = True,
+        is_numeric: bool = False,
+        expand: bool = False,
+    ):
+        def on_setup(_factory, list_item):
+            label = Gtk.Label(halign=Gtk.Align.START, margin_top=2, margin_bottom=2, selectable=True)
+            list_item.set_child(label)
+
+        def on_bind(_factory, list_item, property_name):
+            label_widget = list_item.get_child()
+            log_message = list_item.get_item()
+            label_widget.set_label(str(getattr(log_message, property_name)))
+
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", on_setup)
+        factory.connect("bind", on_bind, property_name)
+
+        column = Gtk.ColumnViewColumn(title=title, factory=factory, expand=expand)
+        self.columns.append(column)
+        self.column_view.append_column(column)
+
+        if is_sortable:
+            prop_expr = Gtk.PropertyExpression.new(self.row_object, None, property_name)
+            sorter = Gtk.NumericSorter.new(prop_expr) if is_numeric else Gtk.StringSorter.new(prop_expr)
+            column.set_sorter(sorter)
+
+    def change_header(self, column_index: int, new_title: str):
+        if column_index < 0 or column_index >= len(self.columns):
+            raise IndexError("Invalid column index.")
+
+        self.columns[column_index].set_title(new_title)
+
+    def get_headers(self) -> list[str]:
+        return [column.get_title() for column in self.columns]
+
+    def add_row(self, row_object: GObject.GObject) -> int:
+        GLib.idle_add(self.data_model.append, row_object)
+
+    def _match_filter(self, string: str, pattern: str) -> bool:
+        if pattern == "":
+            return True
+
+        try:
+            if string is None or pattern is None:
+                return False  # Avoid searching in None values
+
+            match = re.search(pattern, string, re.IGNORECASE)
+
+            if match is None or not match:
+                return False  # No match found
+
+            return True  # Match found
+        except re.error:
+            return True
+
+    def _filter_func(self, row_object: GObject.GObject):
+        if not row_object or not self.filter_conditions:
+            return True  # No filters applied, show all rows
+
+        row_properties = {p.name: getattr(row_object, p.name) for p in row_object.list_properties()}
+
+        for property_name, filter_value in self.filter_conditions.items():
+            if property_name not in row_properties:
+                continue  # Ignore non-existent properties
+
+            cell_value = str(row_properties[property_name])
+
+            if isinstance(filter_value, str):
+                if not self._match_filter(cell_value, filter_value):
+                    return False  # Exclude row if no match
+
+            elif isinstance(filter_value, list):
+                # At least one pattern in the list must match
+                if not any(self._match_filter(cell_value, pattern) for pattern in filter_value):
+                    return False  # Exclude row if none of the patterns match
+
+        return True  # Show the row if it passes all filters
+
+    def apply_filter(self, **filter_kwargs):
+        """
+        Applies column-specific filters using keyword arguments.
+
+        Example usage:
+            apply_filter(timestamp="2023", severity=["ERROR", "INFO"], message="System")
+
+        - Filters apply to properties of the GObject.
+        - A value can be:
+            - `None`: No filtering for that property.
+            - A `str`: The property must contain this substring.
+            - A `list[str]`: The property must contain at least one of these substrings.
+        - Properties not mentioned in `kwargs` will default to `None` (no filtering).
+        """
+        # Get all GObject properties and initialize missing ones with None
+        self.filter_conditions.update(filter_kwargs)  # Store only provided filters
+        self.filter.changed(Gtk.FilterChange.DIFFERENT)  # Refresh filtering
+
+    def clear_rows(self):
+        self.data_model.remove_all()
+
+
 class MultiToggleButtonRow(AdditionalContentRow):
     __gtype_name__ = "MultiToggleButtonRow"
-    __gsignals__ = {"buttons-changed": (GObject.SignalFlags.RUN_FIRST, None, ())}
+    __gsignals__ = {"button-toggled": (GObject.SignalFlags.RUN_FIRST, None, (str, bool))}
 
-    def __init__(self, **kwargs):
+    def __init__(self, show_quickselect_btns: bool = False, **kwargs):
         super().__init__(**kwargs)
         super().set_activatable(False)
 
@@ -608,6 +768,14 @@ class MultiToggleButtonRow(AdditionalContentRow):
             homogeneous=True,
             css_classes=["linked"],
         )
+
+        self.activate_all_btn = self.add_suffix_btn(
+            icon_name=ON_ICON, tooltip_text="Activate all", func=self.toggle_all, func_kwargs={"active": True}
+        )
+        self.deactivate_all_btn = self.add_suffix_btn(
+            icon_name=OFF_ICON, tooltip_text="Deactivate all", func=self.toggle_all, func_kwargs={"active": False}
+        )
+        self.suffixes_box.add_css_class("linked")
 
         self.buttons = dict()
 
@@ -627,11 +795,23 @@ class MultiToggleButtonRow(AdditionalContentRow):
     def get_active_buttons(self) -> dict:
         return {btn_id: btn for btn_id, btn in self.buttons.items() if btn.get_active()}
 
+    def get_button_id(self, btn: ToggleButton) -> int | str:
+        for _id, b in self.buttons.items():
+            if b == btn:
+                return _id
+        else:
+            raise ValueError("Button not found")
+
     def get_all_btn_states(self) -> dict:
         return {btn_id: (btn, btn.get_active()) for btn_id, btn in self.buttons.items()}
 
-    def on_btn_toggled(self, *args):
-        super().emit("buttons-changed")
+    def on_btn_toggled(self, btn: ToggleButton, is_active: bool, *args):
+        _id = self.get_button_id(btn)
+        super().emit("button-toggled", _id, is_active)
+
+    def toggle_all(self, active: bool):
+        for btn in self.buttons.values():
+            btn.set_active(active)
 
 
 # somewhat based on

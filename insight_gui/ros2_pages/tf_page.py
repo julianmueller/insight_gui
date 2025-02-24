@@ -56,9 +56,10 @@ class TransformsPage(Adw.NavigationPage):
 
         self.result_text_row = self.calc_group.add_row(TextViewRow(title="Result", show_copy_btn=True, visible=False))
 
-        # self.list_group = self.content_page.pref_page.add_group(empty_msg="No transforms found")
-
-        self.frames_group = self.content_page.pref_page.add_group(title="Frames", empty_msg="No frames found")
+        self.frames_group = self.content_page.pref_page.add_group(
+            title="Frames", empty_group_text="Refresh to show frames"
+        )
+        self.frames_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.frames_list = []
 
     def refresh(self, *args) -> bool:
@@ -86,24 +87,25 @@ class TransformsPage(Adw.NavigationPage):
             self.calc_button.set_sensitive(True)
         elif isinstance(frames_dict, list):
             self.content_page.show_toast("No frames found")
+            self.frames_group.set_empty_group_text("No frames found. Refresh to try again.")
             self.calc_button.set_sensitive(False)
             return False
 
         # Create a Gio.ListStore
-        self.list_store = Gio.ListStore.new(Gtk.StringObject)
+        self.frames_list_store.remove_all()
 
         for frame_name in self.frames_list:
             # Create a PrefRow for each frame
             self.frames_group.add_row(PrefRow(title=frame_name))
 
             # Fill the ListStore with items
-            self.list_store.append(Gtk.StringObject.new(frame_name))
+            self.frames_list_store.append(Gtk.StringObject.new(frame_name))
 
         # Set the Gio.ListModel on the ComboRow
-        if self.list_store.get_n_items() > 0:
-            self.source_frame_row.set_model(self.list_store)
+        if self.frames_list_store.get_n_items() > 0:
+            self.source_frame_row.set_model(self.frames_list_store)
             self.source_frame_row.set_selected(0)
-            self.target_frame_row.set_model(self.list_store)
+            self.target_frame_row.set_model(self.frames_list_store)
             self.target_frame_row.set_selected(0)
 
     def on_switch_frames(self, *args):

@@ -22,6 +22,10 @@ def main(args=None):
     # Enable Ctrl+C handling
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+    # import debugpy
+    # debugpy.listen(("0.0.0.0", 5678))
+    # debugpy.wait_for_client()
+
     try:
         gui_app = Ros2GuiApp(share_dir, start_ros2_connector=True)
         signal.signal(signal.SIGINT, lambda *_: gui_app.shutdown())

@@ -32,7 +32,12 @@ class ContentPage(Adw.Bin):
     bottom_bar: Gtk.ActionBar = Gtk.Template.Child()
 
     def __init__(
-        self, refresh_func: Callable = lambda: None, search_enabled: bool = True, refresh_enabled: bool = True, **kwargs
+        self,
+        refresh_func: Callable = lambda: None,
+        search_enabled: bool = True,
+        refresh_enabled: bool = True,
+        empty_page_text: str = "",
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.set_refresh_func(refresh_func)
@@ -40,12 +45,12 @@ class ContentPage(Adw.Bin):
         self.toggle_search_btn(search_enabled)
         self.toggle_refresh_btn(refresh_enabled)
 
-        self.pref_page = PrefPage()
+        self.pref_page = PrefPage(empty_page_text=empty_page_text)
         self.content_stack.add_child(self.pref_page)
-        if refresh_enabled:
-            self.content_stack.set_visible_child(self.refresh_page)
-        else:
-            self.content_stack.set_visible_child(self.pref_page)
+        # if refresh_enabled: # TODO necessary?
+        #     self.content_stack.set_visible_child(self.refresh_page)
+        # else:
+        self.content_stack.set_visible_child(self.pref_page)
 
         # self.search_bar.set_key_capture_widget(self.get_root())
         self.search_btn.bind_property(
@@ -60,7 +65,7 @@ class ContentPage(Adw.Bin):
     def on_refresh(self, *args):
         self.search_bar.set_search_mode(False)
         GLib.idle_add(self.refresh_func)
-        self.content_stack.set_visible_child(self.pref_page)
+        # self.content_stack.set_visible_child(self.pref_page)
 
     def show_toast(self, toast_text: str):
         self.toast_overlay.add_toast(Adw.Toast(title=str(toast_text)))
@@ -94,16 +99,20 @@ class ContentPage(Adw.Bin):
         self.header_bar.pack_start(widget)
         return widget
 
-    def add_bottom_left_btn(self, icon_name: str, tooltip_text: str, func: Callable, **func_kwargs) -> Gtk.Button:
-        btn = Gtk.Button.new_from_icon_name(icon_name)
-        btn.set_tooltip_text(tooltip_text)
+    def add_bottom_left_btn(
+        self, *, label: str = "", icon_name: str = "", tooltip_text: str = "", func: Callable, **func_kwargs
+    ) -> Gtk.Button:
+        btn = Gtk.Button(tooltip_text=tooltip_text)
+        btn.set_child(Adw.ButtonContent(label=label, icon_name=icon_name))
         btn.connect_data("clicked", lambda *_: func(**func_kwargs))
         self.add_bottom_widget(btn, position="start")
         return btn
 
-    def add_bottom_right_btn(self, icon_name: str, tooltip_text: str, func: Callable, **func_kwargs) -> Gtk.Button:
-        btn = Gtk.Button.new_from_icon_name(icon_name)
-        btn.set_tooltip_text(tooltip_text)
+    def add_bottom_right_btn(
+        self, *, label: str = "", icon_name: str = "", tooltip_text: str = "", func: Callable, **func_kwargs
+    ) -> Gtk.Button:
+        btn = Gtk.Button(tooltip_text=tooltip_text)
+        btn.set_child(Adw.ButtonContent(label=label, icon_name=icon_name))
         btn.connect_data("clicked", lambda *_: func(**func_kwargs))
         self.add_bottom_widget(btn, position="end")
         return btn
@@ -124,7 +133,11 @@ class ContentPage(Adw.Bin):
         self.search_entry.set_placeholder_text(str(text))
 
     def set_refresh_func(self, func: Callable):
-        self.refresh_func = lambda *_: func() and False
+        def refresh_wrapper():
+            func()
+            return False  # for Glib.idle_add to end after one iteration
+
+        self.refresh_func = refresh_wrapper
 
     def toggle_search_btn(self, enabled: bool):
         self.search_btn.set_visible(enabled)

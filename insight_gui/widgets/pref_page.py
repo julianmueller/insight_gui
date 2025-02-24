@@ -13,7 +13,13 @@ class PrefPage(Adw.PreferencesPage):
     __gtype_name__ = "PrefPage"
 
     def __init__(
-        self, title: str = "Preferences", icon_name: str = "settings-symbolic", description: str = "", **kwargs
+        self,
+        *,
+        title: str = "Preferences",
+        icon_name: str = "settings-symbolic",
+        description: str = "",
+        empty_page_text: str = "page is empty",
+        **kwargs,
     ):
         super().__init__(**kwargs)
         super().set_title(str(title))
@@ -24,6 +30,8 @@ class PrefPage(Adw.PreferencesPage):
             super().set_description(str(description))
 
         self.groups: list[PrefGroup] = []
+        self.empty_group = PrefGroup(sensitive=False, empty_group_text=empty_page_text)
+        super().add(self.empty_group)
 
     @property
     def num_groups(self) -> int:
@@ -37,10 +45,17 @@ class PrefPage(Adw.PreferencesPage):
         raise NotImplementedError("use 'add_group' instead")
 
     def add_group(
-        self, title: str = "", description: str = "", empty_msg: str = "empty list", filterable: bool = True, **kwargs
+        self,
+        *,
+        title: str = "",
+        description: str = "",
+        empty_group_text: str = "group is empty",
+        filterable: bool = True,
+        **kwargs,
     ) -> PrefGroup:
+        self.empty_group.set_visible(False)
         pref_group = PrefGroup(
-            title=title, description=description, empty_msg=empty_msg, filterable=filterable, **kwargs
+            title=title, description=description, empty_group_text=empty_group_text, filterable=filterable, **kwargs
         )
         super().add(pref_group)
         self.groups.append(pref_group)
@@ -53,7 +68,8 @@ class PrefPage(Adw.PreferencesPage):
     def clear(self):
         for pref_group in reversed(self.groups):
             self.remove_group(pref_group)
-        # self.groups = []
+        self.empty_group.set_visible(True)
+        self.groups = []
 
     def apply_filter(self, text: str):
         """Filters groups and rows based on a search query."""
@@ -101,3 +117,6 @@ class PrefPage(Adw.PreferencesPage):
 
             # Show group if it matches or any row inside it matches
             group.set_filtered(group_matches or any_row_matches)
+
+    def set_empty_page_text(self, text: str):
+        self.empty_group.set_empty_group_text(text)

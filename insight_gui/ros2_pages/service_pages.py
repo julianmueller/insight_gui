@@ -33,7 +33,7 @@ class ServiceListPage(Adw.NavigationPage):
         self.content_page.set_search_entry_placeholder_text("Search for services")
         super().set_child(self.content_page)
 
-        self.list_group = self.content_page.pref_page.add_group(empty_msg="No services found")
+        self.service_list_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show services")
 
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
@@ -42,7 +42,7 @@ class ServiceListPage(Adw.NavigationPage):
             )
             return False
 
-        self.list_group.clear()
+        self.service_list_group.clear()
 
         available_services = sorted(
             get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True)
@@ -66,7 +66,10 @@ class ServiceListPage(Adw.NavigationPage):
                 service_types=service_types,
                 ros2_connector=self.ros2_connector,
             )
-            self.list_group.add_row(row)
+            self.service_list_group.add_row(row)
+
+        if self.service_list_group.num_rows == 0:
+            self.service_list_group.set_empty_group_text("No services found. Refresh to try again.")
 
         return bool(self.content_page.pref_page.num_groups)
 
@@ -115,12 +118,12 @@ class ServiceInfoPage(Adw.NavigationPage):
 
         # Service Servers
         service_servers_group = self.content_page.pref_page.add_group(
-            title="Service Servers", empty_msg="Service has no servers"
+            title="Service Servers", empty_group_text="Service has no servers"
         )
 
         # Service Clients
         service_clients_group = self.content_page.pref_page.add_group(
-            title="Service Clients", empty_msg="Service has no clients"
+            title="Service Clients", empty_group_text="Service has no clients"
         )
 
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):

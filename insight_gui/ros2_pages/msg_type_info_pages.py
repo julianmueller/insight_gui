@@ -93,7 +93,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         )
 
         # Service Message Request
-        request_group = self.content_page.pref_page.add_group(title="Request", empty_msg="No request data")
+        request_group = self.content_page.pref_page.add_group(title="Request", empty_group_text="No request data")
         request_class = srv_class.Request
         _populate_group_w_msg_rows(msg_class=request_class, pref_group=request_group, nav_view=self.nav_view)
 
@@ -109,7 +109,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         )
 
         # Service Message Response
-        response_group = self.content_page.pref_page.add_group(title="Response", empty_msg="No response data")
+        response_group = self.content_page.pref_page.add_group(title="Response", empty_group_text="No response data")
         response_class = srv_class.Response
         _populate_group_w_msg_rows(msg_class=response_class, pref_group=response_group, nav_view=self.nav_view)
 
@@ -167,7 +167,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         )
 
         # Action Message Goal
-        goal_group = self.content_page.pref_page.add_group(title="Goal", empty_msg="No goal data")
+        goal_group = self.content_page.pref_page.add_group(title="Goal", empty_group_text="No goal data")
         goal_class = act_class.Goal
         _populate_group_w_msg_rows(msg_class=goal_class, pref_group=goal_group, nav_view=self.nav_view)
 
@@ -183,7 +183,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         )
 
         # Action Message Feedback
-        feedback_group = self.content_page.pref_page.add_group(title="Feedback", empty_msg="No feedback data")
+        feedback_group = self.content_page.pref_page.add_group(title="Feedback", empty_group_text="No feedback data")
         feedback_class = act_class.Feedback
         _populate_group_w_msg_rows(msg_class=feedback_class, pref_group=feedback_group, nav_view=self.nav_view)
 
@@ -199,7 +199,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         )
 
         # Action Message Result
-        result_group = self.content_page.pref_page.add_group(title="Result", empty_msg="No result data")
+        result_group = self.content_page.pref_page.add_group(title="Result", empty_group_text="No result data")
         result_class = act_class.Result
         _populate_group_w_msg_rows(msg_class=result_class, pref_group=result_group, nav_view=self.nav_view)
 

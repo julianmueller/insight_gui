@@ -26,11 +26,11 @@ class PackageListPage(Adw.NavigationPage):
 
         self.nav_view = nav_view if nav_view else self.get_parent()
 
-        self.content_page = ContentPage(refresh_func=self.refresh)
-        self.content_page.set_search_entry_placeholder_text("Search for Nodes")
+        self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show packages")
+        self.content_page.set_search_entry_placeholder_text("Search for Packages")
         super().set_child(self.content_page)
 
-        self.list_group = self.content_page.pref_page.add_group(empty_msg="No packages found")
+        self.pkg_list_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show packages")
 
         self.content_page.add_bottom_left_btn(
             icon_name="list-add-symbolic",
@@ -45,18 +45,21 @@ class PackageListPage(Adw.NavigationPage):
         )
 
     def refresh(self, *args):
-        self.list_group.clear()
+        self.pkg_list_group.clear()
 
         available_pkgs = get_packages_with_prefixes()
 
         for pkg_name, pkg_path in available_pkgs.items():
-            row = self.list_group.add_row(PrefRow(title=pkg_name, subtitle=pkg_path))
+            row = self.pkg_list_group.add_row(PrefRow(title=pkg_name, subtitle=pkg_path))
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=PackageInfoPage,
                 pkg_name=pkg_name,
                 pkg_path=pkg_path,
             )
+
+        if self.pkg_list_group.num_rows == 0:
+            self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
 
         return bool(self.content_page.pref_page.num_groups)
 
@@ -116,7 +119,7 @@ class PackageInfoPage(Adw.NavigationPage):
 
         # Executables
         executables_group = self.content_page.pref_page.add_group(
-            title="Executables", empty_msg="Package has no executables"
+            title="Executables", empty_group_text="Package has no executables"
         )
         executable_paths = get_executable_paths(package_name=pkg_name)
 

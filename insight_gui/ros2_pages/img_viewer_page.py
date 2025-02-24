@@ -38,11 +38,9 @@ class ImageViewerPage(Adw.NavigationPage):
         self.single_img_done = False
         self.play_pause_btn = self.img_row.add_suffix(
             PlayPauseButton(
-                default_play=self.continuous_img_stream,
-                play_label="Continuous",
-                pause_label="Single",
+                default_active=self.continuous_img_stream,
+                labels=("Continuous", "Single"),
                 func=self.on_toggle_img_stream,
-                width_request=150,
             ),
             prepend=True,
         )

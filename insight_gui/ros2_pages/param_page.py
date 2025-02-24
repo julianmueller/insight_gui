@@ -29,8 +29,8 @@ class ParameterListPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(refresh_func=self.refresh)
-        self.content_page.set_search_entry_placeholder_text("Search for Parameters")
+        self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show parameters")
+        self.content_page.set_search_entry_placeholder_text("Refresh to show parameters")
         super().set_child(self.content_page)
 
     def refresh(self, *args):
@@ -40,7 +40,6 @@ class ParameterListPage(Adw.NavigationPage):
                 "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
             )
             return False
-        # self.list_group.clear()
 
         available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
@@ -78,6 +77,9 @@ class ParameterListPage(Adw.NavigationPage):
                 )
                 group.add_row(row)
             group.set_description_to_row_count()
+
+        if len(available_nodes) == 0:
+            self.content_page.pref_page.set_empty_group_text("No Parameters found. Refresh to try again.")
 
         return bool(self.content_page.pref_page.num_groups)
 

@@ -71,7 +71,7 @@ class ToggleButton(Gtk.ToggleButton):
         return super().get_active()
 
     def _on_toggle(self, *args):
-        self.func(**self.func_kwargs)
+        self.func(self, self.is_active, **self.func_kwargs)
         self.update_button()
 
     def update_button(self):
@@ -98,63 +98,74 @@ class ToggleButton(Gtk.ToggleButton):
                 self.add_css_class(css_class)
 
 
-class PlayPauseButton(Gtk.Button):
+class PlayPauseButton(ToggleButton):
     __gtype_name__ = "PlayPauseButton"
 
-    def __init__(
-        self,
-        *,
-        func: Callable,
-        func_kwargs: dict = {},
-        default_play: bool = False,
-        play_label: str = "",
-        pause_label: str = "",
-        play_tooltip: str = "",
-        pause_tooltip: str = "",
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.func = func
-        self.func_kwargs = func_kwargs
-        self.playing = default_play
-        self.play_label = play_label
-        self.pause_label = pause_label
-        self.play_tooltip = play_tooltip
-        self.pause_tooltip = pause_tooltip
-        self.play_icon_name = "media-playback-start-symbolic"
-        self.pause_icon_name = "media-playback-pause-symbolic"
+    def __init__(self, **kwargs):
+        super().__init__(
+            icon_names=("media-playback-pause-symbolic", "media-playback-start-symbolic"),
+            **kwargs,
+        )
+        pass
 
-        self.btn_content = Adw.ButtonContent()
-        self.set_child(self.btn_content)
 
-        if not pause_label:
-            self.pause_label = self.play_label
+# class PlayPauseButton(Gtk.Button):
+#     __gtype_name__ = "PlayPauseButton"
 
-        if not pause_tooltip:
-            self.pause_tooltip = self.play_tooltip
+#     def __init__(
+#         self,
+#         *,
+#         func: Callable,
+#         func_kwargs: dict = {},
+#         default_play: bool = False,
+#         play_label: str = "",
+#         pause_label: str = "",
+#         play_tooltip: str = "",
+#         pause_tooltip: str = "",
+#         **kwargs,
+#     ):
+#         super().__init__(**kwargs)
+#         self.func = func
+#         self.func_kwargs = func_kwargs
+#         self.playing = default_play
+#         self.play_label = play_label
+#         self.pause_label = pause_label
+#         self.play_tooltip = play_tooltip
+#         self.pause_tooltip = pause_tooltip
+#         self.play_icon_name = "media-playback-start-symbolic"
+#         self.pause_icon_name = "media-playback-pause-symbolic"
 
-        super().connect("clicked", self._on_clicked)
-        self._update_btn_state()
+#         self.btn_content = Adw.ButtonContent()
+#         self.set_child(self.btn_content)
 
-    def _on_clicked(self, button):
-        self.func(playing=self.playing, **self.func_kwargs)
-        self._update_btn_state()
+#         if not pause_label:
+#             self.pause_label = self.play_label
 
-    @property
-    def is_playing(self):
-        return self.playing
+#         if not pause_tooltip:
+#             self.pause_tooltip = self.play_tooltip
 
-    def _update_btn_state(self):
-        if self.playing:
-            self.btn_content.set_label(self.pause_label)
-            self.btn_content.set_icon_name(self.pause_icon_name)
-            super().set_tooltip_text(self.play_tooltip)
-            self.playing = False
-        else:
-            self.btn_content.set_label(self.play_label)
-            self.btn_content.set_icon_name(self.play_icon_name)
-            super().set_tooltip_text(self.pause_tooltip)
-            self.playing = True
+#         super().connect("clicked", self._on_clicked)
+#         self._update_btn_state()
+
+#     def _on_clicked(self, button):
+#         self.func(playing=self.playing, **self.func_kwargs)
+#         self._update_btn_state()
+
+#     @property
+#     def is_playing(self):
+#         return self.playing
+
+#     def _update_btn_state(self):
+#         if self.playing:
+#             self.btn_content.set_label(self.pause_label)
+#             self.btn_content.set_icon_name(self.pause_icon_name)
+#             super().set_tooltip_text(self.play_tooltip)
+#             self.playing = False
+#         else:
+#             self.btn_content.set_label(self.play_label)
+#             self.btn_content.set_icon_name(self.play_icon_name)
+#             super().set_tooltip_text(self.pause_tooltip)
+#             self.playing = True
 
 
 # TODO this is just copy/past of the one above, adapt it for toggle functionality

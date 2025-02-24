@@ -135,18 +135,18 @@ class MainWindow(Adw.ApplicationWindow):
             title="Image Viewer",
             ros2_connector=self.ros2_connector,
         )
-        # Doctor
-        self.add_stack_page(
-            nav_page_class=DoctorPage,
-            name="doctor",
-            title="Doctor",
-            ros2_connector=self.ros2_connector,
-        )
         # Logger
         self.add_stack_page(
             nav_page_class=LoggerPage,
             name="logger",
             title="Logger",
+            ros2_connector=self.ros2_connector,
+        )
+        # Doctor
+        self.add_stack_page(
+            nav_page_class=DoctorPage,
+            name="doctor",
+            title="Doctor",
             ros2_connector=self.ros2_connector,
         )
 
