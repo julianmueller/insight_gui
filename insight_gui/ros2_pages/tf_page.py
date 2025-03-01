@@ -39,9 +39,21 @@ class TransformsPage(Adw.NavigationPage):
         )
 
         # TODO use prefix_icons left-large-symbolic and right-large-symbolic
-        self.source_frame_row = self.calc_group.add_row(Adw.ComboRow(title="Source Frame", enable_search=True))
+        self.source_frame_row = self.calc_group.add_row(
+            Adw.ComboRow(
+                title="Source Frame",
+                enable_search=True,
+                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+            )
+        )
         self.source_frame_row.connect("notify::selected-item", self.on_source_frame_changed)
-        self.target_frame_row = self.calc_group.add_row(Adw.ComboRow(title="Target Frame", enable_search=True))
+        self.target_frame_row = self.calc_group.add_row(
+            Adw.ComboRow(
+                title="Target Frame",
+                enable_search=True,
+                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+            )
+        )
         self.target_frame_row.connect("notify::selected-item", self.on_target_frame_changed)
 
         self.calc_button: ButtonRow = self.calc_group.add_row(
@@ -60,6 +72,8 @@ class TransformsPage(Adw.NavigationPage):
             title="Frames", empty_group_text="Refresh to show frames"
         )
         self.frames_list_store = Gio.ListStore.new(Gtk.StringObject)
+        self.target_frame_row.set_model(self.frames_list_store)
+        self.source_frame_row.set_model(self.frames_list_store)
         self.frames_list = []
 
     def refresh(self, *args) -> bool:
@@ -103,9 +117,7 @@ class TransformsPage(Adw.NavigationPage):
 
         # Set the Gio.ListModel on the ComboRow
         if self.frames_list_store.get_n_items() > 0:
-            self.source_frame_row.set_model(self.frames_list_store)
             self.source_frame_row.set_selected(0)
-            self.target_frame_row.set_model(self.frames_list_store)
             self.target_frame_row.set_selected(0)
 
     def on_switch_frames(self, *args):

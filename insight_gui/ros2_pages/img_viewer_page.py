@@ -30,9 +30,19 @@ class ImageViewerPage(Adw.NavigationPage):
         super().set_child(self.content_page)
 
         self.img_group = self.content_page.pref_page.add_group(title="View Image", filterable=False)
-        self.img_topic_row = self.img_group.add_row(Adw.ComboRow(title="Image Topic", enable_search=True))
+        self.img_topic_row = self.img_group.add_row(
+            Adw.ComboRow(
+                title="Image Topic",
+                enable_search=True,
+                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+            )
+        )
         self.img_topic_row.connect("notify::selected-item", self.on_image_topic_changed)
         self.img_row: ImageViewRow = self.img_group.add_row(ImageViewRow(title="Image"))
+
+        # Create a Gio.ListStore to fill the ComboBox with
+        self.img_topic_list_store = Gio.ListStore.new(Gtk.StringObject)
+        self.img_topic_row.set_model(self.img_topic_list_store)
 
         self.continuous_img_stream = False
         self.single_img_done = False
@@ -64,6 +74,7 @@ class ImageViewerPage(Adw.NavigationPage):
             return False
 
         self.topic_list = []
+        self.img_topic_list_store.remove_all()
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
         for i, (topic_name, topic_types) in enumerate(available_topics):
@@ -77,20 +88,17 @@ class ImageViewerPage(Adw.NavigationPage):
             if topic_types == "sensor_msgs/msg/Image":
                 self.topic_list.append(topic_name)
 
-        # Create a Gio.ListStore to fill the ComboBox with
-        self.list_store = Gio.ListStore.new(Gtk.StringObject)
-
         for img_topic in self.topic_list:
-            self.list_store.append(Gtk.StringObject.new(img_topic))
+            self.img_topic_list_store.append(Gtk.StringObject.new(img_topic))
 
-        if self.list_store.get_n_items() > 0:
-            self.img_topic_row.set_model(self.list_store)
+        if self.img_topic_list_store.get_n_items() > 0:
+            self.img_topic_row.set_model(self.img_topic_list_store)
             self.img_topic_row.set_selected(0)
         else:
             self.content_page.show_toast("No topic with images found")
 
     def on_image_topic_changed(self, *args):
-        if self.list_store.get_n_items() == 0:
+        if self.img_topic_list_store.get_n_items() <= 0:
             return
 
         topic_name = self.img_topic_row.get_selected_item().get_string()

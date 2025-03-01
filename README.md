@@ -77,21 +77,32 @@ ros2 run insight_gui main
 - traverse through msg definitions (like PoseArray > Pose > Position > x)
 - filter all lists where it is useful
 - call services and specify the request data
-- calcualte tf transforms between two frames
+- calculate tf transforms between two frames
 - get parameters from nodes
 - show images from topics (as single or continuous stream)
 - show current ros2 clock/time
 - manipulate ros2 env variables like ROS_DOMAIN_ID for the running GUI session
+- show ros2 logs and filter them
 - show ros2 doctor inspection with available package updates etc
 
 
 ## TODO List
 
-- make a proper logo (help!)
-- make parameter setting work
-- make btns of img viewer work
-- check continuous img stream
-- redo all screenshots before release
-- check preferences dialog
-- make shortcuts (eg CTRL+F) work
-- make the Logger with filtering work
+- marketing
+    - make a proper logo (help!)
+    - redo all screenshots before release
+- features
+    - make "set parameter" work
+    - make btns of img viewer work
+    - add tf inspection page (show the stuff that rviz shows)
+    - add every page of the gui as a ros2 executable, so a window with only this page starts
+- improvements
+    - find a way to load all "refresh" content on startup, also if one page updates "available_nodes" etc, all other pages that utilize this shall update as well
+    - check continuous img stream
+    - check preferences dialog
+- cleanup
+    - remove "status_page" in window.ui
+- gnome/gtk4
+    - make shortcuts (eg CTRL+F) work and add shortcuts page
+    - add gtk action for all majoractions
+    - add gtk settings

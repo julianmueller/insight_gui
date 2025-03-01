@@ -169,6 +169,11 @@ class MainWindow(Adw.ApplicationWindow):
         action.connect("activate", lambda *_: self.preferences_dialog.present(self))
         self.app.add_action(action)
 
+        # TODO add shortcuts
+        # action = Gio.SimpleAction.new("shortcuts", None)
+        # action.connect("activate", lambda *_: self.shortcuts_dialog.present(self))
+        # self.app.add_action(action)
+
         action = Gio.SimpleAction.new("about", None)
         action.connect("activate", lambda *_: self.about_dialog.present(self))
         self.app.add_action(action)
@@ -186,6 +191,20 @@ class MainWindow(Adw.ApplicationWindow):
         # action.connect("activate", self.on_quit)
         # self.app.add_action(action)
 
+        # Shortcuts
+        controller = Gtk.ShortcutController()
+        shortcut = Gtk.Shortcut.new(
+            trigger=Gtk.ShortcutTrigger.parse_string("<Control>p"),
+            action=Gtk.CallbackAction.new(self.on_shortcut_activated),
+        )
+
+        # Add shortcut to controller
+        controller.add_shortcut(shortcut)
+
+        # Add controller to window
+        self.add_controller(controller)
+
+        # update time labels
         GLib.idle_add(self.update_time_labels)
 
     @property
@@ -204,6 +223,9 @@ class MainWindow(Adw.ApplicationWindow):
             refresh_func = getattr(nav_page, "on_refresh", None)
             if callable(refresh_func):
                 refresh_func()
+
+    def on_shortcut_activated(self, *args):
+        print("Shortcut Ctrl+P activated!")
 
     def add_stack_page(self, *, name: str, title: str, nav_page_class: type[Adw.NavigationPage], **kwargs):
         nav_view = Adw.NavigationView()
@@ -235,7 +257,7 @@ class MainWindow(Adw.ApplicationWindow):
             # self.wall_time_lbl.set_text(f"{(current_time.nanoseconds / 1e9):.2f} s")
             # self.wall_elapsed_time_lbl.set_text(f"{(elapsed.nanoseconds / 1e9):.2f} s")
 
-        return True
+        return True  # keep GLib thread running
 
     # add accent colors
     def _setup_accent_colors(self):

@@ -9,7 +9,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio
+from gi.repository import Gtk, Adw, Gio, GLib
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
@@ -37,11 +37,22 @@ class ServiceCallPage(Adw.NavigationPage):
         # select group
         self.select_group = self.content_page.pref_page.add_group(title="Select Service")
 
-        self.service_select_row = self.select_group.add_row(Adw.ComboRow(title="Service", enable_search=True))
+        self.service_select_row = self.select_group.add_row(
+            Adw.ComboRow(
+                title="Service",
+                enable_search=True,
+                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+            )
+        )
         self.service_select_row.connect("notify::selected-item", self.on_service_selected)
         self.selected_service_type_row = self.select_group.add_row(
             PrefRow(title="Service Type", css_classes=["property"])
         )
+
+        # Create a Gio.ListStore
+        self.service_list_store: Gio.ListStore = Gio.ListStore.new(Gtk.StringObject)
+        self.service_select_row.set_model(self.service_list_store)
+
         # TODO maybe merge the two rows, to match the visuals of the service info page
         # TODO make that:
         # - the request and response groups have a btn in the header, that opens the type dialog for request/response
@@ -57,13 +68,16 @@ class ServiceCallPage(Adw.NavigationPage):
             ButtonRow(
                 label="Call Service",
                 start_icon_name="call-start-symbolic",
-                func=self.on_call_service,
+                func=lambda *_: GLib.idle_add(self.on_call_service),
                 sensitive=False,
             )
         )
 
         # response group
         self.response_group = self.content_page.pref_page.add_group(title="Response")
+        self.response_group.add_suffix_btn(
+            icon_name="trash-symbolic", tooltip_text="Clear Response Text", func=self.on_clear_response
+        )
         self.response_text_row = self.response_group.add_row(TextViewRow(editable=False))
 
     def refresh(self, *args):
@@ -74,8 +88,8 @@ class ServiceCallPage(Adw.NavigationPage):
             )
             return False
 
-        # Create a Gio.ListStore
-        list_store = Gio.ListStore.new(Gtk.StringObject)
+        # clear previous service list
+        self.service_list_store.remove_all()
 
         available_services = sorted(
             get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True)
@@ -89,20 +103,33 @@ class ServiceCallPage(Adw.NavigationPage):
             self.call_btn.set_sensitive(False)
             return False
 
+        def on_setup(factory, list_item):
+            label = Gtk.Label(xalign=0, wrap=True, hexpand=True)
+            list_item.set_child(label)
+
+        def on_bind(factory, list_item):
+            item = list_item.get_item()
+            label = list_item.get_child()
+            if item and label:
+                label.set_text(item.get_string())
+
         # TODO maybe also group the services by namespaces
         factory = Gtk.SignalListItemFactory()
-        factory.connect("setup", lambda _, list_item: list_item.set_child(Gtk.Label(xalign=0, wrap=True, hexpand=True)))
-        factory.connect("bind", lambda _, list_item: list_item.get_child().set_text(list_item.get_item().get_string()))
+        factory.connect("setup", on_setup)
+        factory.connect("bind", on_bind)
 
         # fill the ComboBox/ListStore with available services
         for service_name, service_types in available_services:
-            list_store.append(Gtk.StringObject.new(service_name))
+            self.service_list_store.append(Gtk.StringObject.new(service_name))
 
-        self.service_select_row.set_model(list_store)
+        # self.service_select_row.set_model(list_store)
         self.service_select_row.set_factory(factory)
         # self.service_select_row.set_selected(0)
 
     def on_service_selected(self, *args):
+        if self.service_list_store.get_n_items() <= 0:
+            return
+
         self.selected_service_name = self.service_select_row.get_selected_item().get_string()
         self.service_class = get_service_class(
             node=self.ros2_connector.node,
@@ -156,6 +183,13 @@ class ServiceCallPage(Adw.NavigationPage):
 
         response_yaml = message_to_yaml(response).rstrip()
         self.response_text_row.set_text(response_yaml)
+
+        self.content_page.show_toast("Service call was successful")
+
+        return False  # stop the Glib.idle_add
+
+    def on_clear_response(self, *args):
+        self.response_text_row.clear()
 
 
 def get_msg_full_name(msg_class):
