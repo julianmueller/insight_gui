@@ -28,6 +28,7 @@ class PackageListPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show packages")
         self.content_page.set_search_entry_placeholder_text("Search for Packages")
+        self.content_page.set_dedock_page(type(self))
         super().set_child(self.content_page)
 
         self.pkg_list_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show packages")

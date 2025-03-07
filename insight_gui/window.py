@@ -19,7 +19,7 @@ from insight_gui.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.ros2_pages.action_pages import ActionListPage
 from insight_gui.ros2_pages.param_page import ParameterListPage
 from insight_gui.ros2_pages.tf_page import TransformsPage
-from insight_gui.ros2_pages.log_pages import LoggerPage
+from insight_gui.ros2_pages.log_page import LoggerPage
 from insight_gui.ros2_pages.doctor_page import DoctorPage
 from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
 from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog

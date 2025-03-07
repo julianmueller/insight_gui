@@ -35,6 +35,7 @@ class MessageTypeBrowserPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show message types")
         self.content_page.set_search_entry_placeholder_text("Search for message types")
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
     def refresh(self, *args) -> bool:
@@ -88,6 +89,7 @@ class ServiceTypeBrowserPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show service types")
         self.content_page.set_search_entry_placeholder_text("Search for service types")
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
     def refresh(self, *args) -> bool:
@@ -142,6 +144,7 @@ class ActionTypeBrowserPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show action types")
         self.content_page.set_search_entry_placeholder_text("Search for action types")
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
     def refresh(self, *args) -> bool:

@@ -31,6 +31,7 @@ class ParameterListPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show parameters")
         self.content_page.set_search_entry_placeholder_text("Refresh to show parameters")
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
     def refresh(self, *args):

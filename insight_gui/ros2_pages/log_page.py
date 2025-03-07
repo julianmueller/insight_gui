@@ -80,22 +80,15 @@ class LogMessage(GObject.Object):
 class LoggerPage(Adw.NavigationPage):
     __gtype_name__ = "LoggerPage"
 
-    def __init__(
-        self,
-        nav_view: Adw.NavigationView = None,
-        ros2_connector: ROS2Connector = None,
-        **kwargs,
-    ):
+    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Logger")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(
-            refresh_enabled=False,
-            search_enabled=False,  # refresh_func=self.on_refresh_node_list
-        )
+        self.content_page = ContentPage(refresh_enabled=False, search_enabled=False)
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
         self.is_logging = False

@@ -27,6 +27,7 @@ class ImageViewerPage(Adw.NavigationPage):
         self.bridge = CvBridge()
 
         self.content_page = ContentPage(refresh_func=self.refresh, search_enabled=False)
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
         self.img_group = self.content_page.pref_page.add_group(title="View Image", filterable=False)

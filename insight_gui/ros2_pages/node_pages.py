@@ -36,6 +36,7 @@ class NodeListPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for nodes")
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
         self.node_list_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show nodes")
@@ -95,6 +96,15 @@ class NodeInfoPage(Adw.NavigationPage):
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(search_enabled=True, refresh_enabled=False)
+        self.content_page.set_dedock_page(
+            type(self),
+            dedock_kwargs={
+                "node_name": self.node_name,
+                "node_namespace": self.node_namespace,
+                "node_full_name": self.node_full_name,
+                "ros2_connector": self.ros2_connector,
+            },
+        )
         super().set_child(self.content_page)
 
         # Imports here, to prevent circular imports # TODO find a nicer way?

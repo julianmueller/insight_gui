@@ -30,6 +30,7 @@ class TopicListPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for topics")
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
         self.topic_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show topics")
@@ -90,6 +91,14 @@ class TopicInfoPage(Adw.NavigationPage):
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         self.content_page = ContentPage(search_enabled=True, refresh_enabled=False)
+        self.content_page.set_dedock_page(
+            type(self),
+            dedock_kwargs={
+                "topic_name": self.topic_name,
+                "topic_types": topic_types,
+                "ros2_connector": self.ros2_connector,
+            },
+        )
         super().set_child(self.content_page)
 
         # Message Type

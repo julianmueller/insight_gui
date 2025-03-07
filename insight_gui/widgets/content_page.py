@@ -18,6 +18,7 @@ class ContentPage(Adw.Bin):
     header_bar: Adw.HeaderBar = Gtk.Template.Child()
     search_btn: Gtk.ToggleButton = Gtk.Template.Child()
     refresh_btn: Gtk.Button = Gtk.Template.Child()
+    dedock_btn: Gtk.Button = Gtk.Template.Child()
 
     search_bar: Gtk.SearchBar = Gtk.Template.Child()
     search_entry: Gtk.SearchEntry = Gtk.Template.Child()
@@ -41,6 +42,8 @@ class ContentPage(Adw.Bin):
     ):
         super().__init__(**kwargs)
         self.set_refresh_func(refresh_func)
+        self.dedock_page_class = None
+        self.dedock_kwargs = {}
 
         self.toggle_search_btn(search_enabled)
         self.toggle_refresh_btn(refresh_enabled)
@@ -66,6 +69,18 @@ class ContentPage(Adw.Bin):
         self.search_bar.set_search_mode(False)
         GLib.idle_add(self.refresh_func)
         # self.content_stack.set_visible_child(self.pref_page)
+
+    @Gtk.Template.Callback()
+    def on_dedock(self, *args):
+        if self.dedock_page_class:
+            nav_view = Adw.NavigationView()
+            win = Adw.Window(content=nav_view, destroy_with_parent=True, default_height=600, default_width=800)
+
+            nav_page = self.dedock_page_class(nav_view=nav_view, **self.dedock_kwargs)
+            nav_page.content_page.dedock_btn.set_visible(False)
+
+            nav_view.add(nav_page)
+            win.show()
 
     def show_toast(self, toast_text: str):
         self.toast_overlay.add_toast(Adw.Toast(title=str(toast_text)))
@@ -138,6 +153,11 @@ class ContentPage(Adw.Bin):
             return False  # for Glib.idle_add to end after one iteration
 
         self.refresh_func = refresh_wrapper
+
+    def set_dedock_page(self, dedock_page_class: Gtk.Widget, dedock_kwargs: dict = {}):
+        self.dedock_page_class = dedock_page_class
+        self.dedock_kwargs = dedock_kwargs
+        self.dedock_btn.set_visible(True)
 
     def toggle_search_btn(self, enabled: bool):
         self.search_btn.set_visible(enabled)

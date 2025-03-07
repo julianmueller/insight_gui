@@ -31,6 +31,7 @@ class TransformsPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Search for Frames")
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
         self.calc_group = self.content_page.pref_page.add_group(title="Calculate Transform", filterable=False)

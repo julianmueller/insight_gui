@@ -25,8 +25,17 @@
                                 <signal name="clicked" handler="on_refresh" />
                             </object>
                         </child>
+                        <child>
+                            <object class="GtkButton" id="dedock_btn">
+                                <property name="icon-name">external-link-symbolic</property>
+                                <property name="tooltip-text">Open in separate window</property>
+                                <property name="visible">false</property>
+                                <signal name="clicked" handler="on_dedock" />
+                            </object>
+                        </child>
                     </object>
                 </child>
+
                 <child type="top">
                     <object class="GtkSearchBar" id="search_bar">
                         <property name="search-mode-enabled">False</property>

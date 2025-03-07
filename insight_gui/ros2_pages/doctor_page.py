@@ -26,6 +26,7 @@ class DoctorPage(Adw.NavigationPage):
 
         self.content_page = ContentPage(refresh_func=self.refresh)
         self.content_page.set_search_entry_placeholder_text("Ask the doctor")
+        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
         self.network_config_group = self.content_page.pref_page.add_group(
