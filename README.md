@@ -105,11 +105,12 @@ ros2 run insight_gui main
     - check continuous img stream
     - check preferences dialog
     - add GtkSpinner as a loading animation for refreshs
+    - add a "clear" method for all the pages
 - cleanup
     - remove "status_page" in window.ui
-    - replace "webbrowser" stuff with gtk File/Web Launcher
 - gnome/gtk4
     - make shortcuts (eg CTRL+F) work and add shortcuts page
     - add gtk action for all majoractions
     - add gtk settings
     - add Gtk/Gio Notifications
+    - replace "webbrowser" stuff with gtk File/Web Launcher

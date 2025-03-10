@@ -1,4 +1,5 @@
 from operator import itemgetter
+from typing import Dict
 
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from ros2service.api import get_service_names_and_types
@@ -14,11 +15,11 @@ from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
 from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-# TODO group by package names
 class ServiceListPage(Adw.NavigationPage):
     __gtype_name__ = "ServiceListPage"
 
@@ -29,12 +30,12 @@ class ServiceListPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(refresh_func=self.refresh)
+        self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show services")
         self.content_page.set_search_entry_placeholder_text("Search for services")
         self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 
-        self.service_list_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show services")
+        self.service_ns_groups: Dict[PrefGroup] = {}
 
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
@@ -43,11 +44,12 @@ class ServiceListPage(Adw.NavigationPage):
             )
             return False
 
-        self.service_list_group.clear()
+        self.clear()
 
         available_services = sorted(
-            get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True)
+            get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True), key=itemgetter(0)
         )
+
         for service_name, service_types in available_services:
             # service_types is a list, as multiple servers can offer different types to the same service
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
@@ -56,7 +58,22 @@ class ServiceListPage(Adw.NavigationPage):
             else:
                 service_types = ", ".join(service_types)  # TODO this might cause problems in the info page
 
-            row = PrefRow(title=service_name, subtitle=service_types)
+            # split service name into namespace and name
+            parts = service_name.rstrip("/").split("/")
+            namespace = "/".join(parts[:-1])  # Everything except the last part
+            name = "/" + parts[-1]  # The last part, prefixed with '/'
+
+            # TODO add a button to enable/disable sorting into groups
+            # get the namespace group of the service
+            if namespace in self.service_ns_groups.keys():
+                group = self.service_ns_groups[namespace]
+            else:
+                group = self.content_page.pref_page.add_group(title=namespace)
+                self.service_ns_groups[namespace] = group
+
+            # TODO this somehow messes with the sorting :( again ...
+
+            row = PrefRow(title=name, subtitle=service_types)
             if topic_or_service_is_hidden(service_name):
                 row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
 
@@ -67,12 +84,15 @@ class ServiceListPage(Adw.NavigationPage):
                 service_types=service_types,
                 ros2_connector=self.ros2_connector,
             )
-            self.service_list_group.add_row(row)
+            group.add_row(row)
 
-        if self.service_list_group.num_rows == 0:
-            self.service_list_group.set_empty_group_text("No services found. Refresh to try again.")
+        if len(available_services) == 0:
+            self.content_page.pref_page.set_empty_page_text("No services found. Refresh to try again.")
 
-        return bool(self.content_page.pref_page.num_groups)
+    def clear(self):
+        for group in reversed(self.service_ns_groups.values()):
+            self.content_page.pref_page.remove_group(group)
+        self.service_ns_groups.clear()
 
 
 class ServiceInfoPage(Adw.NavigationPage):
