@@ -47,7 +47,6 @@ class TransformsPage(Adw.NavigationPage):
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
-        self.source_frame_row.connect("notify::selected-item", self.on_source_frame_changed)
         self.target_frame_row = self.calc_group.add_row(
             Adw.ComboRow(
                 title="Target Frame",
@@ -55,7 +54,6 @@ class TransformsPage(Adw.NavigationPage):
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
-        self.target_frame_row.connect("notify::selected-item", self.on_target_frame_changed)
 
         self.calc_button: ButtonRow = self.calc_group.add_row(
             ButtonRow(
@@ -131,14 +129,6 @@ class TransformsPage(Adw.NavigationPage):
 
         self.source_frame_row.set_selected(current_target_index)
         self.target_frame_row.set_selected(current_source_index)
-
-    def on_source_frame_changed(self, *args):
-        # self.source_frame = self.source_frame_row.get_selected_item().get_string()
-        pass
-
-    def on_target_frame_changed(self, *args):
-        # self.target_frame = self.target_frame_row.get_selected_item().get_string()
-        pass
 
     def on_calc_transform(self, *args):
         source_frame = self.source_frame_row.get_selected_item().get_string()

@@ -12,20 +12,20 @@
 
                 <child type="top">
                     <object class="AdwHeaderBar" id="header_bar">
-                        <child>
+                        <child type="start">
                             <object class="GtkToggleButton" id="search_btn">
                                 <property name="icon-name">search-symbolic</property>
                                 <property name="tooltip-text">Search</property>
                             </object>
                         </child>
-                        <child>
+                        <child type="start">
                             <object class="GtkButton" id="refresh_btn">
                                 <property name="icon-name">update-symbolic</property>
                                 <property name="tooltip-text">Refresh</property>
                                 <signal name="clicked" handler="on_refresh" />
                             </object>
                         </child>
-                        <child>
+                        <child type="end">
                             <object class="GtkButton" id="dedock_btn">
                                 <property name="icon-name">external-link-symbolic</property>
                                 <property name="tooltip-text">Open in separate window</property>

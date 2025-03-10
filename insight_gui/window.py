@@ -22,6 +22,7 @@ from insight_gui.ros2_pages.tf_page import TransformsPage
 from insight_gui.ros2_pages.log_page import LoggerPage
 from insight_gui.ros2_pages.doctor_page import DoctorPage
 from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
+from insight_gui.ros2_pages.joint_states_page import JointStatesPage
 from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
 
 from insight_gui.utils.adw_colors import AdwAccentColor
@@ -133,6 +134,13 @@ class MainWindow(Adw.ApplicationWindow):
             nav_page_class=ImageViewerPage,
             name="img_viewer",
             title="Image Viewer",
+            ros2_connector=self.ros2_connector,
+        )
+        # Joint States
+        self.add_stack_page(
+            nav_page_class=JointStatesPage,
+            name="joint_states",
+            title="Joint States",
             ros2_connector=self.ros2_connector,
         )
         # Logger

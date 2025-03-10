@@ -74,7 +74,7 @@ class ImageViewerPage(Adw.NavigationPage):
             )
             return False
 
-        self.topic_list = []
+        img_topic_list = []
         self.img_topic_list_store.remove_all()
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
@@ -87,9 +87,9 @@ class ImageViewerPage(Adw.NavigationPage):
                 topic_types = ", ".join(topic_types)
 
             if topic_types == "sensor_msgs/msg/Image":
-                self.topic_list.append(topic_name)
+                img_topic_list.append(topic_name)
 
-        for img_topic in self.topic_list:
+        for img_topic in img_topic_list:
             self.img_topic_list_store.append(Gtk.StringObject.new(img_topic))
 
         if self.img_topic_list_store.get_n_items() > 0:
