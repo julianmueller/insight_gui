@@ -5,52 +5,55 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GObject, GLib, Gio
+from gi.repository import Gtk, Adw, GObject, GLib
 
 from insight_gui.widgets.pref_page import PrefPage
 
 
-@Gtk.Template(filename=str(Path(__file__).with_suffix(".ui")))
-class ContentPage(Adw.Bin):
+class ContentPage(Adw.NavigationPage):
     __gtype_name__ = "ContentPage"
-
-    toolbar_view: Adw.ToolbarView = Gtk.Template.Child()
-    header_bar: Adw.HeaderBar = Gtk.Template.Child()
-    search_btn: Gtk.ToggleButton = Gtk.Template.Child()
-    refresh_btn: Gtk.Button = Gtk.Template.Child()
-    dedock_btn: Gtk.Button = Gtk.Template.Child()
-
-    search_bar: Gtk.SearchBar = Gtk.Template.Child()
-    search_entry: Gtk.SearchEntry = Gtk.Template.Child()
-
-    toast_overlay: Adw.ToastOverlay = Gtk.Template.Child()
-    banner: Adw.Banner = Gtk.Template.Child()
-    content_stack: Gtk.Stack = Gtk.Template.Child()
-
-    refresh_page: Adw.StatusPage = Gtk.Template.Child()
-    empty_search_page: Adw.StatusPage = Gtk.Template.Child()
-
-    bottom_bar: Gtk.ActionBar = Gtk.Template.Child()
 
     def __init__(
         self,
-        refresh_func: Callable = lambda: None,
-        search_enabled: bool = True,
-        refresh_enabled: bool = True,
+        searchable: bool = True,
+        refreshable: bool = True,
         empty_page_text: str = "",
         **kwargs,
     ):
+        builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
+
+        self.toolbar_view: Adw.ToolbarView = builder.get_object("toolbar_view")
+        self.header_bar: Adw.HeaderBar = builder.get_object("header_bar")
+        self.search_btn: Gtk.ToggleButton = builder.get_object("search_btn")
+        self.refresh_btn: Gtk.Button = builder.get_object("refresh_btn")
+        self.refresh_btn.connect("clicked", self.on_refresh)
+        self.dedock_btn: Gtk.Button = builder.get_object("dedock_btn")
+        self.dedock_btn.connect("clicked", self.on_dedock)
+
+        self.search_bar: Gtk.SearchBar = builder.get_object("search_bar")
+        self.search_entry: Gtk.SearchEntry = builder.get_object("search_entry")
+        self.search_entry.connect("search-changed", self.on_search_changed)
+
+        self.toast_overlay: Adw.ToastOverlay = builder.get_object("toast_overlay")
+        self.banner: Adw.Banner = builder.get_object("banner")
+
+        self.content_stack: Gtk.Stack = builder.get_object("content_stack")
+        self.refresh_page: Adw.StatusPage = builder.get_object("refresh_page")
+        self.empty_search_page: Adw.StatusPage = builder.get_object("empty_search_page")
+        self.bottom_bar: Gtk.ActionBar = builder.get_object("bottom_bar")
+
         super().__init__(**kwargs)
-        self.set_refresh_func(refresh_func)
+        super().set_child(self.toolbar_view)
+
         self.dedock_page_class = None
         self.dedock_kwargs = {}
 
-        self.toggle_search_btn(search_enabled)
-        self.toggle_refresh_btn(refresh_enabled)
+        self.toggle_search_btn(searchable)
+        self.toggle_refresh_btn(refreshable)
 
         self.pref_page = PrefPage(empty_page_text=empty_page_text)
         self.content_stack.add_child(self.pref_page)
-        # if refresh_enabled: # TODO necessary?
+        # if refreshable: # TODO necessary?
         #     self.content_stack.set_visible_child(self.refresh_page)
         # else:
         self.content_stack.set_visible_child(self.pref_page)
@@ -60,17 +63,19 @@ class ContentPage(Adw.Bin):
             "active", self.search_bar, "search-mode-enabled", GObject.BindingFlags.BIDIRECTIONAL
         )
 
-    @Gtk.Template.Callback()
     def on_search_changed(self, *args):
         self.pref_page.apply_filter(self.search_entry.get_text())
 
-    @Gtk.Template.Callback()
     def on_refresh(self, *args):
         self.search_bar.set_search_mode(False)
-        GLib.idle_add(self.refresh_func)
+
+        def refresh_wrapper():
+            self.refresh()
+            return False  # for Glib.idle_add to end after one iteration
+
+        GLib.idle_add(refresh_wrapper)
         # self.content_stack.set_visible_child(self.pref_page)
 
-    @Gtk.Template.Callback()
     def on_dedock(self, *args):
         if self.dedock_page_class:
             nav_view = Adw.NavigationView()
@@ -146,13 +151,6 @@ class ContentPage(Adw.Bin):
 
     def set_search_entry_placeholder_text(self, text: str):
         self.search_entry.set_placeholder_text(str(text))
-
-    def set_refresh_func(self, func: Callable):
-        def refresh_wrapper():
-            func()
-            return False  # for Glib.idle_add to end after one iteration
-
-        self.refresh_func = refresh_wrapper
 
     def set_dedock_page(self, dedock_page_class: Gtk.Widget, dedock_kwargs: dict = {}):
         self.dedock_page_class = dedock_page_class

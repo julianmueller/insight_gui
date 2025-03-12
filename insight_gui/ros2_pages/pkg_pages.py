@@ -17,29 +17,29 @@ from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.widgets.buttons import CopyButton
 
 
-class PackageListPage(Adw.NavigationPage):
+class PackageListPage(ContentPage):
     __gtype_name__ = "PackageListPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(empty_page_text="Refresh to show packages", **kwargs)
         super().set_title("Package List")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
 
-        self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show packages")
-        self.content_page.set_search_entry_placeholder_text("Search for Packages")
-        self.content_page.set_dedock_page(type(self))
-        super().set_child(self.content_page)
+        # self.content_page = ContentPage(empty_page_text="Refresh to show packages")
+        super().set_search_entry_placeholder_text("Search for Packages")
+        super().set_dedock_page(type(self))
+        # super().set_child(self.content_page)
 
-        self.pkg_list_group = self.content_page.pref_page.add_group(empty_group_text="Refresh to show packages")
+        self.pkg_list_group = self.pref_page.add_group(empty_group_text="Refresh to show packages")
 
-        self.content_page.add_bottom_left_btn(
+        super().add_bottom_left_btn(
             icon_name="list-add-symbolic",
             tooltip_text="Create New Package",
             func=lambda: NewPkgDialog().present(self),
         )
 
-        self.content_page.add_bottom_right_btn(
+        super().add_bottom_right_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Open ROS Index",
             func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
@@ -62,7 +62,7 @@ class PackageListPage(Adw.NavigationPage):
         if self.pkg_list_group.num_rows == 0:
             self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
 
-        return bool(self.content_page.pref_page.num_groups)
+        return bool(self.pref_page.num_groups)
 
 
 class PackageInfoPage(Adw.NavigationPage):
@@ -81,7 +81,7 @@ class PackageInfoPage(Adw.NavigationPage):
         self.pkg_name = pkg_name
         self.nav_view = nav_view if nav_view else self.get_parent()
 
-        self.content_page = ContentPage(search_enabled=True, refresh_enabled=False)
+        self.content_page = ContentPage(searchable=True, refreshable=False)
         super().set_child(self.content_page)
 
         self.link_group = self.content_page.pref_page.add_group(title="Links")

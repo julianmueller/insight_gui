@@ -26,7 +26,7 @@ class ImageViewerPage(Adw.NavigationPage):
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
         self.bridge = CvBridge()
 
-        self.content_page = ContentPage(refresh_func=self.refresh, search_enabled=False)
+        self.content_page = ContentPage(searchable=False)
         self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
 

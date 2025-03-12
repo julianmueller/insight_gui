@@ -20,7 +20,7 @@ from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-class TopicListPage(Adw.NavigationPage):
+class TopicListPage(ContentPage):
     __gtype_name__ = "TopicListPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
@@ -30,7 +30,7 @@ class TopicListPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(refresh_func=self.refresh, empty_page_text="Refresh to show topics")
+        self.content_page = ContentPage(empty_page_text="Refresh to show topics")
         self.content_page.set_search_entry_placeholder_text("Search for topics")
         self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
         super().set_child(self.content_page)
@@ -112,7 +112,7 @@ class TopicInfoPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(search_enabled=True, refresh_enabled=False)
+        self.content_page = ContentPage(searchable=True, refreshable=False)
         self.content_page.set_dedock_page(
             type(self),
             dedock_kwargs={

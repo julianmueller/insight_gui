@@ -23,12 +23,12 @@ from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 
 
-class MessageTypeBrowserPage(Adw.NavigationPage):
-    __gtype_name__ = "MessageTypeBrowserPage"
+class InterfaceBrowserPage(Adw.NavigationPage):
+    __gtype_name__ = "InterfaceBrowserPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title("Message Type Browser")
+        super().set_title("Interface Browser")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector

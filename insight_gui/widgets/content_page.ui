@@ -3,107 +3,102 @@
     <requires lib="gtk" version="4.0" />
     <requires lib="adw" version="1.0" />
 
-    <template class="ContentPage" parent="AdwBin">
-        <child>
-            <object class="AdwToolbarView" id="toolbar_view">
-                <!-- <property name="top-bar-style">raised</property>
+
+    <object class="AdwToolbarView" id="toolbar_view">
+        <!-- <property name="top-bar-style">raised</property>
                 <property name="bottom-bar-style">raised</property>
                 <property name="extend-content-to-bottom-edge">True</property> -->
 
-                <child type="top">
-                    <object class="AdwHeaderBar" id="header_bar">
-                        <child type="start">
-                            <object class="GtkToggleButton" id="search_btn">
-                                <property name="icon-name">search-symbolic</property>
-                                <property name="tooltip-text">Search</property>
-                            </object>
-                        </child>
-                        <child type="start">
-                            <object class="GtkButton" id="refresh_btn">
-                                <property name="icon-name">update-symbolic</property>
-                                <property name="tooltip-text">Refresh</property>
-                                <signal name="clicked" handler="on_refresh" />
-                            </object>
-                        </child>
-                        <child type="end">
-                            <object class="GtkButton" id="dedock_btn">
-                                <property name="icon-name">external-link-symbolic</property>
-                                <property name="tooltip-text">Open in separate window</property>
-                                <property name="visible">false</property>
-                                <signal name="clicked" handler="on_dedock" />
-                            </object>
-                        </child>
+        <child type="top">
+            <object class="AdwHeaderBar" id="header_bar">
+                <child type="start">
+                    <object class="GtkToggleButton" id="search_btn">
+                        <property name="icon-name">search-symbolic</property>
+                        <property name="tooltip-text">Search</property>
                     </object>
                 </child>
-
-                <child type="top">
-                    <object class="GtkSearchBar" id="search_bar">
-                        <property name="search-mode-enabled">False</property>
-                        <property name="show-close-button">True</property>
-                        <child>
-                            <object class="GtkSearchEntry" id="search_entry">
-                                <property name="placeholder-text">Search</property>
-                                <property name="search-delay">100</property>
-                                <signal name="search-changed" handler="on_search_changed" />
-                            </object>
-                        </child>
+                <child type="start">
+                    <object class="GtkButton" id="refresh_btn">
+                        <property name="icon-name">update-symbolic</property>
+                        <property name="tooltip-text">Refresh</property>
                     </object>
                 </child>
+                <child type="end">
+                    <object class="GtkButton" id="dedock_btn">
+                        <property name="icon-name">external-link-symbolic</property>
+                        <property name="tooltip-text">Open in separate window</property>
+                        <property name="visible">false</property>
+                    </object>
+                </child>
+            </object>
+        </child>
 
+        <child type="top">
+            <object class="GtkSearchBar" id="search_bar">
+                <property name="search-mode-enabled">False</property>
+                <property name="show-close-button">True</property>
                 <child>
-                    <object class="AdwToastOverlay" id="toast_overlay">
+                    <object class="GtkSearchEntry" id="search_entry">
+                        <property name="placeholder-text">Search</property>
+                        <property name="search-delay">100</property>
+                    </object>
+                </child>
+            </object>
+        </child>
+
+        <child>
+            <object class="AdwToastOverlay" id="toast_overlay">
+                <child>
+                    <object class="GtkBox">
+                        <property name="orientation">vertical</property>
                         <child>
-                            <object class="GtkBox">
-                                <property name="orientation">vertical</property>
+                            <object class="AdwBanner" id="banner">
+                                <property name="revealed">false</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkStack" id="content_stack">
+                                <property name="vexpand">True</property>
                                 <child>
-                                    <object class="AdwBanner" id="banner">
-                                        <property name="revealed">false</property>
+                                    <object class="AdwStatusPage" id="refresh_page">
+                                        <property name="title">No Content</property>
+                                        <property name="description">Refresh to show content. This may take a second.</property>
+                                        <property name="icon-name">update-symbolic</property>
+                                        <child>
+                                            <object class="GtkButton">
+                                                <property name="halign">center</property>
+                                                <property name="child">
+                                                    <object class="AdwButtonContent">
+                                                        <property name="label">Refresh</property>
+                                                        <property name="icon-name">update-symbolic</property>
+                                                    </object>
+                                                </property>
+                                                <style>
+                                                    <class name="pill" />
+                                                </style>
+                                            </object>
+                                        </child>
                                     </object>
                                 </child>
                                 <child>
-                                    <object class="GtkStack" id="content_stack">
-                                        <property name="vexpand">True</property>
-                                        <child>
-                                            <object class="AdwStatusPage" id="refresh_page">
-                                                <property name="title">No Content</property>
-                                                <property name="description">Refresh to show content. This may take a second.</property>
-                                                <property name="icon-name">update-symbolic</property>
-                                                <child>
-                                                    <object class="GtkButton">
-                                                        <property name="halign">center</property>
-                                                        <property name="child">
-                                                            <object class="AdwButtonContent">
-                                                                <property name="label">Refresh</property>
-                                                                <property name="icon-name">update-symbolic</property>
-                                                            </object>
-                                                        </property>
-                                                        <style>
-                                                            <class name="pill" />
-                                                        </style>
-                                                        <signal name="clicked" handler="on_refresh" />
-                                                    </object>
-                                                </child>
-                                            </object>
-                                        </child>
-                                        <child>
-                                            <object class="AdwStatusPage" id="empty_search_page">
-                                                <property name="title">No Search Results</property>
-                                                <property name="description">Search found no results.</property>
-                                                <property name="icon-name">search-symbolic</property>
-                                            </object>
-                                        </child>
+                                    <object class="AdwStatusPage" id="empty_search_page">
+                                        <property name="title">No Search Results</property>
+                                        <property name="description">Search found no results.</property>
+                                        <property name="icon-name">search-symbolic</property>
                                     </object>
                                 </child>
                             </object>
                         </child>
                     </object>
                 </child>
+            </object>
+        </child>
 
-                <child type="bottom">
-                    <object class="GtkActionBar" id="bottom_bar">
-                        <property name="revealed">false</property>
-                        <!-- <property name="valign">2</property> -->
-                        <!-- <child type="start">
+        <child type="bottom">
+            <object class="GtkActionBar" id="bottom_bar">
+                <property name="revealed">false</property>
+                <!-- <property name="valign">2</property> -->
+                <!-- <child type="start">
                             <object class="GtkButton" id="start_widget">
                                 <property name="icon-name">call-start-symbolic</property>
                             </object>
@@ -118,9 +113,7 @@
                                 <property name="icon-name">view-more-symbolic</property>
                             </object>
                         </child> -->
-                    </object>
-                </child>
             </object>
         </child>
-    </template>
+    </object>
 </interface>
