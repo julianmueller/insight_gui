@@ -21,22 +21,20 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, SearchRow, TextVie
 from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
 
 
-class ServiceCallPage(Adw.NavigationPage):
+class ServiceCallPage(ContentPage):
     __gtype_name__ = "ServiceCallPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(searchable=False, **kwargs)
         super().set_title("Service Call")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(searchable=False)
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
         # select group
-        self.select_group = self.content_page.pref_page.add_group(title="Select Service")
+        self.select_group = self.pref_page.add_group(title="Select Service")
 
         self.service_select_row = self.select_group.add_row(
             Adw.ComboRow(
@@ -59,7 +57,7 @@ class ServiceCallPage(Adw.NavigationPage):
         # - the request and response groups have a btn in the header, that opens the type dialog for request/response
 
         # request group
-        self.request_group = self.content_page.pref_page.add_group(title="Request")
+        self.request_group = self.pref_page.add_group(title="Request")
         self.request_group.add_suffix_btn(
             icon_name="edit-undo-symbolic", tooltip_text="Reset Request Text", func=self.on_service_selected
         )
@@ -75,7 +73,7 @@ class ServiceCallPage(Adw.NavigationPage):
         )
 
         # response group
-        self.response_group = self.content_page.pref_page.add_group(title="Response")
+        self.response_group = self.pref_page.add_group(title="Response")
         self.response_group.add_suffix_btn(
             icon_name="trash-symbolic", tooltip_text="Clear Response Text", func=self.on_clear_response
         )
@@ -84,9 +82,7 @@ class ServiceCallPage(Adw.NavigationPage):
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         # clear previous service list
@@ -100,7 +96,7 @@ class ServiceCallPage(Adw.NavigationPage):
         if len(available_services) > 0:
             self.call_btn.set_sensitive(True)
         else:
-            self.content_page.show_toast("No services found")
+            super().show_toast("No services found")
             self.call_btn.set_sensitive(False)
             return False
 
@@ -155,16 +151,14 @@ class ServiceCallPage(Adw.NavigationPage):
 
     def on_call_service(self, *args):
         if not self.ros2_connector.is_running:
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         request_yaml = self.request_text_row.get_text()
         try:
             data_dict = yaml.safe_load(request_yaml)
         except Exception as e:
-            self.content_page.show_toast("Invalid YAML")
+            super().show_toast("Invalid YAML")
             return
 
         try:
@@ -173,7 +167,7 @@ class ServiceCallPage(Adw.NavigationPage):
                 values=data_dict,
             )
         except Exception as e:
-            self.content_page.show_toast("Error parsing the request data")
+            super().show_toast("Error parsing the request data")
             return
 
         response = self.ros2_connector.call_service(
@@ -185,7 +179,7 @@ class ServiceCallPage(Adw.NavigationPage):
         response_yaml = message_to_yaml(response).rstrip()
         self.response_text_row.set_text(response_yaml)
 
-        self.content_page.show_toast("Service call was successful")
+        super().show_toast("Service call was successful")
 
         return False  # stop the Glib.idle_add
 

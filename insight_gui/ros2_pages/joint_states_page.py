@@ -18,7 +18,7 @@ from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-class JointStatesPage(Adw.NavigationPage):
+class JointStatesPage(ContentPage):
     __gtype_name__ = "JointStatesPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
@@ -28,12 +28,10 @@ class JointStatesPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage()
-        self.content_page.set_search_entry_placeholder_text("Search for topics")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for topics")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-        self.search_group = self.content_page.pref_page.add_group(filterable=False)
+        self.search_group = self.pref_page.add_group(filterable=False)
         self.joint_topic_row = self.search_group.add_row(
             Adw.ComboRow(
                 title="Joint Topic",
@@ -45,15 +43,11 @@ class JointStatesPage(Adw.NavigationPage):
         self.joint_topic_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.joint_topic_row.set_model(self.joint_topic_list_store)
 
-        self.joints_group = self.content_page.pref_page.add_group(
-            title="Joints", empty_group_text="Refresh to show joints"
-        )
+        self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
 
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         self.joint_topic_list_store.remove_all()
@@ -96,8 +90,6 @@ class JointStatesPage(Adw.NavigationPage):
 
         # if self.topic_group.num_rows == 0:
         #     self.topic_group.set_empty_group_text("No topics found. Refresh to try again.")
-
-        # return bool(self.content_page.pref_page.num_groups)
 
     def on_joint_topic_changed(self, *args):
         if self.joint_topic_list_store.get_n_items() <= 0:

@@ -76,13 +76,14 @@ class ContentPage(Adw.NavigationPage):
         GLib.idle_add(refresh_wrapper)
         # self.content_stack.set_visible_child(self.pref_page)
 
+    # TODO rework after ContentPage update
     def on_dedock(self, *args):
         if self.dedock_page_class:
             nav_view = Adw.NavigationView()
             win = Adw.Window(content=nav_view, destroy_with_parent=True, default_height=600, default_width=800)
 
             nav_page = self.dedock_page_class(nav_view=nav_view, **self.dedock_kwargs)
-            nav_page.content_page.dedock_btn.set_visible(False)
+            self.dedock_btn.set_visible(False)
 
             nav_view.add(nav_page)
             win.show()

@@ -19,7 +19,7 @@ from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 
 
-class TransformsPage(Adw.NavigationPage):
+class TransformsPage(ContentPage):
     __gtype_name__ = "TransformsPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
@@ -29,12 +29,10 @@ class TransformsPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage()
-        self.content_page.set_search_entry_placeholder_text("Search for Frames")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for Frames")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-        self.calc_group = self.content_page.pref_page.add_group(title="Calculate Transform", filterable=False)
+        self.calc_group = self.pref_page.add_group(title="Calculate Transform", filterable=False)
         self.calc_group.add_suffix_btn(
             icon_name="vertical-arrows-symbolic", tooltip_text="Switch source/target", func=self.on_switch_frames
         )
@@ -67,9 +65,7 @@ class TransformsPage(Adw.NavigationPage):
 
         self.result_text_row = self.calc_group.add_row(TextViewRow(title="Result", show_copy_btn=True, visible=False))
 
-        self.frames_group = self.content_page.pref_page.add_group(
-            title="Frames", empty_group_text="Refresh to show frames"
-        )
+        self.frames_group = self.pref_page.add_group(title="Frames", empty_group_text="Refresh to show frames")
         self.frames_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.target_frame_row.set_model(self.frames_list_store)
         self.source_frame_row.set_model(self.frames_list_store)
@@ -78,9 +74,7 @@ class TransformsPage(Adw.NavigationPage):
     def refresh(self, *args) -> bool:
         if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         self.frames_group.clear()
@@ -99,7 +93,7 @@ class TransformsPage(Adw.NavigationPage):
             self.frames_list = sorted(frames_dict.keys())
             self.calc_button.set_sensitive(True)
         elif isinstance(frames_dict, list):
-            self.content_page.show_toast("No frames found")
+            super().show_toast("No frames found")
             self.frames_group.set_empty_group_text("No frames found. Refresh to try again.")
             self.calc_button.set_sensitive(False)
             return False
@@ -121,7 +115,7 @@ class TransformsPage(Adw.NavigationPage):
 
     def on_switch_frames(self, *args):
         if len(self.frames_list) <= 1:
-            self.content_page.show_toast("not enough frames to switch")
+            super().show_toast("not enough frames to switch")
             return
 
         current_source_index = self.source_frame_row.get_selected()
@@ -135,7 +129,7 @@ class TransformsPage(Adw.NavigationPage):
         target_frame = self.target_frame_row.get_selected_item().get_string()
 
         if source_frame == target_frame:
-            self.content_page.show_toast("'source frame' and 'target frame' cannot be the same")
+            super().show_toast("'source frame' and 'target frame' cannot be the same")
             return
 
         try:
@@ -163,6 +157,6 @@ class TransformsPage(Adw.NavigationPage):
 
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().error(f"Could not calculate transform: {e}")
-            self.content_page.show_toast(f"Could not calculate transform: {e}")
+            super().show_toast(f"Could not calculate transform: {e}")
             self.result_text_row.set_text("")
             self.result_text_row.set_visible(False)

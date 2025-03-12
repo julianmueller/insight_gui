@@ -23,28 +23,26 @@ from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 
 
-class MessageTypeBrowserPage(Adw.NavigationPage):
+class MessageTypeBrowserPage(ContentPage):
     __gtype_name__ = "MessageTypeBrowserPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(empty_page_text="Refresh to show message types", **kwargs)
         super().set_title("Message Type Browser")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(empty_page_text="Refresh to show message types")
-        self.content_page.set_search_entry_placeholder_text("Search for message types")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for message types")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
     def refresh(self, *args) -> bool:
-        self.content_page.pref_page.clear()
+        self.clear()
 
         available_msgs = get_message_interfaces()
 
         for pkg_name, msgs_list in sorted(available_msgs.items()):
-            msg_group = self.content_page.pref_page.add_group(title=pkg_name)
+            msg_group = self.pref_page.add_group(title=pkg_name)
 
             for msg in sorted(msgs_list):
                 msg_type_full_name = f"{pkg_name}/{msg}"
@@ -72,34 +70,33 @@ class MessageTypeBrowserPage(Adw.NavigationPage):
                 msg_group.add_row(row)
 
         if len(available_msgs) == 0:
-            self.content_page.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
+            self.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
 
-        return bool(self.content_page.pref_page.num_groups)
+    def clear(self):
+        self.pref_page.clear()
 
 
-class ServiceTypeBrowserPage(Adw.NavigationPage):
+class ServiceTypeBrowserPage(ContentPage):
     __gtype_name__ = "ServiceTypeBrowserPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(empty_page_text="Refresh to show service types", **kwargs)
         super().set_title("Service Type Browser")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(empty_page_text="Refresh to show service types")
-        self.content_page.set_search_entry_placeholder_text("Search for service types")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for service types")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
     def refresh(self, *args) -> bool:
-        self.content_page.pref_page.clear()
+        self.clear()
 
         available_srvs = get_service_interfaces()
 
         # TODO
         for pkg_name, srvs_list in sorted(available_srvs.items()):
-            srv_group = self.content_page.pref_page.add_group(title=pkg_name)
+            srv_group = self.pref_page.add_group(title=pkg_name)
 
             for srv in sorted(srvs_list):
                 srv_type_full_name = f"{pkg_name}/{srv}"
@@ -127,32 +124,31 @@ class ServiceTypeBrowserPage(Adw.NavigationPage):
                 srv_group.add_row(row)
 
         if len(available_srvs) == 0:
-            self.content_page.pref_page.set_empty_page_text("No Services found. Refresh to try again.")
+            self.pref_page.set_empty_page_text("No Services found. Refresh to try again.")
 
-        return bool(self.content_page.pref_page.num_groups)
+    def clear(self):
+        self.pref_page.clear()
 
 
-class ActionTypeBrowserPage(Adw.NavigationPage):
+class ActionTypeBrowserPage(ContentPage):
     __gtype_name__ = "ActionTypeBrowserPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(empty_page_text="Refresh to show action types", **kwargs)
         super().set_title("Action Type Browser")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(empty_page_text="Refresh to show action types")
-        self.content_page.set_search_entry_placeholder_text("Search for action types")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for action types")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
     def refresh(self, *args) -> bool:
-        self.content_page.pref_page.clear()
+        self.clear()
 
         available_action_msgs = get_action_interfaces()
         for pkg_name, actions_list in sorted(available_action_msgs.items()):
-            actions_group = self.content_page.pref_page.add_group(title=pkg_name)
+            actions_group = self.pref_page.add_group(title=pkg_name)
 
             for act in sorted(actions_list):
                 act_type_full_name = f"{pkg_name}/{act}"
@@ -180,9 +176,10 @@ class ActionTypeBrowserPage(Adw.NavigationPage):
                 actions_group.add_row(row)
 
         if len(available_action_msgs) == 0:
-            self.content_page.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
+            self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
 
-        return bool(self.content_page.pref_page.num_groups)
+    def clear(self):
+        self.pref_page.clear()
 
 
 def _on_open_msg_file(btn: Gtk.Button = None, *, msg_type_full_name: str):

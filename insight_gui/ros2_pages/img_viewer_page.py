@@ -15,22 +15,20 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, Text
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
-class ImageViewerPage(Adw.NavigationPage):
+class ImageViewerPage(ContentPage):
     __gtype_name__ = "ImageViewerPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(searchable=False, **kwargs)
         super().set_title("Image Viewer")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
         self.bridge = CvBridge()
 
-        self.content_page = ContentPage(searchable=False)
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-        self.img_group = self.content_page.pref_page.add_group(title="View Image", filterable=False)
+        self.img_group = self.pref_page.add_group(title="View Image", filterable=False)
         self.img_topic_row = self.img_group.add_row(
             Adw.ComboRow(
                 title="Image Topic",
@@ -57,7 +55,7 @@ class ImageViewerPage(Adw.NavigationPage):
         )
 
         # rows to display infos about the image
-        self.info_group = self.content_page.pref_page.add_group(title="Infos", filterable=False)
+        self.info_group = self.pref_page.add_group(title="Infos", filterable=False)
         self.width_row: PrefRow = self.info_group.add_row(PrefRow(title="Image Width"))
         self.height_row = self.info_group.add_row(PrefRow(title="Image Height"))
         self.encoding_row = self.info_group.add_row(PrefRow(title="Image Encoding"))
@@ -69,9 +67,7 @@ class ImageViewerPage(Adw.NavigationPage):
     def refresh(self, *args) -> bool:
         if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         img_topic_list = []
@@ -96,7 +92,7 @@ class ImageViewerPage(Adw.NavigationPage):
             self.img_topic_row.set_model(self.img_topic_list_store)
             self.img_topic_row.set_selected(0)
         else:
-            self.content_page.show_toast("No topic with images found")
+            super().show_toast("No topic with images found")
 
     def on_image_topic_changed(self, *args):
         if self.img_topic_list_store.get_n_items() <= 0:

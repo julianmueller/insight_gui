@@ -108,6 +108,7 @@ ros2 run insight_gui main
     - add a "clear" method for all the pages
 - cleanup
     - remove "status_page" in window.ui
+    - check that refresh funcs do not return a bool
 - gnome/gtk4
     - make shortcuts (eg CTRL+F) work and add shortcuts page
     - add gtk action for all majoractions

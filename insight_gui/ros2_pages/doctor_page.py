@@ -14,7 +14,7 @@ from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.widgets.buttons import CopyButton
 
 
-class DoctorPage(Adw.NavigationPage):
+class DoctorPage(ContentPage):
     __gtype_name__ = "DoctorPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
@@ -24,39 +24,33 @@ class DoctorPage(Adw.NavigationPage):
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage()
-        self.content_page.set_search_entry_placeholder_text("Ask the doctor")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Ask the doctor")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-        self.network_config_group = self.content_page.pref_page.add_group(
+        self.network_config_group = self.pref_page.add_group(
             title="NETWORK CONFIGURATION", empty_group_text="Refresh to show network configuration"
         )
-        self.package_versions_group = self.content_page.pref_page.add_group(
+        self.package_versions_group = self.pref_page.add_group(
             title="PACKAGE VERSIONS", empty_group_text="Refresh to show package versions"
         )
-        self.platform_info_group = self.content_page.pref_page.add_group(
+        self.platform_info_group = self.pref_page.add_group(
             title="PLATFORM INFORMATION", empty_group_text="Refresh to show platform information"
         )
-        self.qos_compatibility_group = self.content_page.pref_page.add_group(
+        self.qos_compatibility_group = self.pref_page.add_group(
             title="QOS COMPATIBILITY LIST", empty_group_text="Refresh to show QoS compatibility list"
         )
-        self.rmw_info_group = self.content_page.pref_page.add_group(
+        self.rmw_info_group = self.pref_page.add_group(
             title="RMW MIDDLEWARE", empty_group_text="Refresh to show RMW middleware"
         )
-        self.ros2_info_group = self.content_page.pref_page.add_group(
+        self.ros2_info_group = self.pref_page.add_group(
             title="ROS2 INFORMATION", empty_group_text="Refresh to show ROS2 information"
         )
-        self.topic_list_group = self.content_page.pref_page.add_group(
-            title="TOPIC LIST", empty_group_text="Refresh to show topics"
-        )
+        self.topic_list_group = self.pref_page.add_group(title="TOPIC LIST", empty_group_text="Refresh to show topics")
 
     def refresh(self, *args) -> bool:
         if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         self.network_config_group.clear()
@@ -142,7 +136,7 @@ class DoctorPage(Adw.NavigationPage):
             elif report.name == "ROS 2 INFORMATION":
                 for item in report.items:
                     row = self.ros2_info_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
-                    row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.content_page.toast_overlay))
+                    row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.toast_overlay))
 
                 if self.ros2_info_group.num_rows == 0:
                     self.ros2_info_group.set_empty_group_text("No ROS 2 information found. Refresh to try again.")

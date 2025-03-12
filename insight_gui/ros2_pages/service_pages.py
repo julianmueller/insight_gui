@@ -20,28 +20,24 @@ from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-class ServiceListPage(Adw.NavigationPage):
+class ServiceListPage(ContentPage):
     __gtype_name__ = "ServiceListPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(empty_page_text="Refresh to show services", **kwargs)
         super().set_title("Service List")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(empty_page_text="Refresh to show services")
-        self.content_page.set_search_entry_placeholder_text("Search for services")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for services")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
         self.service_ns_groups: Dict[PrefGroup] = {}
 
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         self.clear()
@@ -68,7 +64,7 @@ class ServiceListPage(Adw.NavigationPage):
             if namespace in self.service_ns_groups.keys():
                 group = self.service_ns_groups[namespace]
             else:
-                group = self.content_page.pref_page.add_group(title=namespace)
+                group = self.pref_page.add_group(title=namespace)
                 self.service_ns_groups[namespace] = group
 
             # TODO this somehow messes with the sorting :( again ...
@@ -87,15 +83,15 @@ class ServiceListPage(Adw.NavigationPage):
             group.add_row(row)
 
         if len(available_services) == 0:
-            self.content_page.pref_page.set_empty_page_text("No services found. Refresh to try again.")
+            self.pref_page.set_empty_page_text("No services found. Refresh to try again.")
 
     def clear(self):
         for group in reversed(self.service_ns_groups.values()):
-            self.content_page.pref_page.remove_group(group)
+            self.pref_page.remove_group(group)
         self.service_ns_groups.clear()
 
 
-class ServiceInfoPage(Adw.NavigationPage):
+class ServiceInfoPage(ContentPage):
     __gtype_name__ = "ServiceInfoPage"
 
     def __init__(
@@ -106,15 +102,14 @@ class ServiceInfoPage(Adw.NavigationPage):
         ros2_connector: ROS2Connector = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(searchable=True, refreshable=False, **kwargs)
         super().set_title(f"Service <{service_name}>")
 
         self.service_name = service_name
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(searchable=True, refreshable=False)
-        self.content_page.set_dedock_page(
+        super().set_dedock_page(
             type(self),
             dedock_kwargs={
                 "service_name": self.service_name,
@@ -122,10 +117,9 @@ class ServiceInfoPage(Adw.NavigationPage):
                 "ros2_connector": self.ros2_connector,
             },
         )
-        super().set_child(self.content_page)
 
         # Service Type
-        service_type_group = self.content_page.pref_page.add_group(title="Service Type")
+        service_type_group = self.pref_page.add_group(title="Service Type")
 
         def add_srv_type_row(srv_type: str):
             srv_type_row = PrefRow(title=srv_type)  # , subtitle=node_full_name)
@@ -146,12 +140,12 @@ class ServiceInfoPage(Adw.NavigationPage):
         available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=False)
 
         # Service Servers
-        service_servers_group = self.content_page.pref_page.add_group(
+        service_servers_group = self.pref_page.add_group(
             title="Service Servers", empty_group_text="Service has no servers"
         )
 
         # Service Clients
-        service_clients_group = self.content_page.pref_page.add_group(
+        service_clients_group = self.pref_page.add_group(
             title="Service Clients", empty_group_text="Service has no clients"
         )
 

@@ -24,24 +24,6 @@ from insight_gui.widgets.pref_rows import (
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
-# class LogLevel(Enum):
-#     DEBUG = 10
-#     INFO = 20
-#     WARN = 30
-#     ERROR = 40
-#     FATAL = 50
-
-#     @classmethod
-#     def from_value(cls, value: int):
-#         for level in cls:
-#             if level.value == value:
-#                 return level
-#         raise ValueError(f"No LogLevel found for value: {value}")
-
-#     def __str__(self):
-#         return self.name
-
-
 class LogMessage(GObject.Object):
     """A GObject that represents a log message with timestamp, severity, and message."""
 
@@ -77,24 +59,22 @@ class LogMessage(GObject.Object):
         return self._node_name
 
 
-class LoggerPage(Adw.NavigationPage):
+class LoggerPage(ContentPage):
     __gtype_name__ = "LoggerPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(refreshable=False, searchable=False, **kwargs)
         super().set_title("Logger")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(refreshable=False, searchable=False)
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
         self.is_logging = False
 
         # Btn for opening the online link to msg definition
-        self.play_pause_btn = self.content_page.add_bottom_widget(
+        self.play_pause_btn = super().add_bottom_widget(
             PlayPauseButton(
                 default_active=self.is_logging,
                 func=self.on_toggle_logging,
@@ -102,10 +82,10 @@ class LoggerPage(Adw.NavigationPage):
             ),
             position="start",
         )
-        self.content_page.add_bottom_right_btn(label="Clear Log", icon_name="trash-symbolic", func=self.on_clear_log)
+        super().add_bottom_right_btn(label="Clear Log", icon_name="trash-symbolic", func=self.on_clear_log)
 
         # filters to apply to the column view
-        filters_group: PrefGroup = self.content_page.pref_page.add_group(title="Filters", filterable=False)
+        filters_group: PrefGroup = self.pref_page.add_group(title="Filters", filterable=False)
         self.severity_filter_row: MultiToggleButtonRow = filters_group.add_row(
             MultiToggleButtonRow(
                 title="Severity Levels",
@@ -161,7 +141,7 @@ class LoggerPage(Adw.NavigationPage):
         # self.node_filter_row.connect("notify::selected-item", self.on_node_filter_changed)
         # self.node_list_store = Gio.ListStore.new(Gtk.StringObject)
 
-        log_group: PrefGroup = self.content_page.pref_page.add_group(title="Logs", filterable=False)
+        log_group: PrefGroup = self.pref_page.add_group(title="Logs", filterable=False)
         # TODO add a limit of row, that old ones are deleted after a while
         # TODO vextend this to fill out the whole screen
         self.column_view_row: ColumnViewRow = log_group.add_row(ColumnViewRow(row_object=LogMessage))

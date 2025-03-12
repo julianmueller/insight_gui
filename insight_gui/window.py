@@ -64,99 +64,99 @@ class MainWindow(Adw.ApplicationWindow):
             name="pkg_list",
             title="Package List",
         )
-        # self.add_stack_page(
-        #     nav_page_class=NodeListPage,
-        #     name="node_list",
-        #     title="Node List",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Topics
-        # self.add_stack_page(
-        #     nav_page_class=TopicListPage,
-        #     name="topic_list",
-        #     title="Topic List",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # self.add_stack_page(
-        #     nav_page_class=MessageTypeBrowserPage,
-        #     name="msg_type_browser",
-        #     title="Message Type Browser",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Services
-        # self.add_stack_page(
-        #     nav_page_class=ServiceListPage,
-        #     name="service_list",
-        #     title="Service List",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # self.add_stack_page(
-        #     nav_page_class=ServiceTypeBrowserPage,
-        #     name="srv_type_browser",
-        #     title="Service Type Browser",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # self.add_stack_page(
-        #     nav_page_class=ServiceCallPage,
-        #     name="srv_caller",
-        #     title="Service Caller",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Actions
-        # self.add_stack_page(
-        #     nav_page_class=ActionListPage,
-        #     name="action_list",
-        #     title="Action List",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # self.add_stack_page(
-        #     nav_page_class=ActionTypeBrowserPage,
-        #     name="action_type_browser",
-        #     title="Action Type Browser",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Parameters
-        # self.add_stack_page(
-        #     nav_page_class=ParameterListPage,
-        #     name="param_list",
-        #     title="Parameters",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Transforms
-        # self.add_stack_page(
-        #     nav_page_class=TransformsPage,
-        #     name="tf",
-        #     title="Transforms",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Images
-        # self.add_stack_page(
-        #     nav_page_class=ImageViewerPage,
-        #     name="img_viewer",
-        #     title="Image Viewer",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Joint States
-        # self.add_stack_page(
-        #     nav_page_class=JointStatesPage,
-        #     name="joint_states",
-        #     title="Joint States",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Logger
-        # self.add_stack_page(
-        #     nav_page_class=LoggerPage,
-        #     name="logger",
-        #     title="Logger",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # # Doctor
-        # self.add_stack_page(
-        #     nav_page_class=DoctorPage,
-        #     name="doctor",
-        #     title="Doctor",
-        #     ros2_connector=self.ros2_connector,
-        # )
+        self.add_stack_page(
+            nav_page_class=NodeListPage,
+            name="node_list",
+            title="Node List",
+            ros2_connector=self.ros2_connector,
+        )
+        # Topics
+        self.add_stack_page(
+            nav_page_class=TopicListPage,
+            name="topic_list",
+            title="Topic List",
+            ros2_connector=self.ros2_connector,
+        )
+        self.add_stack_page(
+            nav_page_class=MessageTypeBrowserPage,
+            name="msg_type_browser",
+            title="Message Type Browser",
+            ros2_connector=self.ros2_connector,
+        )
+        # Services
+        self.add_stack_page(
+            nav_page_class=ServiceListPage,
+            name="service_list",
+            title="Service List",
+            ros2_connector=self.ros2_connector,
+        )
+        self.add_stack_page(
+            nav_page_class=ServiceTypeBrowserPage,
+            name="srv_type_browser",
+            title="Service Type Browser",
+            ros2_connector=self.ros2_connector,
+        )
+        self.add_stack_page(
+            nav_page_class=ServiceCallPage,
+            name="srv_caller",
+            title="Service Caller",
+            ros2_connector=self.ros2_connector,
+        )
+        # Actions
+        self.add_stack_page(
+            nav_page_class=ActionListPage,
+            name="action_list",
+            title="Action List",
+            ros2_connector=self.ros2_connector,
+        )
+        self.add_stack_page(
+            nav_page_class=ActionTypeBrowserPage,
+            name="action_type_browser",
+            title="Action Type Browser",
+            ros2_connector=self.ros2_connector,
+        )
+        # Parameters
+        self.add_stack_page(
+            nav_page_class=ParameterListPage,
+            name="param_list",
+            title="Parameters",
+            ros2_connector=self.ros2_connector,
+        )
+        # Transforms
+        self.add_stack_page(
+            nav_page_class=TransformsPage,
+            name="tf",
+            title="Transforms",
+            ros2_connector=self.ros2_connector,
+        )
+        # Images
+        self.add_stack_page(
+            nav_page_class=ImageViewerPage,
+            name="img_viewer",
+            title="Image Viewer",
+            ros2_connector=self.ros2_connector,
+        )
+        # Joint States
+        self.add_stack_page(
+            nav_page_class=JointStatesPage,
+            name="joint_states",
+            title="Joint States",
+            ros2_connector=self.ros2_connector,
+        )
+        # Logger
+        self.add_stack_page(
+            nav_page_class=LoggerPage,
+            name="logger",
+            title="Logger",
+            ros2_connector=self.ros2_connector,
+        )
+        # Doctor
+        self.add_stack_page(
+            nav_page_class=DoctorPage,
+            name="doctor",
+            title="Doctor",
+            ros2_connector=self.ros2_connector,
+        )
 
         # Preferences
         self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)

@@ -20,28 +20,24 @@ from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-class ActionListPage(Adw.NavigationPage):
+class ActionListPage(ContentPage):
     __gtype_name__ = "ActionListPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(empty_page_text="Refresh to show actions", **kwargs)
         super().set_title("Action List")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(empty_page_text="Refresh to show actions")
-        self.content_page.set_search_entry_placeholder_text("Search for actions")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for actions")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
         self.action_ns_groups: Dict[PrefGroup] = {}
 
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         self.clear()
@@ -65,7 +61,7 @@ class ActionListPage(Adw.NavigationPage):
             if namespace in self.action_ns_groups.keys():
                 group = self.action_ns_groups[namespace]
             else:
-                group = self.content_page.pref_page.add_group(title=namespace)
+                group = self.pref_page.add_group(title=namespace)
                 self.action_ns_groups[namespace] = group
 
             # TODO this somehow messes with the sorting :( again ...
@@ -82,16 +78,16 @@ class ActionListPage(Adw.NavigationPage):
             group.add_row(row)
 
         if len(available_actions) == 0:
-            self.content_page.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
+            self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
 
     def clear(self):
         for group in reversed(self.action_ns_groups.values()):
-            self.content_page.pref_page.remove_group(group)
+            self.pref_page.remove_group(group)
         self.action_ns_groups.clear()
 
 
 # TODO test this class, because i havent had an action in the list to look at its info
-class ActionInfoPage(Adw.NavigationPage):
+class ActionInfoPage(ContentPage):
     __gtype_name__ = "ActionInfoPage"
 
     def __init__(
@@ -102,15 +98,14 @@ class ActionInfoPage(Adw.NavigationPage):
         ros2_connector: ROS2Connector = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(searchable=True, refreshable=False, **kwargs)
         super().set_title(f"Action <{action_name}>")
 
         self.action_name = action_name
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(searchable=True, refreshable=False)
-        self.content_page.set_dedock_page(
+        super().set_dedock_page(
             type(self),
             dedock_kwargs={
                 "action_name": self.action_name,
@@ -118,10 +113,9 @@ class ActionInfoPage(Adw.NavigationPage):
                 "ros2_connector": self.ros2_connector,
             },
         )
-        super().set_child(self.content_page)
 
         # Action Type
-        action_type_group = self.content_page.pref_page.add_group(title="Action Type")
+        action_type_group = self.pref_page.add_group(title="Action Type")
 
         def add_act_type_row(msg_type_full_name: str):
             msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
@@ -142,12 +136,12 @@ class ActionInfoPage(Adw.NavigationPage):
         available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
         # Action Servers
-        action_servers_group = self.content_page.pref_page.add_group(
+        action_servers_group = self.pref_page.add_group(
             title="Action Servers", empty_group_text="action has no servers"
         )
 
         # Subscribers
-        action_clients_group = self.content_page.pref_page.add_group(
+        action_clients_group = self.pref_page.add_group(
             title="Action Clients", empty_group_text="action has no clients"
         )
 

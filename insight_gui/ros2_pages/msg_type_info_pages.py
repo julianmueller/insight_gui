@@ -27,26 +27,24 @@ from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 
 
-class MessageTypeInfoPage(Adw.NavigationPage):
+class MessageTypeInfoPage(ContentPage):
     __gtype_name__ = "MessageTypeInfoPage"
 
     def __init__(self, msg_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(searchable=False, refreshable=False, **kwargs)
         super().set_title(f"Message Type <{msg_type_full_name}>")
 
         self.msg_type_full_name = msg_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
 
-        self.content_page = ContentPage(searchable=False, refreshable=False)
-        self.content_page.set_search_entry_placeholder_text("Search for message types")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"msg_type_full_name": self.msg_type_full_name})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for message types")
+        super().set_dedock_page(type(self), dedock_kwargs={"msg_type_full_name": self.msg_type_full_name})
 
         # Load the message parent class
         msg_class = get_message(msg_type_full_name)
 
         # Btn for opening the online link to msg definition
-        self.content_page.add_header_btn(
+        super().add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
@@ -54,7 +52,7 @@ class MessageTypeInfoPage(Adw.NavigationPage):
         )
 
         # Message Type
-        msg_group = self.content_page.pref_page.add_group(title="Message")
+        msg_group = self.pref_page.add_group(title="Message")
         _populate_group_w_msg_rows(msg_class=msg_class, pref_group=msg_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
@@ -68,26 +66,24 @@ class MessageTypeInfoPage(Adw.NavigationPage):
         )
 
 
-class ServiceTypeInfoPage(Adw.NavigationPage):
+class ServiceTypeInfoPage(ContentPage):
     __gtype_name__ = "ServiceTypeInfoPage"
 
     def __init__(self, srv_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(searchable=False, refreshable=False, **kwargs)
         super().set_title(f"Service Type <{srv_type_full_name}>")
 
         self.srv_type_full_name = srv_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
 
-        self.content_page = ContentPage(searchable=False, refreshable=False)
-        self.content_page.set_search_entry_placeholder_text("Search for service types")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"srv_type_full_name": self.srv_type_full_name})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for service types")
+        super().set_dedock_page(type(self), dedock_kwargs={"srv_type_full_name": self.srv_type_full_name})
 
         # Load the service parent class
         srv_class = get_service(srv_type_full_name)
 
         # Btn for opening the online link to msg definition
-        self.content_page.add_header_btn(
+        super().add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
@@ -95,7 +91,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         )
 
         # Service Message Request
-        request_group = self.content_page.pref_page.add_group(title="Request", empty_group_text="No request data")
+        request_group = self.pref_page.add_group(title="Request", empty_group_text="No request data")
         request_class = srv_class.Request
         _populate_group_w_msg_rows(msg_class=request_class, pref_group=request_group, nav_view=self.nav_view)
 
@@ -111,7 +107,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         )
 
         # Service Message Response
-        response_group = self.content_page.pref_page.add_group(title="Response", empty_group_text="No response data")
+        response_group = self.pref_page.add_group(title="Response", empty_group_text="No response data")
         response_class = srv_class.Response
         _populate_group_w_msg_rows(msg_class=response_class, pref_group=response_group, nav_view=self.nav_view)
 
@@ -127,7 +123,7 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         )
 
         # Service Message Event
-        event_group = self.content_page.pref_page.add_group(title="Event")
+        event_group = self.pref_page.add_group(title="Event")
         event_class = srv_class.Event
         _populate_group_w_msg_rows(msg_class=event_class, pref_group=event_group, nav_view=self.nav_view)
 
@@ -143,26 +139,24 @@ class ServiceTypeInfoPage(Adw.NavigationPage):
         )
 
 
-class ActionTypeInfoPage(Adw.NavigationPage):
+class ActionTypeInfoPage(ContentPage):
     __gtype_name__ = "ActionTypeInfoPage"
 
     def __init__(self, act_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(searchable=False, refreshable=False, **kwargs)
         super().set_title(f"Action Type <{act_type_full_name}>")
 
         self.act_type_full_name = act_type_full_name
         self.nav_view = nav_view if nav_view else self.get_parent()
 
-        self.content_page = ContentPage(searchable=False, refreshable=False)
-        self.content_page.set_search_entry_placeholder_text("Search for action types")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"act_type_full_name": self.act_type_full_name})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for action types")
+        super().set_dedock_page(type(self), dedock_kwargs={"act_type_full_name": self.act_type_full_name})
 
         # Load the action parent class
         act_class = get_action(act_type_full_name)
 
         # Btn for opening the online link to msg definition
-        self.content_page.add_header_btn(
+        super().add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
@@ -170,7 +164,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         )
 
         # Action Message Goal
-        goal_group = self.content_page.pref_page.add_group(title="Goal", empty_group_text="No goal data")
+        goal_group = self.pref_page.add_group(title="Goal", empty_group_text="No goal data")
         goal_class = act_class.Goal
         _populate_group_w_msg_rows(msg_class=goal_class, pref_group=goal_group, nav_view=self.nav_view)
 
@@ -186,7 +180,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         )
 
         # Action Message Feedback
-        feedback_group = self.content_page.pref_page.add_group(title="Feedback", empty_group_text="No feedback data")
+        feedback_group = self.pref_page.add_group(title="Feedback", empty_group_text="No feedback data")
         feedback_class = act_class.Feedback
         _populate_group_w_msg_rows(msg_class=feedback_class, pref_group=feedback_group, nav_view=self.nav_view)
 
@@ -202,7 +196,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         )
 
         # Action Message Result
-        result_group = self.content_page.pref_page.add_group(title="Result", empty_group_text="No result data")
+        result_group = self.pref_page.add_group(title="Result", empty_group_text="No result data")
         result_class = act_class.Result
         _populate_group_w_msg_rows(msg_class=result_class, pref_group=result_group, nav_view=self.nav_view)
 
@@ -218,7 +212,7 @@ class ActionTypeInfoPage(Adw.NavigationPage):
         )
 
         # # Action Message Impl # TODO check what impl is
-        # impl_group = self.content_page.pref_page.add_group(title="Impl")
+        # impl_group = self.pref_page.add_group(title="Impl")
         # impl_class = act_class.Impl
         # _populate_group_w_msg_rows(msg_class=impl_class, pref_group=impl_group, nav_view=self.nav_view)
         #

@@ -24,24 +24,20 @@ class TopicListPage(ContentPage):
     __gtype_name__ = "TopicListPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(empty_page_text="Refresh to show topics", **kwargs)
         super().set_title("Topic List")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(empty_page_text="Refresh to show topics")
-        self.content_page.set_search_entry_placeholder_text("Search for topics")
-        self.content_page.set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-        super().set_child(self.content_page)
+        super().set_search_entry_placeholder_text("Search for topics")
+        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
         self.topic_ns_groups: Dict[PrefGroup] = {}
 
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
-            self.content_page.show_toast_w_btn(
-                "ROS2 node not running", "Start Node", func=self.ros2_connector.start_node
-            )
+            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
             return False
 
         self.clear()
@@ -67,7 +63,7 @@ class TopicListPage(ContentPage):
             if namespace in self.topic_ns_groups.keys():
                 group = self.topic_ns_groups[namespace]
             else:
-                group = self.content_page.pref_page.add_group(title=namespace)
+                group = self.pref_page.add_group(title=namespace)
                 self.topic_ns_groups[namespace] = group
 
             # TODO this somehow messes with the sorting :( again ...
@@ -86,15 +82,15 @@ class TopicListPage(ContentPage):
             group.add_row(row)
 
         if len(available_topics) == 0:
-            self.content_page.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
+            self.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
 
     def clear(self):
         for group in reversed(self.topic_ns_groups.values()):
-            self.content_page.pref_page.remove_group(group)
+            self.pref_page.remove_group(group)
         self.topic_ns_groups.clear()
 
 
-class TopicInfoPage(Adw.NavigationPage):
+class TopicInfoPage(ContentPage):
     __gtype_name__ = "TopicInfoPage"
 
     def __init__(
@@ -105,15 +101,14 @@ class TopicInfoPage(Adw.NavigationPage):
         ros2_connector: ROS2Connector = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(searchable=True, refreshable=False, **kwargs)
         super().set_title(f"Topic <{topic_name}>")
 
         self.topic_name = topic_name
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
-        self.content_page = ContentPage(searchable=True, refreshable=False)
-        self.content_page.set_dedock_page(
+        super().set_dedock_page(
             type(self),
             dedock_kwargs={
                 "topic_name": self.topic_name,
@@ -121,10 +116,9 @@ class TopicInfoPage(Adw.NavigationPage):
                 "ros2_connector": self.ros2_connector,
             },
         )
-        super().set_child(self.content_page)
 
         # Message Type
-        message_type_group = self.content_page.pref_page.add_group(title="Message Type")
+        message_type_group = self.pref_page.add_group(title="Message Type")
 
         def add_msg_type_row(msg_type_full_name: str):
             msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
@@ -145,14 +139,10 @@ class TopicInfoPage(Adw.NavigationPage):
         available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
         # Publishers
-        publishers_group = self.content_page.pref_page.add_group(
-            title="Publishers", empty_group_text="Topic has no publishers"
-        )
+        publishers_group = self.pref_page.add_group(title="Publishers", empty_group_text="Topic has no publishers")
 
         # Subscribers
-        subscribers_group = self.content_page.pref_page.add_group(
-            title="Subscribers", empty_group_text="Topic has no subscribers"
-        )
+        subscribers_group = self.pref_page.add_group(title="Subscribers", empty_group_text="Topic has no subscribers")
 
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
             # TODO maybe use self.ros2_connector.node.get_publishers_info_by_topic()

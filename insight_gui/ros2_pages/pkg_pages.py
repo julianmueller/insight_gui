@@ -26,10 +26,8 @@ class PackageListPage(ContentPage):
 
         self.nav_view = nav_view if nav_view else self.get_parent()
 
-        # self.content_page = ContentPage(empty_page_text="Refresh to show packages")
         super().set_search_entry_placeholder_text("Search for Packages")
         super().set_dedock_page(type(self))
-        # super().set_child(self.content_page)
 
         self.pkg_list_group = self.pref_page.add_group(empty_group_text="Refresh to show packages")
 
@@ -62,10 +60,8 @@ class PackageListPage(ContentPage):
         if self.pkg_list_group.num_rows == 0:
             self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
 
-        return bool(self.pref_page.num_groups)
 
-
-class PackageInfoPage(Adw.NavigationPage):
+class PackageInfoPage(ContentPage):
     __gtype_name__ = "PackageInfoPage"
 
     def __init__(
@@ -75,16 +71,13 @@ class PackageInfoPage(Adw.NavigationPage):
         nav_view: Adw.NavigationView = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(searchable=True, refreshable=False, **kwargs)
         super().set_title(f"Package <{pkg_name}>")
 
         self.pkg_name = pkg_name
         self.nav_view = nav_view if nav_view else self.get_parent()
 
-        self.content_page = ContentPage(searchable=True, refreshable=False)
-        super().set_child(self.content_page)
-
-        self.link_group = self.content_page.pref_page.add_group(title="Links")
+        self.link_group = self.pref_page.add_group(title="Links")
         self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
             icon_name="folder-symbolic",
             func=self.on_open_pkg_folder,
@@ -119,9 +112,7 @@ class PackageInfoPage(Adw.NavigationPage):
         # - dependencies?
 
         # Executables
-        executables_group = self.content_page.pref_page.add_group(
-            title="Executables", empty_group_text="Package has no executables"
-        )
+        executables_group = self.pref_page.add_group(title="Executables", empty_group_text="Package has no executables")
         executable_paths = get_executable_paths(package_name=pkg_name)
 
         for path in sorted(executable_paths):
@@ -131,7 +122,7 @@ class PackageInfoPage(Adw.NavigationPage):
                 CopyButton(
                     copy_text=f"ros2 run {pkg_name} {executable_name}",
                     tooltip_text="Copy 'ros2 run' command",
-                    toast_host=self.content_page.toast_overlay,
+                    toast_host=self.toast_overlay,
                 )
             )
 
@@ -143,4 +134,4 @@ class PackageInfoPage(Adw.NavigationPage):
         if os.path.isdir(path):
             os.system(rf"xdg-open {path}")
         else:
-            self.content_page.show_toast(f"Path '{path}' does not exist!")
+            super().show_toast(f"Path '{path}' does not exist!")
