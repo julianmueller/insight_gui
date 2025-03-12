@@ -83,7 +83,7 @@ class ServiceCallPage(ContentPage):
         if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
             super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return False
+            return
 
         # clear previous service list
         self.service_list_store.remove_all()
@@ -98,7 +98,7 @@ class ServiceCallPage(ContentPage):
         else:
             super().show_toast("No services found")
             self.call_btn.set_sensitive(False)
-            return False
+            return
 
         def on_setup(factory, list_item):
             label = Gtk.Label(xalign=0, wrap=True, hexpand=True)
@@ -159,7 +159,7 @@ class ServiceCallPage(ContentPage):
             data_dict = yaml.safe_load(request_yaml)
         except Exception as e:
             super().show_toast("Invalid YAML")
-            return
+            return False
 
         try:
             set_message_fields(
@@ -168,7 +168,7 @@ class ServiceCallPage(ContentPage):
             )
         except Exception as e:
             super().show_toast("Error parsing the request data")
-            return
+            return False
 
         response = self.ros2_connector.call_service(
             srv_name=self.selected_service_name,

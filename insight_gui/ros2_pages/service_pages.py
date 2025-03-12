@@ -38,7 +38,7 @@ class ServiceListPage(ContentPage):
     def refresh(self, *args):
         if not self.ros2_connector.is_running:
             super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return False
+            return
 
         self.clear()
 

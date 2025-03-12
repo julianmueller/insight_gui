@@ -44,7 +44,7 @@ class PackageListPage(ContentPage):
         )
 
     def refresh(self, *args):
-        self.pkg_list_group.clear()
+        self.clear()
 
         available_pkgs = get_packages_with_prefixes()
 
@@ -59,6 +59,9 @@ class PackageListPage(ContentPage):
 
         if self.pkg_list_group.num_rows == 0:
             self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
+
+    def clear(self):
+        self.pkg_list_group.clear()
 
 
 class PackageInfoPage(ContentPage):

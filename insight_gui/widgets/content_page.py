@@ -48,6 +48,9 @@ class ContentPage(Adw.NavigationPage):
         self.dedock_page_class = None
         self.dedock_kwargs = {}
 
+        self.searchable = searchable
+        self.refreshable = refreshable
+
         self.toggle_search_btn(searchable)
         self.toggle_refresh_btn(refreshable)
 
@@ -73,7 +76,8 @@ class ContentPage(Adw.NavigationPage):
             self.refresh()
             return False  # for Glib.idle_add to end after one iteration
 
-        GLib.idle_add(refresh_wrapper)
+        if self.refreshable:
+            GLib.idle_add(refresh_wrapper)
         # self.content_stack.set_visible_child(self.pref_page)
 
     # TODO rework after ContentPage update
@@ -83,7 +87,7 @@ class ContentPage(Adw.NavigationPage):
             win = Adw.Window(content=nav_view, destroy_with_parent=True, default_height=600, default_width=800)
 
             nav_page = self.dedock_page_class(nav_view=nav_view, **self.dedock_kwargs)
-            self.dedock_btn.set_visible(False)
+            nav_page.dedock_btn.set_visible(False)
 
             nav_view.add(nav_page)
             win.show()
@@ -163,3 +167,10 @@ class ContentPage(Adw.NavigationPage):
 
     def toggle_refresh_btn(self, enabled: bool):
         self.refresh_btn.set_visible(enabled)
+
+    def refresh(self): ...
+    def clear(self): ...
+
+    def show_search_bar(self):
+        if self.searchable:
+            self.search_bar.set_search_mode(True)

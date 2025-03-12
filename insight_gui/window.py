@@ -199,18 +199,41 @@ class MainWindow(Adw.ApplicationWindow):
         # action.connect("activate", self.on_quit)
         # self.app.add_action(action)
 
-        # Shortcuts
-        controller = Gtk.ShortcutController()
-        shortcut = Gtk.Shortcut.new(
-            trigger=Gtk.ShortcutTrigger.parse_string("<Control>p"),
-            action=Gtk.CallbackAction.new(self.on_shortcut_activated),
+        # Shortcuts # TODO make them also work in the detached windows
+        self.shortcut_controller = Gtk.ShortcutController()
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.ShortcutTrigger.parse_string("<Control>f"),
+                action=Gtk.CallbackAction.new(self.on_search_shortcut),
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.ShortcutTrigger.parse_string("<Control>r"),
+                action=Gtk.CallbackAction.new(self.on_refresh_shortcut),
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.ShortcutTrigger.parse_string("F5"),
+                action=Gtk.CallbackAction.new(self.on_refresh_shortcut),
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.ShortcutTrigger.parse_string("<Control><Shift>n"),
+                action=Gtk.CallbackAction.new(self.on_dedock_shortcut),
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.ShortcutTrigger.parse_string("<Control>w"),
+                action=Gtk.CallbackAction.new(lambda *_: self.close()),
+            )
         )
 
-        # Add shortcut to controller
-        controller.add_shortcut(shortcut)
-
         # Add controller to window
-        self.add_controller(controller)
+        self.add_controller(self.shortcut_controller)
 
         # update time labels
         GLib.idle_add(self.update_time_labels)
@@ -223,17 +246,23 @@ class MainWindow(Adw.ApplicationWindow):
     # def on_menu_btn_clicked(self, *args):
     #     self.preferences_dialog.present(self)
 
-    @Gtk.Template.Callback()
-    def on_refresh_btn_clicked(self, *args):
-        for stack_page in self.content_stack.get_pages():
-            nav_view = stack_page.get_child()
-            nav_page = nav_view.get_navigation_stack()[0]
-            refresh_func = getattr(nav_page, "refresh", None)
-            if callable(refresh_func):
-                refresh_func()
+    # @Gtk.Template.Callback()
+    # def on_refresh_btn_clicked(self, *args):
+    #     for stack_page in self.content_stack.get_pages():
+    #         nav_view = stack_page.get_child()
+    #         nav_page = nav_view.get_navigation_stack()[0]
+    #         refresh_func = getattr(nav_page, "refresh", None)
+    #         if callable(refresh_func):
+    #             refresh_func()
 
-    def on_shortcut_activated(self, *args):
-        print("Shortcut Ctrl+P activated!")
+    def on_search_shortcut(self, *args):
+        self.content_stack.get_visible_child().get_visible_page().show_search_bar()
+
+    def on_refresh_shortcut(self, *args):
+        self.content_stack.get_visible_child().get_visible_page().on_refresh()
+
+    def on_dedock_shortcut(self, *args):
+        self.content_stack.get_visible_child().get_visible_page().on_dedock()
 
     def add_stack_page(self, *, name: str, title: str, nav_page_class: type[Adw.NavigationPage], **kwargs):
         nav_view = Adw.NavigationView()

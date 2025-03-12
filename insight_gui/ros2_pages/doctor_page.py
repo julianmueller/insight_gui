@@ -51,15 +51,9 @@ class DoctorPage(ContentPage):
         if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
             super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return False
+            return
 
-        self.network_config_group.clear()
-        self.package_versions_group.clear()
-        self.platform_info_group.clear()
-        self.qos_compatibility_group.clear()
-        self.rmw_info_group.clear()
-        self.ros2_info_group.clear()
-        self.topic_list_group.clear()
+        self.clear()
 
         # TODO: this sometimes shows the following warnings:
         # - UserWarning: Fail to call QoSCompatibilityReport class functions.
@@ -158,6 +152,15 @@ class DoctorPage(ContentPage):
 
                 if self.topic_list_group.num_rows == 0:
                     self.topic_list_group.set_empty_group_text("No topics found. Refresh to try again.")
+
+    def clear(self):
+        self.network_config_group.clear()
+        self.package_versions_group.clear()
+        self.platform_info_group.clear()
+        self.qos_compatibility_group.clear()
+        self.rmw_info_group.clear()
+        self.ros2_info_group.clear()
+        self.topic_list_group.clear()
 
 
 # TODO add NetworkHelloPage for 'ros2 doctor hello'

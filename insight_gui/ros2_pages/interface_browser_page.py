@@ -138,7 +138,7 @@ class ActionTypeBrowserPage(ContentPage):
         super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
     def refresh(self, *args) -> bool:
-        self.pref_page.clear()
+        self.clear()
 
         available_action_msgs = get_action_interfaces()
         for pkg_name, actions_list in sorted(available_action_msgs.items()):
@@ -171,6 +171,9 @@ class ActionTypeBrowserPage(ContentPage):
 
         if len(available_action_msgs) == 0:
             self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
+
+    def clear(self):
+        self.pref_page.clear()
 
 
 def _on_open_msg_file(btn: Gtk.Button = None, *, msg_type_full_name: str):

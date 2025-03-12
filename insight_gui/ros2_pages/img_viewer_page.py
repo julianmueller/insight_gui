@@ -68,10 +68,10 @@ class ImageViewerPage(ContentPage):
         if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
             super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return False
+            return
 
+        self.clear()
         img_topic_list = []
-        self.img_topic_list_store.remove_all()
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
         for i, (topic_name, topic_types) in enumerate(available_topics):
@@ -93,6 +93,9 @@ class ImageViewerPage(ContentPage):
             self.img_topic_row.set_selected(0)
         else:
             super().show_toast("No topic with images found")
+
+    def clear(self):
+        self.img_topic_list_store.remove_all()
 
     def on_image_topic_changed(self, *args):
         if self.img_topic_list_store.get_n_items() <= 0:

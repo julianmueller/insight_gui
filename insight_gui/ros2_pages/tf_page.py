@@ -75,10 +75,9 @@ class TransformsPage(ContentPage):
         if not self.ros2_connector.is_running:
             # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
             super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return False
+            return
 
-        self.frames_group.clear()
-        self.result_text_row.set_visible(False)
+        self.clear()
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
@@ -96,7 +95,7 @@ class TransformsPage(ContentPage):
             super().show_toast("No frames found")
             self.frames_group.set_empty_group_text("No frames found. Refresh to try again.")
             self.calc_button.set_sensitive(False)
-            return False
+            return
 
         # Create a Gio.ListStore
         self.frames_list_store.remove_all()
@@ -112,6 +111,10 @@ class TransformsPage(ContentPage):
         if self.frames_list_store.get_n_items() > 0:
             self.source_frame_row.set_selected(0)
             self.target_frame_row.set_selected(0)
+
+    def clear(self):
+        self.frames_group.clear()
+        self.result_text_row.set_visible(False)
 
     def on_switch_frames(self, *args):
         if len(self.frames_list) <= 1:

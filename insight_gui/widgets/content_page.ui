@@ -41,6 +41,7 @@
                     <object class="GtkSearchEntry" id="search_entry">
                         <property name="placeholder-text">Search</property>
                         <property name="search-delay">100</property>
+                        <property name="width-request">300</property>
                     </object>
                 </child>
             </object>

@@ -26,9 +26,6 @@
                         <property name="title">Navigation</property>
                         <property name="child">
                             <object class="AdwToolbarView">
-                                <style>
-                                    <class name="undershoot-top" />
-                                </style>
 
                                 <child type="top">
                                     <object class="AdwHeaderBar" id="nav_header_bar">
