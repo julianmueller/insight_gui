@@ -115,3 +115,7 @@ ros2 run insight_gui main
     - add gtk settings
     - add Gtk/Gio Notifications
     - replace "webbrowser" stuff with gtk File/Web Launcher
+
+## License
+
+GPLv3. See [LICENSE](LICENSE).
