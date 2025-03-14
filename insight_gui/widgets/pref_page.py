@@ -54,12 +54,26 @@ class PrefPage(Adw.PreferencesPage):
         **kwargs,
     ) -> PrefGroup:
         self.empty_group.set_visible(False)
-        pref_group = PrefGroup(
-            title=title, description=description, empty_group_text=empty_group_text, filterable=filterable, **kwargs
-        )
-        super().add(pref_group)
-        self.groups.append(pref_group)
-        return pref_group
+
+        # check if pref group already exists
+        pref_group = self.get_group(title)
+        if pref_group:
+            return pref_group
+
+        else:
+            pref_group = PrefGroup(
+                title=title, description=description, empty_group_text=empty_group_text, filterable=filterable, **kwargs
+            )
+            super().add(pref_group)
+            self.groups.append(pref_group)
+            return pref_group
+
+    def get_group(self, title: str) -> PrefGroup:
+        for group in self.groups:
+            if group.get_title() == title:
+                return group
+        else:
+            return None
 
     def remove_group(self, pref_group: PrefGroup):
         super().remove(pref_group)

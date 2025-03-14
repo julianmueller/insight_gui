@@ -47,20 +47,12 @@ class DoctorPage(ContentPage):
         )
         self.topic_list_group = self.pref_page.add_group(title="TOPIC LIST", empty_group_text="Refresh to show topics")
 
-    def refresh(self, *args) -> bool:
-        if not self.ros2_connector.is_running:
-            # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return
+    def refresh_blocking(self, *args) -> bool:
+        self.reports = generate_reports()
+        return len(self.reports) > 0
 
-        self.clear()
-
-        # TODO: this sometimes shows the following warnings:
-        # - UserWarning: Fail to call QoSCompatibilityReport class functions.
-        # - UserWarning: Fail to call TopicReport class functions.
-        reports = generate_reports()
-
-        for report in reports:
+    def refresh_gui(self, *args):
+        for report in self.reports:
             if report.name == "NETWORK CONFIGURATION":
                 # TODO these should be somehow grouped by network device
                 for item in report.items:
@@ -72,21 +64,26 @@ class DoctorPage(ContentPage):
                     )
 
             elif report.name == "PACKAGE VERSIONS":
+                rows = []
                 for item in sorted(report.items):
-                    row: PrefRow = self.package_versions_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
+                    row: PrefRow = PrefRow(title=item[0], subtitle=item[1])
 
                     re_match = re.match(r"^latest\=([^,]+), local\=([^,]+)$", item[1])
                     latest_version = re_match.group(1).strip()
                     local_version = re_match.group(2).strip()
                     if latest_version != local_version:
                         row.add_prefix_icon("software-update-available-symbolic", tooltip_text="Update available")
+                    rows.append(row)
+                self.package_versions_group.add_rows_idle(rows)
 
                 if self.package_versions_group.num_rows == 0:
                     self.package_versions_group.set_empty_group_text("No package versions found.")
 
             elif report.name == "PLATFORM INFORMATION":
+                rows = []
                 for item in sorted(report.items):
-                    self.platform_info_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
+                    rows.append(PrefRow(title=item[0], subtitle=item[1]))
+                self.platform_info_group.add_rows_idle(rows)
 
                 if self.platform_info_group.num_rows == 0:
                     self.platform_info_group.set_empty_group_text(
@@ -98,20 +95,24 @@ class DoctorPage(ContentPage):
                     self.qos_compatibility_group.add_row(PrefRow(title=report.items[0][0], subtitle=report.items[0][1]))
 
                 else:
+                    rows = []
                     for i in range(0, len(report.items), 4):
-                        print(i)
+                        # print(i)
                         topic_type = report.items[i]
                         pub_node = report.items[i + 1]
                         sub_node = report.items[i + 2]
                         compatibility_status = report.items[i + 3]
 
-                        row = self.qos_compatibility_group.add_row(PrefRow(title=topic_type[1]))
+                        row = PrefRow(title=topic_type[1])
                         row.set_use_markup(True)
                         row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
                         if compatibility_status[1] == "OK":
                             row.add_prefix_icon("check-symbolic")
                         else:
                             row.add_prefix_icon("dialog-error-symbolic")
+                        rows.append(row)
+                    self.qos_compatibility_group.add_rows_idle(rows)
+
                 # for item in report.items:
                 #     self.qos_compatibility_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
 
@@ -121,39 +122,47 @@ class DoctorPage(ContentPage):
                     )
 
             elif report.name == "RMW MIDDLEWARE":
+                rows = []
                 for item in sorted(report.items):
-                    self.rmw_info_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
+                    rows.append(PrefRow(title=item[0], subtitle=item[1]))
+                self.rmw_info_group.add_rows_idle(rows)
 
                 if self.rmw_info_group.num_rows == 0:
                     self.rmw_info_group.set_empty_group_text("No RMW middleware found. Refresh to try again.")
 
             elif report.name == "ROS 2 INFORMATION":
+                rows = []
                 for item in report.items:
-                    row = self.ros2_info_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
+                    row = PrefRow(title=item[0], subtitle=item[1])
                     row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.toast_overlay))
+                    rows.append(row)
+                self.ros2_info_group.add_rows_idle(rows)
 
                 if self.ros2_info_group.num_rows == 0:
                     self.ros2_info_group.set_empty_group_text("No ROS 2 information found. Refresh to try again.")
 
             elif report.name == "TOPIC LIST":
+                rows = []
                 for i in range(0, len(report.items), 4):
                     topic_type = report.items[i]
                     pub_node = report.items[i + 1]
                     sub_node = report.items[i + 2]
                     compatibility_status = report.items[i + 3]
 
-                    row = self.topic_list_group.add_row(PrefRow(title=topic_type[1]))
+                    row = PrefRow(title=topic_type[1])
                     row.set_use_markup(True)
                     row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
                     if compatibility_status[1] == "OK":
-                        row.add_prefix_icon("check-symbolic")
+                        row.add_prefix_icon("checkbox-checked-symbolic")
                     else:
                         row.add_prefix_icon("dialog-error-symbolic")
+                    rows.append(row)
+                self.topic_list_group.add_rows_idle(rows)
 
                 if self.topic_list_group.num_rows == 0:
                     self.topic_list_group.set_empty_group_text("No topics found. Refresh to try again.")
 
-    def clear(self):
+    def clear_gui(self):
         self.network_config_group.clear()
         self.package_versions_group.clear()
         self.platform_info_group.clear()

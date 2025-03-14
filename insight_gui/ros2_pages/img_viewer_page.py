@@ -64,16 +64,11 @@ class ImageViewerPage(ContentPage):
         self.height_lbl = self.height_row.add_suffix_lbl("")
         self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
 
-    def refresh(self, *args) -> bool:
-        if not self.ros2_connector.is_running:
-            # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return
-
-        self.clear()
-        img_topic_list = []
+    def refresh_blocking(self, *args) -> bool:
+        self.img_topic_list = []
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+
         for i, (topic_name, topic_types) in enumerate(available_topics):
             # topic_types is a list, as multiple servers can advertise different types to the same topic
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
@@ -83,9 +78,11 @@ class ImageViewerPage(ContentPage):
                 topic_types = ", ".join(topic_types)
 
             if topic_types == "sensor_msgs/msg/Image":
-                img_topic_list.append(topic_name)
+                self.img_topic_list.append(topic_name)
+        return len(self.img_topic_list) > 0
 
-        for img_topic in img_topic_list:
+    def refresh_gui(self, *args):
+        for img_topic in self.img_topic_list:
             self.img_topic_list_store.append(Gtk.StringObject.new(img_topic))
 
         if self.img_topic_list_store.get_n_items() > 0:
@@ -94,7 +91,7 @@ class ImageViewerPage(ContentPage):
         else:
             super().show_toast("No topic with images found")
 
-    def clear(self):
+    def clear_gui(self):
         self.img_topic_list_store.remove_all()
 
     def on_image_topic_changed(self, *args):

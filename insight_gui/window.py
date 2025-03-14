@@ -7,11 +7,12 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gdk, Gio, GLib
 
 from insight_gui.ros2_pages.node_pages import NodeListPage
-from insight_gui.ros2_pages.msg_type_browser_pages import (
+from insight_gui.ros2_pages.msg_type_browser_pages import (  # TODO remove
     MessageTypeBrowserPage,
     ServiceTypeBrowserPage,
     ActionTypeBrowserPage,
 )
+from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
 from insight_gui.ros2_pages.pkg_pages import PackageListPage
 from insight_gui.ros2_pages.topic_pages import TopicListPage
 from insight_gui.ros2_pages.service_pages import ServiceListPage
@@ -62,38 +63,38 @@ class MainWindow(Adw.ApplicationWindow):
         self.add_stack_page(
             nav_page_class=PackageListPage,
             name="pkg_list",
-            title="Package List",
+            title="Packages",
         )
         self.add_stack_page(
             nav_page_class=NodeListPage,
             name="node_list",
-            title="Node List",
+            title="Nodes",
             ros2_connector=self.ros2_connector,
         )
         # Topics
         self.add_stack_page(
             nav_page_class=TopicListPage,
             name="topic_list",
-            title="Topic List",
+            title="Topics",
             ros2_connector=self.ros2_connector,
         )
         self.add_stack_page(
             nav_page_class=MessageTypeBrowserPage,
             name="msg_type_browser",
-            title="Message Type Browser",
+            title="(old) Message Type Browser",
             ros2_connector=self.ros2_connector,
         )
         # Services
         self.add_stack_page(
             nav_page_class=ServiceListPage,
             name="service_list",
-            title="Service List",
+            title="Services",
             ros2_connector=self.ros2_connector,
         )
         self.add_stack_page(
             nav_page_class=ServiceTypeBrowserPage,
             name="srv_type_browser",
-            title="Service Type Browser",
+            title="(old) Service Type Browser",
             ros2_connector=self.ros2_connector,
         )
         self.add_stack_page(
@@ -106,13 +107,19 @@ class MainWindow(Adw.ApplicationWindow):
         self.add_stack_page(
             nav_page_class=ActionListPage,
             name="action_list",
-            title="Action List",
+            title="Actions",
             ros2_connector=self.ros2_connector,
         )
         self.add_stack_page(
             nav_page_class=ActionTypeBrowserPage,
             name="action_type_browser",
-            title="Action Type Browser",
+            title="(old) Action Type Browser",
+            ros2_connector=self.ros2_connector,
+        )
+        self.add_stack_page(
+            nav_page_class=InterfaceBrowserPage,
+            name="interface_browser",
+            title="Interfaces",
             ros2_connector=self.ros2_connector,
         )
         # Parameters

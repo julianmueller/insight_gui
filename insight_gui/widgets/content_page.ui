@@ -19,10 +19,30 @@
                 </child>
                 <child type="start">
                     <object class="GtkButton" id="refresh_btn">
-                        <property name="icon-name">update-symbolic</property>
                         <property name="tooltip-text">Refresh</property>
+                        <child>
+                            <object class="GtkBox">
+                                <child>
+                                    <object class="GtkImage" id="refresh_icon">
+                                        <property name="visible">true</property>
+                                        <property name="icon-name">update-symbolic</property>
+                                    </object>
+                                </child>
+                                <child>
+                                    <object class="GtkSpinner" id="refresh_spinner">
+                                        <property name="visible">false</property>
+                                        <property name="spinning">false</property>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <style>
+                            <class name="flat" />
+                        </style>
                     </object>
                 </child>
+
                 <child type="end">
                     <object class="GtkButton" id="dedock_btn">
                         <property name="icon-name">external-link-symbolic</property>

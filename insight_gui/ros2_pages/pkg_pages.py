@@ -43,24 +43,28 @@ class PackageListPage(ContentPage):
             func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
         )
 
-    def refresh(self, *args):
-        self.clear()
+    def refresh_blocking(self, *args) -> bool:
+        self.available_pkgs = get_packages_with_prefixes()
+        return len(self.available_pkgs) > 0
 
-        available_pkgs = get_packages_with_prefixes()
-
-        for pkg_name, pkg_path in available_pkgs.items():
-            row = self.pkg_list_group.add_row(PrefRow(title=pkg_name, subtitle=pkg_path))
+    def refresh_gui(self, *args):
+        rows = []
+        for pkg_name, pkg_path in self.available_pkgs.items():
+            row = PrefRow(title=pkg_name, subtitle=pkg_path)
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=PackageInfoPage,
                 pkg_name=pkg_name,
                 pkg_path=pkg_path,
             )
+            rows.append(row)
+
+        self.pkg_list_group.add_rows_idle(rows)
 
         if self.pkg_list_group.num_rows == 0:
             self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
 
-    def clear(self):
+    def clear_gui(self):
         self.pkg_list_group.clear()
 
 
@@ -113,6 +117,8 @@ class PackageInfoPage(ContentPage):
         # - license
         # - urls
         # - dependencies?
+
+        # TODO add all the interfaces (msgs etc) that a package defines
 
         # Executables
         executables_group = self.pref_page.add_group(title="Executables", empty_group_text="Package has no executables")

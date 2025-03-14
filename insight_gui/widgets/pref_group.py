@@ -4,7 +4,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, GLib
 
 from insight_gui.widgets.pref_rows import PrefRow
 
@@ -85,13 +85,43 @@ class PrefGroup(Adw.PreferencesGroup):
         self.rows.append(row)
         return row
 
+    def add_row_idle(self, row: Gtk.Widget):
+        def _idle(row: Gtk.Widget):
+            self.add_row(row)
+            return False
+
+        GLib.idle_add(_idle, row)
+        return row
+
+    def add_rows_idle(self, rows: list[Gtk.Widget], batch_size: int = 2):
+        index = 0
+
+        def add_batch():
+            nonlocal index
+            end = min(index + batch_size, len(rows))
+
+            for i in range(index, end):
+                self.add_row(rows[i])
+
+            index += batch_size
+            return index < len(rows)  # Return True if more rows need to be added
+
+        GLib.idle_add(add_batch)  # Start adding in batches
+
     def remove_row(self, row: Gtk.Widget):
         super().remove(row)
         self.rows = [_row for _row in self.rows if _row != row]
 
     def clear(self):
-        for row in reversed(self.rows):
-            self.remove_row(row)
+        rows_to_remove = reversed(self.rows)
+
+        def _idle():
+            for row in rows_to_remove:
+                Adw.PreferencesGroup.remove(self, row)
+            return False
+
+        GLib.idle_add(_idle)
+        self.rows = []
         self.empty_row.set_visible(True)
 
     def add_suffix_btn(self, *, icon_name: str, tooltip_text: str, visible: bool = True, func: Callable, **func_kwargs):

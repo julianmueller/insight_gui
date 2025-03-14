@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Callable
+import threading
 
 import gi
 
@@ -25,8 +26,12 @@ class ContentPage(Adw.NavigationPage):
         self.toolbar_view: Adw.ToolbarView = builder.get_object("toolbar_view")
         self.header_bar: Adw.HeaderBar = builder.get_object("header_bar")
         self.search_btn: Gtk.ToggleButton = builder.get_object("search_btn")
+
         self.refresh_btn: Gtk.Button = builder.get_object("refresh_btn")
         self.refresh_btn.connect("clicked", self.on_refresh)
+        self.refresh_icon: Gtk.Image = builder.get_object("refresh_icon")
+        self.refresh_spinner: Gtk.Spinner = builder.get_object("refresh_spinner")
+
         self.dedock_btn: Gtk.Button = builder.get_object("dedock_btn")
         self.dedock_btn.connect("clicked", self.on_dedock)
 
@@ -50,6 +55,8 @@ class ContentPage(Adw.NavigationPage):
 
         self.searchable = searchable
         self.refreshable = refreshable
+        self.refreshing = False
+        self.refresh_thread: GLib.Thread = None
 
         self.toggle_search_btn(searchable)
         self.toggle_refresh_btn(refreshable)
@@ -70,15 +77,59 @@ class ContentPage(Adw.NavigationPage):
         self.pref_page.apply_filter(self.search_entry.get_text())
 
     def on_refresh(self, *args):
-        self.search_bar.set_search_mode(False)
+        """Executed, when the refresh button is clicked."""
+        if not self.refreshable or self.refreshing:
+            return
 
-        def refresh_wrapper():
-            self.refresh()
+        def prepare_refresh(*args):
+            self.search_bar.set_search_mode(False)
+            self.refresh_icon.set_visible(False)
+            self.refresh_spinner.set_visible(True)
+            self.refresh_spinner.start()
+            self.refreshing = True
             return False  # for Glib.idle_add to end after one iteration
 
-        if self.refreshable:
-            GLib.idle_add(refresh_wrapper)
-        # self.content_stack.set_visible_child(self.pref_page)
+        def finish_refresh(*args):
+            self.refresh_spinner.stop()
+            self.refresh_spinner.set_visible(False)
+            self.refresh_icon.set_visible(True)
+            self.refreshing = False
+            return False  # for Glib.idle_add to end after one iteration
+
+        def refresh_wrapper(*args):
+            # TODO add, that if the ros2_connector is not running, a toast is shown
+            try:
+                refresh_result = self.refresh_blocking()
+
+                # only refresh the gui, if the
+                if refresh_result:
+                    GLib.idle_add(self.clear_gui)
+                    GLib.idle_add(self.refresh_gui)
+                else:
+                    self.show_toast("Refresh failed")
+
+                GLib.idle_add(finish_refresh)
+
+            except Exception as e:
+                print(f"Error in refresh: {e}")
+                GLib.idle_add(finish_refresh)
+
+        GLib.idle_add(prepare_refresh)
+        if self.refresh_thread is None or not self.refresh_thread.is_alive():
+            self.refresh_thread = threading.Thread(target=refresh_wrapper, daemon=True)
+            self.refresh_thread.start()
+
+    def refresh_blocking(self) -> bool:
+        """Child class should override this with blocking, long-running computation."""
+        raise NotImplementedError("Child class must implement refresh_blocking()!")
+
+    def refresh_gui(self, *args):
+        """Child class should override this to update the UI with the result of the blocking refresh."""
+        raise NotImplementedError("Child class must implement refresh_gui()!")
+
+    def clear_gui(self):
+        """Child class should override this to clear the UI before a refresh."""
+        raise NotImplementedError("Child class must implement clear_gui()!")
 
     # TODO rework after ContentPage update
     def on_dedock(self, *args):
@@ -167,9 +218,6 @@ class ContentPage(Adw.NavigationPage):
 
     def toggle_refresh_btn(self, enabled: bool):
         self.refresh_btn.set_visible(enabled)
-
-    def refresh(self): ...
-    def clear(self): ...
 
     def show_search_bar(self):
         if self.searchable:

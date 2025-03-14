@@ -1,4 +1,3 @@
-from operator import itemgetter
 import yaml
 import time
 
@@ -32,6 +31,8 @@ class TransformsPage(ContentPage):
         super().set_search_entry_placeholder_text("Search for Frames")
         super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
+        # TODO add a button rowthat shows a dialog with a tf-tree
+
         self.calc_group = self.pref_page.add_group(title="Calculate Transform", filterable=False)
         self.calc_group.add_suffix_btn(
             icon_name="vertical-arrows-symbolic", tooltip_text="Switch source/target", func=self.on_switch_frames
@@ -63,61 +64,96 @@ class TransformsPage(ContentPage):
             )
         )
 
+        # result row that displays the result of the calculation
         self.result_text_row = self.calc_group.add_row(TextViewRow(title="Result", show_copy_btn=True, visible=False))
 
-        self.frames_group = self.pref_page.add_group(title="Frames", empty_group_text="Refresh to show frames")
+        # gio store that will hold all the frames
         self.frames_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.target_frame_row.set_model(self.frames_list_store)
         self.source_frame_row.set_model(self.frames_list_store)
-        self.frames_list = []
 
-    def refresh(self, *args) -> bool:
-        if not self.ros2_connector.is_running:
-            # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return
+        # a group to display all the frames
+        self.frames_group = self.pref_page.add_group(title="Frames", empty_group_text="Refresh to show frames")
 
-        self.clear()
-
+    def refresh_blocking(self) -> bool:
+        super().show_toast("Listening to tf data for 5.0 seconds...")
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
-        time.sleep(1.0)
+        time.sleep(5.0)
+        self.lookup_time = self.ros2_connector.node.get_clock().now()
 
         # Get the frames from the buffer as YAML
         result = self.tf_buffer.all_frames_as_yaml()
-        frames_dict = yaml.safe_load(result)
+        self.frames_dict = yaml.safe_load(result)
 
-        # Check if frames are present in the result
-        if isinstance(frames_dict, dict):
-            self.frames_list = sorted(frames_dict.keys())
+        if isinstance(self.frames_dict, dict):
+            # get all the infos from the collected frames
+            for frame_name, frame_info in self.frames_dict.items():
+                parent_frame = frame_info["parent"]
+                trans: TransformStamped = self.tf_buffer.lookup_transform(parent_frame, frame_name, rclpy.time.Time())
+                self.frames_dict[frame_name]["transform"] = trans
+
             self.calc_button.set_sensitive(True)
-        elif isinstance(frames_dict, list):
+            return True
+        else:
             super().show_toast("No frames found")
             self.frames_group.set_empty_group_text("No frames found. Refresh to try again.")
             self.calc_button.set_sensitive(False)
-            return
+            return False
 
-        # Create a Gio.ListStore
-        self.frames_list_store.remove_all()
+    def refresh_gui(self):
+        # create an expander row for each frame and add all the info as rows
+        frame_rows = []
+        for frame_name, frame_info in self.frames_dict.items():
+            expander_row: Adw.ExpanderRow = Adw.ExpanderRow(title=frame_name)
 
-        for frame_name in self.frames_list:
-            # Create a PrefRow for each frame
-            self.frames_group.add_row(PrefRow(title=frame_name))
+            parent_frame_row = PrefRow(title="Parent frame")
+            parent_frame_row.add_suffix_lbl(frame_info["parent"])
+            expander_row.add_row(parent_frame_row)
 
-            # Fill the ListStore with items
+            tf_row = TextViewRow(title="Transform", show_copy_btn=True)
+            tf_row.set_text(self._tf_stamped_to_text(frame_info["transform"]))
+            expander_row.add_row(tf_row)
+
+            broadcaster_row = PrefRow(title="Broadcaster")
+            broadcaster_row.add_suffix_lbl(frame_info["broadcaster"])
+            expander_row.add_row(broadcaster_row)
+
+            rate_row = PrefRow(title="Rate")
+            rate_row.add_suffix_lbl(str(frame_info["rate"]))
+            expander_row.add_row(rate_row)
+
+            most_recent_transform_row = PrefRow(title="Most recent transform")
+            most_recent_transform_row.add_suffix_lbl(str(frame_info["most_recent_transform"]))
+            expander_row.add_row(most_recent_transform_row)
+
+            oldest_transform_row = PrefRow(title="Oldest transform")
+            oldest_transform_row.add_suffix_lbl(str(frame_info["oldest_transform"]))
+            expander_row.add_row(oldest_transform_row)
+
+            buffer_length_row = PrefRow(title="Buffer length")
+            buffer_length_row.add_suffix_lbl(str(frame_info["buffer_length"]))
+            expander_row.add_row(buffer_length_row)
+
+            frame_rows.append(expander_row)
             self.frames_list_store.append(Gtk.StringObject.new(frame_name))
+
+        # add all rows to the group
+        self.frames_group.add_rows_idle(frame_rows)
+        self.frames_group.set_description(f"Lookup time: {(self.lookup_time.nanoseconds / 1e9):.2f}")
 
         # Set the Gio.ListModel on the ComboRow
         if self.frames_list_store.get_n_items() > 0:
             self.source_frame_row.set_selected(0)
             self.target_frame_row.set_selected(0)
 
-    def clear(self):
+    def clear_gui(self):
         self.frames_group.clear()
         self.result_text_row.set_visible(False)
+        self.frames_list_store.remove_all()
 
     def on_switch_frames(self, *args):
-        if len(self.frames_list) <= 1:
+        if len(self.frames_dict.keys()) <= 1:
             super().show_toast("not enough frames to switch")
             return
 
@@ -137,22 +173,11 @@ class TransformsPage(ContentPage):
 
         try:
             # Lookup transform
-            transform: TransformStamped = self.tf_buffer.lookup_transform(
+            transform: TransformStamped = self.tf_buffer.lookup_transform_async(
                 target_frame=source_frame, source_frame=target_frame, time=rclpy.time.Time()
             )
 
-            text = (
-                # f"Transform from {self.source_frame} to {self.target_frame}:\n"
-                "Translation:\n"
-                + f"  x: {transform.transform.translation.x:.8f},\n"
-                + f"  y: {transform.transform.translation.y:.8f},\n"
-                + f"  z: {transform.transform.translation.z:.8f}\n"
-                + "Rotation:\n"
-                + f"  x: {transform.transform.rotation.x:.8f},\n"
-                + f"  y: {transform.transform.rotation.y:.8f},\n"
-                + f"  z: {transform.transform.rotation.z:.8f},\n"
-                + f"  w: {transform.transform.rotation.w:.8f}"
-            )
+            text = self._tf_stamped_to_text(transform)
 
             self.result_text_row.set_subtitle(f"from <{source_frame}> to <{target_frame}>")
             self.result_text_row.set_text(text)
@@ -163,3 +188,16 @@ class TransformsPage(ContentPage):
             super().show_toast(f"Could not calculate transform: {e}")
             self.result_text_row.set_text("")
             self.result_text_row.set_visible(False)
+
+    def _tf_stamped_to_text(self, tf: TransformStamped):
+        return (
+            "Translation:\n"
+            + f"  x: {tf.transform.translation.x:.8f},\n"
+            + f"  y: {tf.transform.translation.y:.8f},\n"
+            + f"  z: {tf.transform.translation.z:.8f}\n"
+            + "Rotation:\n"
+            + f"  x: {tf.transform.rotation.x:.8f},\n"
+            + f"  y: {tf.transform.rotation.y:.8f},\n"
+            + f"  z: {tf.transform.rotation.z:.8f},\n"
+            + f"  w: {tf.transform.rotation.w:.8f}"
+        )

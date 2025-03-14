@@ -35,15 +35,16 @@ class ActionListPage(ContentPage):
 
         self.action_ns_groups: Dict[PrefGroup] = {}
 
-    def refresh(self, *args):
-        if not self.ros2_connector.is_running:
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
+    def refresh_blocking(self, *args) -> bool:
+        self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
+        return len(self.available_actions) > 0
+
+    def refresh_gui(self, *args):
+        if len(self.available_actions) == 0:
+            self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
             return
 
-        self.clear()
-
-        available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
-        for action_name, action_types in available_actions:
+        for action_name, action_types in self.available_actions:
             # action_types is a list, as multiple servers can advertise different types to the same action
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
             if len(action_types) == 1:
@@ -77,10 +78,7 @@ class ActionListPage(ContentPage):
             )
             group.add_row(row)
 
-        if len(available_actions) == 0:
-            self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
-
-    def clear(self):
+    def clear_gui(self):
         for group in reversed(self.action_ns_groups.values()):
             self.pref_page.remove_group(group)
         self.action_ns_groups.clear()
