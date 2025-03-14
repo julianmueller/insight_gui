@@ -109,6 +109,9 @@ class PrefGroup(Adw.PreferencesGroup):
         return row
 
     def add_rows_idle(self, rows: list[Gtk.Widget], batch_size: int = 2):
+        if len(rows) == 0:
+            return
+
         index = 0
 
         def add_batch():

@@ -51,12 +51,15 @@ class MessageTypeBrowserPage(ContentPage):
         super().set_search_entry_placeholder_text("Search for message types")
         super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-    def refresh(self, *args) -> bool:
-        self.clear()
+    def refresh(self) -> bool:
+        self.available_msgs = get_message_interfaces()
+        return len(self.available_msgs) > 0
 
-        available_msgs = get_message_interfaces()
+    def refresh_gui(self):
+        if len(self.available_msgs) == 0:
+            self.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
 
-        for pkg_name, msgs_list in sorted(available_msgs.items()):
+        for pkg_name, msgs_list in sorted(self.available_msgs.items()):
             msg_group = self.pref_page.add_group(title=pkg_name)
 
             for msg in sorted(msgs_list):
@@ -84,10 +87,7 @@ class MessageTypeBrowserPage(ContentPage):
                 )
                 msg_group.add_row(row)
 
-        if len(available_msgs) == 0:
-            self.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
-
-    def clear(self):
+    def clear_gui(self):
         self.pref_page.clear()
 
 
@@ -104,13 +104,15 @@ class ServiceTypeBrowserPage(ContentPage):
         super().set_search_entry_placeholder_text("Search for service types")
         super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-    def refresh(self, *args) -> bool:
-        self.clear()
+    def refresh_blocking(self) -> bool:
+        self.available_srvs = get_service_interfaces()
+        return len(self.available_srvs) > 0
 
-        available_srvs = get_service_interfaces()
+    def refresh_gui(self):
+        if len(self.available_srvs) == 0:
+            self.pref_page.set_empty_page_text("No Services found. Refresh to try again.")
 
-        # TODO
-        for pkg_name, srvs_list in sorted(available_srvs.items()):
+        for pkg_name, srvs_list in sorted(self.available_srvs.items()):
             srv_group = self.pref_page.add_group(title=pkg_name)
 
             for srv in sorted(srvs_list):
@@ -118,19 +120,6 @@ class ServiceTypeBrowserPage(ContentPage):
                 srv_type = srv.removeprefix("srv/")  # remove namespace
 
                 row = PrefRow(title=srv_type, subtitle=srv_type_full_name)
-
-                # row.add_suffix_btn(
-                #     icon_name="info-symbolic",
-                #     tooltip_text="Message Info",
-                #     func=self.on_get_msg_info,
-                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
-                # )
-                # row.add_suffix_btn(
-                #     icon_name="folder-symbolic",
-                #     tooltip_text="Open Message File",
-                #     func=_on_open_msg_file,
-                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
-                # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ServiceTypeInfoPage,
@@ -138,10 +127,7 @@ class ServiceTypeBrowserPage(ContentPage):
                 )
                 srv_group.add_row(row)
 
-        if len(available_srvs) == 0:
-            self.pref_page.set_empty_page_text("No Services found. Refresh to try again.")
-
-    def clear(self):
+    def clear_gui(self):
         self.pref_page.clear()
 
 
@@ -158,11 +144,15 @@ class ActionTypeBrowserPage(ContentPage):
         super().set_search_entry_placeholder_text("Search for action types")
         super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-    def refresh(self, *args) -> bool:
-        self.clear()
+    def refresh(self) -> bool:
+        self.available_action_msgs = get_action_interfaces()
+        return len(self.available_action_msgs) > 0
 
-        available_action_msgs = get_action_interfaces()
-        for pkg_name, actions_list in sorted(available_action_msgs.items()):
+    def refresh_gui(self):
+        if len(self.available_action_msgs) == 0:
+            self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
+
+        for pkg_name, actions_list in sorted(self.available_action_msgs.items()):
             actions_group = self.pref_page.add_group(title=pkg_name)
 
             for act in sorted(actions_list):
@@ -190,10 +180,7 @@ class ActionTypeBrowserPage(ContentPage):
                 )
                 actions_group.add_row(row)
 
-        if len(available_action_msgs) == 0:
-            self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
-
-    def clear(self):
+    def clear_gui(self):
         self.pref_page.clear()
 
 

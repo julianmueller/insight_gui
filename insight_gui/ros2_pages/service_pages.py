@@ -50,18 +50,17 @@ class ServiceListPage(ContentPage):
 
         self.service_ns_groups: Dict[PrefGroup] = {}
 
-    def refresh(self, *args):
-        if not self.ros2_connector.is_running:
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return
-
-        self.clear()
-
-        available_services = sorted(
+    def refresh_blocking(self) -> bool:
+        self.available_services = sorted(
             get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True), key=itemgetter(0)
         )
+        if len(self.available_services) == 0:
+            self.pref_page.set_empty_page_text("No services found. Refresh to try again.")
+            return False
+        return True
 
-        for service_name, service_types in available_services:
+    def refresh_gui(self):
+        for service_name, service_types in self.available_services:
             # service_types is a list, as multiple servers can offer different types to the same service
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
             if len(service_types) == 1:
@@ -97,10 +96,7 @@ class ServiceListPage(ContentPage):
             )
             group.add_row(row)
 
-        if len(available_services) == 0:
-            self.pref_page.set_empty_page_text("No services found. Refresh to try again.")
-
-    def clear(self):
+    def clear_gui(self):
         for group in reversed(self.service_ns_groups.values()):
             self.pref_page.remove_group(group)
         self.service_ns_groups.clear()

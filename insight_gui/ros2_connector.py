@@ -87,7 +87,7 @@ class ROS2Connector:
 
     # TODO
     def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable):
-        print("adding subsciption")
+        # print("adding subsciption")
         sub = self.node.create_subscription(msg_type, topic_name, callback, 10)
         return sub
 

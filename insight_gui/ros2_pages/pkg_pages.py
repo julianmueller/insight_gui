@@ -58,11 +58,15 @@ class PackageListPage(ContentPage):
             func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
         )
 
-    def refresh_blocking(self, *args) -> bool:
+    def refresh_blocking(self) -> bool:
         self.available_pkgs = get_packages_with_prefixes()
-        return len(self.available_pkgs) > 0
 
-    def refresh_gui(self, *args):
+        if len(self.available_pkgs) == 0:
+            self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
+            return False
+        return True
+
+    def refresh_gui(self):
         rows = []
         for pkg_name, pkg_path in self.available_pkgs.items():
             row = PrefRow(title=pkg_name, subtitle=pkg_path)
@@ -75,9 +79,6 @@ class PackageListPage(ContentPage):
             rows.append(row)
 
         self.pkg_list_group.add_rows_idle(rows)
-
-        if self.pkg_list_group.num_rows == 0:
-            self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
 
     def clear_gui(self):
         self.pkg_list_group.clear()

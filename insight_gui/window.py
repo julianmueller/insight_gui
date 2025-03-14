@@ -93,12 +93,12 @@ class MainWindow(Adw.ApplicationWindow):
             title="Topics",
             ros2_connector=self.ros2_connector,
         )
-        self.add_stack_page(
-            nav_page_class=MessageTypeBrowserPage,
-            name="msg_type_browser",
-            title="(old) Message Type Browser",
-            ros2_connector=self.ros2_connector,
-        )
+        # self.add_stack_page(
+        #     nav_page_class=MessageTypeBrowserPage,
+        #     name="msg_type_browser",
+        #     title="(old) Message Type Browser",
+        #     ros2_connector=self.ros2_connector,
+        # )
         # Services
         self.add_stack_page(
             nav_page_class=ServiceListPage,
@@ -106,12 +106,12 @@ class MainWindow(Adw.ApplicationWindow):
             title="Services",
             ros2_connector=self.ros2_connector,
         )
-        self.add_stack_page(
-            nav_page_class=ServiceTypeBrowserPage,
-            name="srv_type_browser",
-            title="(old) Service Type Browser",
-            ros2_connector=self.ros2_connector,
-        )
+        # self.add_stack_page(
+        #     nav_page_class=ServiceTypeBrowserPage,
+        #     name="srv_type_browser",
+        #     title="(old) Service Type Browser",
+        #     ros2_connector=self.ros2_connector,
+        # )
         self.add_stack_page(
             nav_page_class=ServiceCallPage,
             name="srv_caller",
@@ -125,12 +125,12 @@ class MainWindow(Adw.ApplicationWindow):
             title="Actions",
             ros2_connector=self.ros2_connector,
         )
-        self.add_stack_page(
-            nav_page_class=ActionTypeBrowserPage,
-            name="action_type_browser",
-            title="(old) Action Type Browser",
-            ros2_connector=self.ros2_connector,
-        )
+        # self.add_stack_page(
+        #     nav_page_class=ActionTypeBrowserPage,
+        #     name="action_type_browser",
+        #     title="(old) Action Type Browser",
+        #     ros2_connector=self.ros2_connector,
+        # )
         self.add_stack_page(
             nav_page_class=InterfaceBrowserPage,
             name="interface_browser",

@@ -50,15 +50,15 @@ class ActionListPage(ContentPage):
 
         self.action_ns_groups: Dict[PrefGroup] = {}
 
-    def refresh_blocking(self, *args) -> bool:
+    def refresh_blocking(self) -> bool:
         self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
-        return len(self.available_actions) > 0
 
-    def refresh_gui(self, *args):
         if len(self.available_actions) == 0:
             self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
-            return
+            return False
+        return True
 
+    def refresh_gui(self):
         for action_name, action_types in self.available_actions:
             # action_types is a list, as multiple servers can advertise different types to the same action
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59

@@ -66,6 +66,11 @@ class MessageTypeInfoPage(ContentPage):
             msg_type_full_name=msg_type_full_name,
         )
 
+        # Constants Group
+        constants_group = self.pref_page.add_group(title="Constants")
+        constants_group.add_row(PrefRow(title="TODO implement this"))
+        # TODO implement to show constants
+
         # Message Type
         msg_group = self.pref_page.add_group(title="Message")
         _populate_group_w_msg_rows(msg_class=msg_class, pref_group=msg_group, nav_view=self.nav_view)
@@ -105,6 +110,11 @@ class ServiceTypeInfoPage(ContentPage):
             msg_type_full_name=srv_type_full_name,
         )
 
+        # Constants Group
+        constants_group = self.pref_page.add_group(title="Constants")
+        constants_group.add_row(PrefRow(title="TODO implement this"))
+        # TODO implement to show constants
+
         # Service Message Request
         request_group = self.pref_page.add_group(title="Request", empty_group_text="No request data")
         request_class = srv_class.Request
@@ -137,21 +147,21 @@ class ServiceTypeInfoPage(ContentPage):
             msg_class=response_class,
         )
 
-        # Service Message Event
-        event_group = self.pref_page.add_group(title="Event")
-        event_class = srv_class.Event
-        _populate_group_w_msg_rows(msg_class=event_class, pref_group=event_group, nav_view=self.nav_view)
+        # # Service Message Event
+        # event_group = self.pref_page.add_group(title="Event")
+        # event_class = srv_class.Event
+        # _populate_group_w_msg_rows(msg_class=event_class, pref_group=event_group, nav_view=self.nav_view)
 
-        # Btn for opening the raw msg text dialog
-        event_group.add_suffix_btn(
-            icon_name="notes-app-symbolic",
-            tooltip_text="Raw Message Text",
-            visible=not event_group.is_empty,
-            func=_on_open_msg_type_dialog,
-            parent=self,
-            msg_type_full_name=f"{srv_type_full_name} - Event",
-            msg_class=event_class,
-        )
+        # # Btn for opening the raw msg text dialog
+        # event_group.add_suffix_btn(
+        #     icon_name="notes-app-symbolic",
+        #     tooltip_text="Raw Message Text",
+        #     visible=not event_group.is_empty,
+        #     func=_on_open_msg_type_dialog,
+        #     parent=self,
+        #     msg_type_full_name=f"{srv_type_full_name} - Event",
+        #     msg_class=event_class,
+        # )
 
 
 class ActionTypeInfoPage(ContentPage):
@@ -177,6 +187,11 @@ class ActionTypeInfoPage(ContentPage):
             func=_on_open_msg_webpage,
             msg_type_full_name=act_type_full_name,
         )
+
+        # Constants Group
+        constants_group = self.pref_page.add_group(title="Constants")
+        constants_group.add_row(PrefRow(title="TODO implement this"))
+        # TODO implement to show constants
 
         # Action Message Goal
         goal_group = self.pref_page.add_group(title="Goal", empty_group_text="No goal data")

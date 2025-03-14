@@ -13,29 +13,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from enum import Enum
 from datetime import datetime
 
 from rcl_interfaces.msg import Log
-from rclpy.logging import get_logger, LoggingSeverity
-from ros2node.api import get_node_names
-
+from rclpy.logging import LoggingSeverity
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GObject, Gio
+from gi.repository import Gtk, Adw, GObject, GLib
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
-from insight_gui.widgets.pref_rows import (
-    PrefRow,
-    TextViewRow,
-    MultiToggleButtonRow,
-    ColumnViewRow,
-)
+from insight_gui.widgets.pref_rows import MultiToggleButtonRow, ColumnViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
@@ -203,15 +195,19 @@ class LoggerPage(ContentPage):
         self.is_logging = playing
 
     def log_callback(self, msg: Log):
-        if self.is_logging:
-            self.column_view_row.add_row(
-                LogMessage(
-                    unix_time=float(msg.stamp.sec + msg.stamp.nanosec / 1e9),
-                    severity=LoggingSeverity(msg.level),
-                    message=msg.msg,
-                    node_name=msg.name,
+        def _idle():
+            if self.is_logging:
+                self.column_view_row.add_row(
+                    LogMessage(
+                        unix_time=float(msg.stamp.sec + msg.stamp.nanosec / 1e9),
+                        severity=LoggingSeverity(msg.level),
+                        message=msg.msg,
+                        node_name=msg.name,
+                    )
                 )
-            )
+            return False
+
+        GLib.idle_add(_idle)
 
     def on_clear_log(self, *args):
         self.column_view_row.clear_rows()

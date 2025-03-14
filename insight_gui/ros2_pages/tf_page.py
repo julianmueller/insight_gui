@@ -89,6 +89,7 @@ class TransformsPage(ContentPage):
 
         # a group to display all the frames
         self.frames_group = self.pref_page.add_group(title="Frames", empty_group_text="Refresh to show frames")
+        self.frames_dict = {}
 
     def refresh_blocking(self) -> bool:
         super().show_toast("Listening to tf data for 5.0 seconds...")

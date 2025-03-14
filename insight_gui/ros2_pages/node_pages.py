@@ -46,8 +46,7 @@ class NodeListPage(ContentPage):
         super().__init__(**kwargs)
         super().set_title("Node List")
 
-        self.nav_view = nav_view  # if nav_view else self.get_parent()
-        print(self.nav_view == self.get_parent())
+        self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
 
         super().set_search_entry_placeholder_text("Search for nodes")
@@ -55,16 +54,17 @@ class NodeListPage(ContentPage):
 
         self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
 
-    def refresh(self, *args) -> bool:
-        if not self.ros2_connector.is_running:
-            # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return
+    def refresh_blocking(self) -> bool:
+        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
-        self.clear()
+        if len(self.available_nodes) == 0:
+            self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
+            return False
+        return True
 
-        available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
-        for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
+    def refresh_gui(self):
+        rows = []
+        for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
             row = PrefRow(title=node_name, subtitle=node_full_name)
             if _is_hidden_name(node_name):
                 row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
@@ -77,13 +77,11 @@ class NodeListPage(ContentPage):
                 node_full_name=node_full_name,
                 ros2_connector=self.ros2_connector,
             )
+            rows.append(row)
 
-            self.node_list_group.add_row(row)
+        self.node_list_group.add_rows_idle(rows)
 
-        if self.node_list_group.num_rows == 0:
-            self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
-
-    def clear(self):
+    def clear_gui(self):
         self.node_list_group.clear()
 
 

@@ -59,14 +59,14 @@ class InterfaceBrowserPage(ContentPage):
         btm_widgets.append(Gtk.ToggleButton(label="srvs", active=True))
         btm_widgets.append(Gtk.ToggleButton(label="acts", active=True))
 
-    def refresh_blocking(self, *args) -> bool:
+    def refresh_blocking(self) -> bool:
         self.available_msgs = get_message_interfaces()
         self.available_srvs = get_service_interfaces()
         self.available_action_msgs = get_action_interfaces()
 
         return len(self.available_msgs) + len(self.available_srvs) + len(self.available_action_msgs) > 0
 
-    def refresh_gui(self, *args):
+    def refresh_gui(self):
         # add all the message interfaces
         for pkg_name, msgs_list in sorted(self.available_msgs.items()):
             msg_group = self.pref_page.add_group(title=pkg_name)
@@ -78,6 +78,18 @@ class InterfaceBrowserPage(ContentPage):
 
                 # TODO add some kind of a label that a row is a message interface
                 row = PrefRow(title=msg_type, subtitle=msg_type_full_name)
+                # row.add_suffix_btn(
+                #     icon_name="info-symbolic",
+                #     tooltip_text="Message Info",
+                #     func=self.on_get_msg_info,
+                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
+                # )
+                # row.add_suffix_btn(
+                #     icon_name="folder-symbolic",
+                #     tooltip_text="Open Message File",
+                #     func=_on_open_msg_file,
+                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
+                # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=MessageTypeInfoPage,

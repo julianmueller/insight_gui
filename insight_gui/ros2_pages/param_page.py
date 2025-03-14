@@ -47,16 +47,17 @@ class ParameterListPage(ContentPage):
         super().set_search_entry_placeholder_text("Refresh to show parameters")
         super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-    def refresh(self, *args):
-        if not self.ros2_connector.is_running:
-            # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return
+    def refresh_blocking(self) -> bool:
+        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
-        available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
+        if len(self.available_nodes) == 0:
+            self.pref_page.set_empty_group_text("No Parameters found. Refresh to try again.")
+            return False
+        return True
 
+    def refresh_gui(self):
         # for every node with params add a group
-        for node_name, node_namespace, node_full_name in sorted(available_nodes):
+        for node_name, node_namespace, node_full_name in sorted(self.available_nodes):
             future = call_list_parameters(node=self.ros2_connector.node, node_name=node_name)
             if future is None:
                 continue
@@ -67,6 +68,7 @@ class ParameterListPage(ContentPage):
 
             # create a group and add all parameters
             group = self.pref_page.add_group(title=node_name)
+            rows = []
             for param_name in sorted(parameter_list):
                 param_type = get_parameter_type_string(
                     call_describe_parameters(
@@ -87,11 +89,13 @@ class ParameterListPage(ContentPage):
                     func=self.on_edit_param,
                     func_kwargs={"node_name": node_name, "param_name": param_name},
                 )
-                group.add_row(row)
+                rows.append(row)
+
+            group.add_rows_idle(rows)
             group.set_description_to_row_count()
 
-        if len(available_nodes) == 0:
-            self.pref_page.set_empty_group_text("No Parameters found. Refresh to try again.")
+    def clear_gui(self):
+        self.pref_page.clear()
 
     def on_edit_param(self, *args, node_name: str, param_name: str):
         EditParamDialog(

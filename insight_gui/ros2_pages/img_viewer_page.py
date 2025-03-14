@@ -79,7 +79,7 @@ class ImageViewerPage(ContentPage):
         self.height_lbl = self.height_row.add_suffix_lbl("")
         self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
 
-    def refresh_blocking(self, *args) -> bool:
+    def refresh_blocking(self) -> bool:
         self.img_topic_list = []
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
@@ -96,7 +96,7 @@ class ImageViewerPage(ContentPage):
                 self.img_topic_list.append(topic_name)
         return len(self.img_topic_list) > 0
 
-    def refresh_gui(self, *args):
+    def refresh_gui(self):
         for img_topic in self.img_topic_list:
             self.img_topic_list_store.append(Gtk.StringObject.new(img_topic))
 
@@ -137,4 +137,3 @@ class ImageViewerPage(ContentPage):
     def on_toggle_img_stream(self, playing: bool, *args):
         self.continuous_img_stream = playing
         self.single_img_done = False
-        print(f"playing: {playing}")

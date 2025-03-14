@@ -60,14 +60,10 @@ class JointStatesPage(ContentPage):
 
         self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
 
-    def refresh(self, *args):
-        if not self.ros2_connector.is_running:
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return
+    def refresh_blocking(self) -> bool:
+        return True
 
-        self.joint_topic_list_store.remove_all()
-        self.joints_group.clear()
-
+    def refresh_gui(self):
         # DUMMY
         for i in range(10):
             row: PrefRow = self.joints_group.add_row(PrefRow(title=f"Joint {i}"))
@@ -105,6 +101,10 @@ class JointStatesPage(ContentPage):
 
         # if self.topic_group.num_rows == 0:
         #     self.topic_group.set_empty_group_text("No topics found. Refresh to try again.")
+
+    def clear_gui(self):
+        self.joint_topic_list_store.remove_all()
+        self.joints_group.clear()
 
     def on_joint_topic_changed(self, *args):
         if self.joint_topic_list_store.get_n_items() <= 0:

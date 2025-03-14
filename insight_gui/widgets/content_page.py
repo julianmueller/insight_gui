@@ -113,23 +113,20 @@ class ContentPage(Adw.NavigationPage):
 
         def refresh_wrapper(*args):
             # TODO add, that if the ros2_connector is not running, a toast is shown
+            GLib.idle_add(prepare_refresh)
+
             try:
                 refresh_result = self.refresh_blocking()
-
-                # only refresh the gui, if the
-                if refresh_result:
-                    GLib.idle_add(self.clear_gui)
-                    GLib.idle_add(self.refresh_gui)
-                else:
-                    self.show_toast("Refresh failed")
-
-                GLib.idle_add(finish_refresh)
-
             except Exception as e:
-                print(f"Error in refresh: {e}")
-                GLib.idle_add(finish_refresh)
+                self.show_toast(f"Refresh failed! Error: {e}")
 
-        GLib.idle_add(prepare_refresh)
+            if refresh_result:
+                GLib.idle_add(self.clear_gui)
+                GLib.idle_add(self.refresh_gui)
+
+            GLib.idle_add(finish_refresh)
+
+        # start the refresh thread
         if self.refresh_thread is None or not self.refresh_thread.is_alive():
             self.refresh_thread = threading.Thread(target=refresh_wrapper, daemon=True)
             self.refresh_thread.start()

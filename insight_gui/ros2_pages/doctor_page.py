@@ -62,11 +62,11 @@ class DoctorPage(ContentPage):
         )
         self.topic_list_group = self.pref_page.add_group(title="TOPIC LIST", empty_group_text="Refresh to show topics")
 
-    def refresh_blocking(self, *args) -> bool:
+    def refresh_blocking(self) -> bool:
         self.reports = generate_reports()
         return len(self.reports) > 0
 
-    def refresh_gui(self, *args):
+    def refresh_gui(self):
         for report in self.reports:
             if report.name == "NETWORK CONFIGURATION":
                 # TODO these should be somehow grouped by network device

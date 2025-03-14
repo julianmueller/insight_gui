@@ -94,21 +94,15 @@ class ServiceCallPage(ContentPage):
         )
         self.response_text_row = self.response_group.add_row(TextViewRow(editable=False))
 
-    def refresh(self, *args):
-        if not self.ros2_connector.is_running:
-            # TODO now, the msg "refresh yielded no result" shows up, make it, that refresh is restarted
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return
-
-        # clear previous service list
-        self.service_list_store.remove_all()
-
-        available_services = sorted(
+    def refresh_blocking(self) -> bool:
+        self.available_services = sorted(
             get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True)
         )
+        return len(self.available_services) > 0
 
+    def refresh_gui(self):
         # Check if there are services to call
-        if len(available_services) > 0:
+        if len(self.available_services) > 0:
             self.call_btn.set_sensitive(True)
         else:
             super().show_toast("No services found")
@@ -131,12 +125,16 @@ class ServiceCallPage(ContentPage):
         factory.connect("bind", on_bind)
 
         # fill the ComboBox/ListStore with available services
-        for service_name, service_types in available_services:
+        for service_name, service_types in self.available_services:
             self.service_list_store.append(Gtk.StringObject.new(service_name))
 
         # self.service_select_row.set_model(list_store)
         self.service_select_row.set_factory(factory)
         # self.service_select_row.set_selected(0)
+
+    def clear_gui(self):
+        # clear previous service list
+        self.service_list_store.remove_all()
 
     def on_service_selected(self, *args):
         if self.service_list_store.get_n_items() <= 0:
