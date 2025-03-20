@@ -208,15 +208,6 @@ class MainWindow(Adw.ApplicationWindow):
         action.connect("activate", lambda *_: self.about_dialog.present(self))
         self.app.add_action(action)
 
-        action = Gio.SimpleAction.new_stateful(
-            "ros2_node_state",  # Action name (used in menus, shortcuts, etc.)
-            None,  # No parameter is needed for a boolean toggle.
-            GLib.Variant.new_boolean(self.ros2_connector.is_running),  # Initial state.
-        )
-        action.connect("change-state", self.ros2_connector.on_node_state_changed)
-        # action.connect("notify::state", self.update_time_labels)
-        self.app.add_action(action)
-
         # action = Gio.SimpleAction.new("quit", None)
         # action.connect("activate", self.on_quit)
         # self.app.add_action(action)

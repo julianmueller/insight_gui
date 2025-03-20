@@ -39,8 +39,14 @@ class ToggleButton(Gtk.ToggleButton):
         css_classes: tuple[list[str], list[str]] | list[str] = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
-        super().set_active(default_active)
+        super().__init__(
+            active=default_active,
+            vexpand=False,
+            valign=Gtk.Align.CENTER,
+            hexpand=False,
+            halign=Gtk.Align.CENTER,
+            **kwargs,
+        )
 
         self.btn_content = Adw.ButtonContent()
         super().set_child(self.btn_content)

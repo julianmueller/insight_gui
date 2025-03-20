@@ -42,7 +42,7 @@ def main(args=None):
     # debugpy.wait_for_client()
 
     try:
-        gui_app = Ros2GuiApp(share_dir, start_ros2_connector=True)
+        gui_app = Ros2GuiApp(share_dir)
         signal.signal(signal.SIGINT, lambda *_: gui_app.shutdown())
         gui_app.run(None)
     except Exception as e:

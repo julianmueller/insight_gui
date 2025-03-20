@@ -34,7 +34,7 @@ from insight_gui.ros2_connector import ROS2Connector
 class Ros2GuiApp(Adw.Application):
     __gtype_name__ = "InsightApplication"
 
-    def __init__(self, share_dir: Path = None, start_ros2_connector: bool = True):
+    def __init__(self, share_dir: Path = None):
         super().__init__(application_id="com.github.julianmueller.Insight")
         Gtk.init()
         Adw.init()
@@ -54,8 +54,24 @@ class Ros2GuiApp(Adw.Application):
         # add event handles
         self.connect("activate", self.on_activate)
 
-        if start_ros2_connector:
-            self.ros2_connector = ROS2Connector()
+        # ros2 connector handles all connections to the ros2 node
+        self.ros2_connector = ROS2Connector()
+
+        # Define "app.ros2_node_sstart" action
+        start_action = Gio.SimpleAction.new("ros2_node_start", None)
+        start_action.connect("activate", lambda *_: self.ros2_connector.start_node())
+        self.add_action(start_action)
+
+        # Define "app.ros2_node_stop" action
+        stop_action = Gio.SimpleAction.new("ros2_node_stop", None)
+        stop_action.connect("activate", lambda *_: self.ros2_connector.stop_node())
+        self.add_action(stop_action)
+
+        # Define "app.ros2_node_is_running" as a stateful action
+        is_running_action = Gio.SimpleAction.new_stateful(
+            "ros2_node_is_running", None, GLib.Variant.new_boolean(self.ros2_connector.is_running)
+        )
+        self.add_action(is_running_action)
 
     def on_activate(self, app):
         if not self.window:
