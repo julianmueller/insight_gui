@@ -26,4 +26,7 @@
     "todo-tree.tree.scanMode": "workspace",
     "editor.detectIndentation": false,
     "codeium.enableExplainProblem": false,
+    "files.associations": {
+        "*.ui": "xml"
+    },
 }

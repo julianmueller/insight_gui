@@ -1,19 +1,25 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# img_viewer_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
-from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from ros2topic.api import get_topic_names_and_types
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -24,7 +30,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, Gdk, GLib
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
@@ -33,15 +38,16 @@ from insight_gui.widgets.buttons import PlayPauseButton
 class ImageViewerPage(ContentPage):
     __gtype_name__ = "ImageViewerPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(searchable=False, **kwargs)
+        super().connect("map", self.on_map)
+        super().connect("unmap", self.on_unmap)
         super().set_title("Image Viewer")
 
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-        self.bridge = CvBridge()
+        self.cv_bridge = CvBridge()
 
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         self.img_group = self.pref_page.add_group(title="View Image", filterable=False)
         self.img_topic_row = self.img_group.add_row(
@@ -79,7 +85,15 @@ class ImageViewerPage(ContentPage):
         self.height_lbl = self.height_row.add_suffix_lbl("")
         self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
 
-    def refresh_blocking(self) -> bool:
+    def on_map(self, *args):
+        # TODO make the img stream start (again) when page is currently visible
+        pass
+
+    def on_unmap(self, *args):
+        # TODO make the img stream stop when page is currently not visible
+        pass
+
+    def on_refresh_blocking(self) -> bool:
         self.img_topic_list = []
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
@@ -96,7 +110,7 @@ class ImageViewerPage(ContentPage):
                 self.img_topic_list.append(topic_name)
         return len(self.img_topic_list) > 0
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         for img_topic in self.img_topic_list:
             self.img_topic_list_store.append(Gtk.StringObject.new(img_topic))
 
@@ -106,7 +120,7 @@ class ImageViewerPage(ContentPage):
         else:
             super().show_toast("No topic with images found")
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.img_topic_list_store.remove_all()
 
     def on_image_topic_changed(self, *args):
@@ -124,7 +138,7 @@ class ImageViewerPage(ContentPage):
     def on_ros_img_callback(self, msg: Image, *args):
         if self.continuous_img_stream or not self.single_img_done:
             # Convert sensor_msgs/Image to a BGR8 numpy array (default behavior).
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
             self.img_row.set_image_from_opencv(cv_image)
 
             # TODO fill the info rows

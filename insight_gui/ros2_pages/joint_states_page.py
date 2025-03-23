@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# joint_states_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from operator import itemgetter
 
@@ -25,7 +32,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
 from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
@@ -36,15 +42,13 @@ from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 class JointStatesPage(ContentPage):
     __gtype_name__ = "JointStatesPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        super().set_title("Topic List")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+        super().set_title("Joint States")
         super().set_search_entry_placeholder_text("Search for topics")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
+
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         self.search_group = self.pref_page.add_group(filterable=False)
         self.joint_topic_row = self.search_group.add_row(
@@ -60,11 +64,12 @@ class JointStatesPage(ContentPage):
 
         self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
+        # TODO implement this
         return True
 
-    def refresh_gui(self):
-        # DUMMY
+    def on_refresh_gui(self):
+        # TODO implement this
         for i in range(10):
             row: PrefRow = self.joints_group.add_row(PrefRow(title=f"Joint {i}"))
             scale = Gtk.Scale(
@@ -102,7 +107,7 @@ class JointStatesPage(ContentPage):
         # if self.topic_group.num_rows == 0:
         #     self.topic_group.set_empty_group_text("No topics found. Refresh to try again.")
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.joint_topic_list_store.remove_all()
         self.joints_group.clear()
 

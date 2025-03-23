@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# msg_type_browser_pages.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 import subprocess
 
@@ -28,7 +35,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import (
     MessageTypeInfoPage,
     ServiceTypeInfoPage,
@@ -41,21 +47,17 @@ from insight_gui.widgets.pref_rows import PrefRow
 class MessageTypeBrowserPage(ContentPage):
     __gtype_name__ = "MessageTypeBrowserPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(empty_page_text="Refresh to show message types", **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         super().set_title("Message Type Browser")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+        super().set_empty_page_text("Refresh to show message types")
         super().set_search_entry_placeholder_text("Search for message types")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-    def refresh(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_msgs = get_message_interfaces()
         return len(self.available_msgs) > 0
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         if len(self.available_msgs) == 0:
             self.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
 
@@ -83,32 +85,28 @@ class MessageTypeBrowserPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=MessageTypeInfoPage,
-                    msg_type_full_name=msg_type_full_name,
+                    subpage_kwargs={"msg_type_full_name": msg_type_full_name},
                 )
                 msg_group.add_row(row)
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.pref_page.clear()
 
 
 class ServiceTypeBrowserPage(ContentPage):
     __gtype_name__ = "ServiceTypeBrowserPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(empty_page_text="Refresh to show service types", **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         super().set_title("Service Type Browser")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+        super().set_empty_page_text("Refresh to show service types")
         super().set_search_entry_placeholder_text("Search for service types")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_srvs = get_service_interfaces()
         return len(self.available_srvs) > 0
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         if len(self.available_srvs) == 0:
             self.pref_page.set_empty_page_text("No Services found. Refresh to try again.")
 
@@ -123,32 +121,28 @@ class ServiceTypeBrowserPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ServiceTypeInfoPage,
-                    srv_type_full_name=srv_type_full_name,
+                    subpage_kwargs={"srv_type_full_name": srv_type_full_name},
                 )
                 srv_group.add_row(row)
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.pref_page.clear()
 
 
 class ActionTypeBrowserPage(ContentPage):
     __gtype_name__ = "ActionTypeBrowserPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(empty_page_text="Refresh to show action types", **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         super().set_title("Action Type Browser")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+        super().set_empty_page_text("Refresh to show action types")
         super().set_search_entry_placeholder_text("Search for action types")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-    def refresh(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_action_msgs = get_action_interfaces()
         return len(self.available_action_msgs) > 0
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         if len(self.available_action_msgs) == 0:
             self.pref_page.set_empty_page_text("No actions found. Refresh to try again.")
 
@@ -176,11 +170,11 @@ class ActionTypeBrowserPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ActionTypeInfoPage,
-                    act_type_full_name=act_type_full_name,
+                    subpage_kwargs={"act_type_full_name": act_type_full_name},
                 )
                 actions_group.add_row(row)
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.pref_page.clear()
 
 

@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# preferences_dialog.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 import os
 import webbrowser
@@ -33,13 +40,13 @@ from insight_gui.widgets.buttons import PlayPauseButton
 class PreferencesDialog(Adw.PreferencesDialog):
     __gtype_name__ = "PreferencesDialog"
 
-    def __init__(self, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, ros2_connector: ROS2Connector, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Settings")
-        super().connect("map", self.on_map)
 
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
+        self.ros2_connector = ros2_connector
 
+    def on_realize(self, *args):
         # Page with ROS2 Settings
         self.ros2_page = PrefPage(title="ROS2", icon_name="applications-other-symbolic")
         super().add(self.ros2_page)
@@ -109,7 +116,11 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         # self.page2.add_group(title="Test", description="bla")
 
-    def on_map(self, *args):
+        # update env vars
+        self.update_env_vars()
+
+    def update_env_vars(self, *args):
+        # TODO split loading of envs and widget text updating in two functions
         env_auto_discovery = os.getenv("ROS_AUTOMATIC_DISCOVERY_RANGE", default="")
         self.env_auto_discovery_row.set_text(env_auto_discovery)
 

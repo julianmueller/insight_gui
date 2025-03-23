@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (C) 2025  Julian Müller
+    window.ui
+
+    This file is part of https://github.com/julianmueller/insight_gui
+    Copyright (C) 2025 Julian Müller
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,6 +17,8 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <interface>
     <requires lib="gtk" version="4.0" />
@@ -174,9 +179,153 @@
                     <object class="AdwNavigationPage">
                         <property name="title">Content</property>
                         <property name="child">
+                            <object class="GtkStack" id="content_stack">
 
-                            <object class="GtkStack" id="content_stack" />
+                                <!-- Package List -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">pkg_list_page</property>
+                                        <property name="title">Packages</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="pkg_list_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
 
+                                <!-- Node List -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">node_list</property>
+                                        <property name="title">Nodes</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="node_list_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Topics -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">topic_list</property>
+                                        <property name="title">Topics</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="topic_list_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Services -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">service_list</property>
+                                        <property name="title">Services</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="service_list_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Service Caller -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">srv_caller</property>
+                                        <property name="title">Service Caller</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="srv_caller_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Actions -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">action_list</property>
+                                        <property name="title">Actions</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="action_list_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Interfaces -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">interface_browser</property>
+                                        <property name="title">Interfaces</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="interface_browser_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Parameters -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">param_list</property>
+                                        <property name="title">Parameters</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="param_list_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Transforms -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">tf</property>
+                                        <property name="title">Transforms</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="tf_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Image Viewer -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">img_viewer</property>
+                                        <property name="title">Image Viewer</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="img_viewer_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Joint States -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">joint_states</property>
+                                        <property name="title">Joint States</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="joint_states_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Logger -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">logger</property>
+                                        <property name="title">Logger</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="logger_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Doctor -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">doctor</property>
+                                        <property name="title">Doctor</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="doctor_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+
+                            </object>
                         </property>
                     </object>
                 </property>

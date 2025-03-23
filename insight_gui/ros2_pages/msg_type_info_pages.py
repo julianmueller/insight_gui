@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# msg_type_info_pages.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 import webbrowser
 import json
@@ -45,25 +52,26 @@ from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 class MessageTypeInfoPage(ContentPage):
     __gtype_name__ = "MessageTypeInfoPage"
 
-    def __init__(self, msg_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
+    def __init__(self, msg_type_full_name: str, **kwargs):
         super().__init__(searchable=False, refreshable=False, **kwargs)
         super().set_title(f"Message Type <{msg_type_full_name}>")
+        super().set_search_entry_placeholder_text("Search for message types")
 
         self.msg_type_full_name = msg_type_full_name
-        self.nav_view = nav_view if nav_view else self.get_parent()
+        self.detach_kwargs = {"msg_type_full_name": msg_type_full_name}
 
-        super().set_search_entry_placeholder_text("Search for message types")
-        super().set_dedock_page(type(self), dedock_kwargs={"msg_type_full_name": self.msg_type_full_name})
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         # Load the message parent class
-        msg_class = get_message(msg_type_full_name)
+        msg_class = get_message(self.msg_type_full_name)
 
         # Btn for opening the online link to msg definition
         super().add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
-            msg_type_full_name=msg_type_full_name,
+            msg_type_full_name=self.msg_type_full_name,
         )
 
         # Constants Group
@@ -81,7 +89,7 @@ class MessageTypeInfoPage(ContentPage):
             tooltip_text="Raw Message Text",
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_type_full_name=msg_type_full_name,
+            msg_type_full_name=self.msg_type_full_name,
             msg_class=msg_class,
         )
 
@@ -89,25 +97,26 @@ class MessageTypeInfoPage(ContentPage):
 class ServiceTypeInfoPage(ContentPage):
     __gtype_name__ = "ServiceTypeInfoPage"
 
-    def __init__(self, srv_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
+    def __init__(self, srv_type_full_name: str, **kwargs):
         super().__init__(searchable=False, refreshable=False, **kwargs)
         super().set_title(f"Service Type <{srv_type_full_name}>")
+        super().set_search_entry_placeholder_text("Search for service types")
 
         self.srv_type_full_name = srv_type_full_name
-        self.nav_view = nav_view if nav_view else self.get_parent()
+        self.detach_kwargs = {"srv_type_full_name": srv_type_full_name}
 
-        super().set_search_entry_placeholder_text("Search for service types")
-        super().set_dedock_page(type(self), dedock_kwargs={"srv_type_full_name": self.srv_type_full_name})
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         # Load the service parent class
-        srv_class = get_service(srv_type_full_name)
+        srv_class = get_service(self.srv_type_full_name)
 
         # Btn for opening the online link to msg definition
         super().add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
-            msg_type_full_name=srv_type_full_name,
+            msg_type_full_name=self.srv_type_full_name,
         )
 
         # Constants Group
@@ -127,7 +136,7 @@ class ServiceTypeInfoPage(ContentPage):
             visible=not request_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_type_full_name=f"{srv_type_full_name} - Request",
+            msg_type_full_name=f"{self.srv_type_full_name} - Request",
             msg_class=request_class,
         )
 
@@ -143,7 +152,7 @@ class ServiceTypeInfoPage(ContentPage):
             visible=not response_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_type_full_name=f"{srv_type_full_name} - Response",
+            msg_type_full_name=f"{self.srv_type_full_name} - Response",
             msg_class=response_class,
         )
 
@@ -167,25 +176,26 @@ class ServiceTypeInfoPage(ContentPage):
 class ActionTypeInfoPage(ContentPage):
     __gtype_name__ = "ActionTypeInfoPage"
 
-    def __init__(self, act_type_full_name: str, nav_view: Adw.NavigationView = None, **kwargs):
+    def __init__(self, act_type_full_name: str, **kwargs):
         super().__init__(searchable=False, refreshable=False, **kwargs)
         super().set_title(f"Action Type <{act_type_full_name}>")
+        super().set_search_entry_placeholder_text("Search for action types")
 
         self.act_type_full_name = act_type_full_name
-        self.nav_view = nav_view if nav_view else self.get_parent()
+        self.detach_kwargs = {"act_type_full_name": act_type_full_name}
 
-        super().set_search_entry_placeholder_text("Search for action types")
-        super().set_dedock_page(type(self), dedock_kwargs={"act_type_full_name": self.act_type_full_name})
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         # Load the action parent class
-        act_class = get_action(act_type_full_name)
+        act_class = get_action(self.act_type_full_name)
 
         # Btn for opening the online link to msg definition
         super().add_header_btn(
             icon_name="webpage-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
-            msg_type_full_name=act_type_full_name,
+            msg_type_full_name=self.act_type_full_name,
         )
 
         # Constants Group
@@ -205,7 +215,7 @@ class ActionTypeInfoPage(ContentPage):
             visible=not goal_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_type_full_name=f"{act_type_full_name} - Goal",
+            msg_type_full_name=f"{self.act_type_full_name} - Goal",
             msg_class=goal_class,
         )
 
@@ -221,7 +231,7 @@ class ActionTypeInfoPage(ContentPage):
             visible=not feedback_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_type_full_name=f"{act_type_full_name} - Feedback",
+            msg_type_full_name=f"{self.act_type_full_name} - Feedback",
             msg_class=feedback_class,
         )
 
@@ -237,7 +247,7 @@ class ActionTypeInfoPage(ContentPage):
             visible=not result_group.is_empty,
             func=_on_open_msg_type_dialog,
             parent=self,
-            msg_type_full_name=f"{act_type_full_name} - Result",
+            msg_type_full_name=f"{self.act_type_full_name} - Result",
             msg_class=result_class,
         )
 
@@ -286,7 +296,7 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
             row.set_subpage_link(
                 nav_view=nav_view,
                 subpage_class=MessageTypeInfoPage,
-                msg_type_full_name=nested_msg_type_full_name,
+                subpage_kwargs={"msg_type_full_name": nested_msg_type_full_name},
             )
 
         # for numpy arrays
@@ -309,7 +319,7 @@ def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.N
                 row.set_subpage_link(
                     nav_view=nav_view,
                     subpage_class=MessageTypeInfoPage,
-                    msg_type_full_name=nested_msg_type_full_name,
+                    subpage_kwargs={"msg_type_full_name": nested_msg_type_full_name},
                 )
             else:
                 if isinstance(slot_type.value_type, BasicType):

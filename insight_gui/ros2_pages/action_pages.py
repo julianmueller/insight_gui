@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# action_pages.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from operator import itemgetter
 from typing import Dict
@@ -26,7 +33,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import ActionTypeInfoPage
 from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
@@ -38,19 +44,15 @@ from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 class ActionListPage(ContentPage):
     __gtype_name__ = "ActionListPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(empty_page_text="Refresh to show actions", **kwargs)
-        super().set_title("Action List")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        super().set_title("Actions")
+        super().set_empty_page_text("Refresh to show actions")
         super().set_search_entry_placeholder_text("Search for actions")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
         self.action_ns_groups: Dict[PrefGroup] = {}
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
 
         if len(self.available_actions) == 0:
@@ -58,7 +60,7 @@ class ActionListPage(ContentPage):
             return False
         return True
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         for action_name, action_types in self.available_actions:
             # action_types is a list, as multiple servers can advertise different types to the same action
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
@@ -87,13 +89,11 @@ class ActionListPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,
-                action_name=action_name,
-                action_types=action_types,
-                ros2_connector=self.ros2_connector,
+                subpage_kwargs={"action_name": action_name, "action_types": action_types},
             )
             group.add_row(row)
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         for group in reversed(self.action_ns_groups.values()):
             self.pref_page.remove_group(group)
         self.action_ns_groups.clear()
@@ -103,29 +103,19 @@ class ActionListPage(ContentPage):
 class ActionInfoPage(ContentPage):
     __gtype_name__ = "ActionInfoPage"
 
-    def __init__(
-        self,
-        action_name: str,
-        action_types: str | list[str],
-        nav_view: Adw.NavigationView = None,
-        ros2_connector: ROS2Connector = None,
-        **kwargs,
-    ):
+    def __init__(self, action_name: str, action_types: str | list[str], **kwargs):
         super().__init__(searchable=True, refreshable=False, **kwargs)
         super().set_title(f"Action <{action_name}>")
 
         self.action_name = action_name
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
+        self.action_types = action_types
+        self.detach_kwargs = {
+            "action_name": action_name,
+            "action_types": action_types,
+        }
 
-        super().set_dedock_page(
-            type(self),
-            dedock_kwargs={
-                "action_name": self.action_name,
-                "action_types": action_types,
-                "ros2_connector": self.ros2_connector,
-            },
-        )
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         # Action Type
         action_type_group = self.pref_page.add_group(title="Action Type")
@@ -135,14 +125,14 @@ class ActionInfoPage(ContentPage):
             msg_row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionTypeInfoPage,
-                act_type_full_name=msg_type_full_name,
+                subpage_kwargs={"act_type_full_name": msg_type_full_name},
             )
             action_type_group.add_row(msg_row)
 
-        if isinstance(action_types, str):
-            add_act_type_row(action_types)
-        elif isinstance(action_types, list):
-            for msg_type in action_types:
+        if isinstance(self.action_types, str):
+            add_act_type_row(self.action_types)
+        elif isinstance(self.action_types, list):
+            for msg_type in self.action_types:
                 add_act_type_row(msg_type)
 
         # first, gather all nodes, to check which of them is a server/client of this action
@@ -172,10 +162,11 @@ class ActionInfoPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    node_name=node_name,
-                    node_namespace=node_namespace,
-                    node_full_name=node_full_name,
-                    ros2_connector=self.ros2_connector,
+                    subpage_kwargs={
+                        "node_name": node_name,
+                        "node_namespace": node_namespace,
+                        "node_full_name": node_full_name,
+                    },
                 )
                 action_servers_group.add_row(row)
 
@@ -191,10 +182,11 @@ class ActionInfoPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    node_name=node_name,
-                    node_namespace=node_namespace,
-                    node_full_name=node_full_name,
-                    ros2_connector=self.ros2_connector,
+                    subpage_kwargs={
+                        "node_name": node_name,
+                        "node_namespace": node_namespace,
+                        "node_full_name": node_full_name,
+                    },
                 )
                 action_clients_group.add_row(row)
 

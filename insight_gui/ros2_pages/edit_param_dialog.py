@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# edit_param_dialog.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from rcl_interfaces.msg import ParameterType
 from ros2param.api import (
@@ -40,12 +47,14 @@ class EditParamDialog(Adw.PreferencesDialog):
 
     def __init__(self, node_name: str, param_name: str, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
+        super().set_title("Edit Parameter")
 
         self.node_name = node_name
         self.param_name = param_name
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
+        self.ros2_connector = ros2_connector
 
-        super().set_title("Edit Parameter")
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         self.page = PrefPage(title="Edit param", icon_name="document-edit-symbolic")
         super().add(self.page)
