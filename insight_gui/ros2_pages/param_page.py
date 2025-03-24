@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# param_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from ros2node.api import get_node_names, _is_hidden_name
 from ros2param.api import (
@@ -28,7 +35,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.ros2_pages.edit_param_dialog import EditParamDialog
@@ -37,17 +43,13 @@ from insight_gui.ros2_pages.edit_param_dialog import EditParamDialog
 class ParameterListPage(ContentPage):
     __gtype_name__ = "ParameterListPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(empty_page_text="Refresh to show parameters", **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         super().set_title("Parameters List")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+        super().set_empty_page_text("Refresh to show parameters")
         super().set_search_entry_placeholder_text("Refresh to show parameters")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
         if len(self.available_nodes) == 0:
@@ -55,7 +57,7 @@ class ParameterListPage(ContentPage):
             return False
         return True
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         # for every node with params add a group
         for node_name, node_namespace, node_full_name in sorted(self.available_nodes):
             future = call_list_parameters(node=self.ros2_connector.node, node_name=node_name)
@@ -94,7 +96,7 @@ class ParameterListPage(ContentPage):
             group.add_rows_idle(rows)
             group.set_description_to_row_count()
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.pref_page.clear()
 
     def on_edit_param(self, *args, node_name: str, param_name: str):

@@ -1,19 +1,25 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# pref_rows.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-from typing import Callable
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
+from typing import Callable, Type
 import re  # regex
 
 import gi
@@ -192,14 +198,11 @@ class PrefRow(Adw.ActionRow, GenericRow):
         return self.add_suffix(btn, prepend=prepend)
 
     def set_subpage_link(
-        self,
-        *,
-        nav_view: Adw.NavigationView,
-        subpage_class: type[Adw.NavigationPage],
-        **subpage_kwargs,
+        self, *, nav_view: Adw.NavigationView, subpage_class: Type[Adw.NavigationPage], subpage_kwargs: dict
     ):
         def _on_activate(*args):
-            nav_view.push(subpage_class(nav_view=nav_view, **subpage_kwargs))
+            subpage = subpage_class(**subpage_kwargs)
+            nav_view.push(subpage)
 
         if hasattr(self, "subpage_signal_handler"):
             super().disconnect(self.subpage_signal_handler)

@@ -37,15 +37,14 @@ from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 class TeleoperatorPage(ContentPage):
     __gtype_name__ = "TeleoperatorPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Teleoperator")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
         super().set_search_entry_placeholder_text("Search for topics")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
+
+    def on_realize(self, *args):
+        super().on_realize(*args)
+        pass
 
         # TODO
         # ros2 run teleop_twist_keyboard teleop_twist_keyboard
@@ -65,7 +64,7 @@ class TeleoperatorPage(ContentPage):
 
         # self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         # self.joint_states_topic_list = []
 
         # available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
@@ -83,7 +82,7 @@ class TeleoperatorPage(ContentPage):
         # return len(self.joint_states_topic_list) > 0
         pass
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         # for js_topic in self.joint_states_topic_list:
         #     self.js_topic_list_store.append(Gtk.StringObject.new(js_topic))
 
@@ -94,7 +93,7 @@ class TeleoperatorPage(ContentPage):
         #     super().show_toast("No topic with joint_states found")
         pass
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         # self.js_topic_list_store.remove_all()
         # self.joints_group.clear()
         pass

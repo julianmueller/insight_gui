@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# window.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from pathlib import Path
 
@@ -57,6 +64,22 @@ class MainWindow(Adw.ApplicationWindow):
     # content_header_bar: Adw.HeaderBar = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
 
+    # all nav views for the pages
+    pkg_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    node_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    topic_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    service_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    srv_caller_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    action_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    interface_browser_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    param_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    tf_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    img_viewer_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    joint_states_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    logger_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    doctor_nav_view: Adw.NavigationView = Gtk.Template.Child()
+
+    # ros time
     time_box: Gtk.Box = Gtk.Template.Child()
     ros_time_lbl: Gtk.Label = Gtk.Template.Child()
     ros_elapsed_time_lbl: Gtk.Label = Gtk.Template.Child()
@@ -68,117 +91,24 @@ class MainWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
         self._setup_accent_colors()
 
-        self.app = self.get_application()
         self.ros2_connector.start_node()
 
         self.refresh_btn.set_visible(False)  # TODO do i still need this?
 
         # content of the stack
-        # TODO add separator lines in the stack_switcher
-        self.add_stack_page(
-            nav_page_class=PackageListPage,
-            name="pkg_list",
-            title="Packages",
-        )
-        self.add_stack_page(
-            nav_page_class=NodeListPage,
-            name="node_list",
-            title="Nodes",
-            ros2_connector=self.ros2_connector,
-        )
-        # Topics
-        self.add_stack_page(
-            nav_page_class=TopicListPage,
-            name="topic_list",
-            title="Topics",
-            ros2_connector=self.ros2_connector,
-        )
-        # self.add_stack_page(
-        #     nav_page_class=MessageTypeBrowserPage,
-        #     name="msg_type_browser",
-        #     title="(old) Message Type Browser",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        # Services
-        self.add_stack_page(
-            nav_page_class=ServiceListPage,
-            name="service_list",
-            title="Services",
-            ros2_connector=self.ros2_connector,
-        )
-        # self.add_stack_page(
-        #     nav_page_class=ServiceTypeBrowserPage,
-        #     name="srv_type_browser",
-        #     title="(old) Service Type Browser",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        self.add_stack_page(
-            nav_page_class=ServiceCallPage,
-            name="srv_caller",
-            title="Service Caller",
-            ros2_connector=self.ros2_connector,
-        )
-        # Actions
-        self.add_stack_page(
-            nav_page_class=ActionListPage,
-            name="action_list",
-            title="Actions",
-            ros2_connector=self.ros2_connector,
-        )
-        # self.add_stack_page(
-        #     nav_page_class=ActionTypeBrowserPage,
-        #     name="action_type_browser",
-        #     title="(old) Action Type Browser",
-        #     ros2_connector=self.ros2_connector,
-        # )
-        self.add_stack_page(
-            nav_page_class=InterfaceBrowserPage,
-            name="interface_browser",
-            title="Interfaces",
-            ros2_connector=self.ros2_connector,
-        )
-        # Parameters
-        self.add_stack_page(
-            nav_page_class=ParameterListPage,
-            name="param_list",
-            title="Parameters",
-            ros2_connector=self.ros2_connector,
-        )
-        # Transforms
-        self.add_stack_page(
-            nav_page_class=TransformsPage,
-            name="tf",
-            title="Transforms",
-            ros2_connector=self.ros2_connector,
-        )
-        # Images
-        self.add_stack_page(
-            nav_page_class=ImageViewerPage,
-            name="img_viewer",
-            title="Image Viewer",
-            ros2_connector=self.ros2_connector,
-        )
-        # Joint States
-        self.add_stack_page(
-            nav_page_class=JointStatesPage,
-            name="joint_states",
-            title="Joint States",
-            ros2_connector=self.ros2_connector,
-        )
-        # Logger
-        self.add_stack_page(
-            nav_page_class=LoggerPage,
-            name="logger",
-            title="Logger",
-            ros2_connector=self.ros2_connector,
-        )
-        # Doctor
-        self.add_stack_page(
-            nav_page_class=DoctorPage,
-            name="doctor",
-            title="Doctor",
-            ros2_connector=self.ros2_connector,
-        )
+        self.pkg_list_nav_view.add(PackageListPage())
+        self.node_list_nav_view.add(NodeListPage())
+        self.topic_list_nav_view.add(TopicListPage())
+        self.service_list_nav_view.add(ServiceListPage())
+        self.srv_caller_nav_view.add(ServiceCallPage())
+        self.action_list_nav_view.add(ActionListPage())
+        self.interface_browser_nav_view.add(InterfaceBrowserPage())
+        self.param_list_nav_view.add(ParameterListPage())
+        self.tf_nav_view.add(TransformsPage())
+        self.img_viewer_nav_view.add(ImageViewerPage())
+        self.joint_states_nav_view.add(JointStatesPage())
+        self.logger_nav_view.add(LoggerPage())
+        self.doctor_nav_view.add(DoctorPage())
 
         # Preferences
         self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)
@@ -199,7 +129,7 @@ class MainWindow(Adw.ApplicationWindow):
         action.connect("activate", lambda *_: self.preferences_dialog.present(self))
         self.app.add_action(action)
 
-        # TODO add shortcuts
+        # TODO add shortcuts dialog
         # action = Gio.SimpleAction.new("shortcuts", None)
         # action.connect("activate", lambda *_: self.shortcuts_dialog.present(self))
         # self.app.add_action(action)
@@ -235,7 +165,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.shortcut_controller.add_shortcut(
             shortcut=Gtk.Shortcut.new(
                 trigger=Gtk.ShortcutTrigger.parse_string("<Control><Shift>n"),
-                action=Gtk.CallbackAction.new(self.on_dedock_shortcut),
+                action=Gtk.CallbackAction.new(self.on_detach_shortcut),
             )
         )
         self.shortcut_controller.add_shortcut(
@@ -254,6 +184,10 @@ class MainWindow(Adw.ApplicationWindow):
     @property
     def ros2_connector(self):
         return self.app.ros2_connector
+
+    @property
+    def app(self):
+        return self.get_application()
 
     # @Gtk.Template.Callback()
     # def on_menu_btn_clicked(self, *args):
@@ -274,20 +208,11 @@ class MainWindow(Adw.ApplicationWindow):
     def on_refresh_shortcut(self, *args):
         self.content_stack.get_visible_child().get_visible_page().on_refresh()
 
-    def on_dedock_shortcut(self, *args):
-        self.content_stack.get_visible_child().get_visible_page().on_dedock()
-
-    def add_stack_page(self, *, name: str, title: str, nav_page_class: type[Adw.NavigationPage], **kwargs):
-        nav_view = Adw.NavigationView()
-        nav_page = nav_page_class(nav_view=nav_view, **kwargs)
-        nav_view.add(nav_page)
-        self.content_stack.add_titled(child=nav_view, name=name, title=title)
+    def on_detach_shortcut(self, *args):
+        self.content_stack.get_visible_child().get_visible_page().on_detach()
 
     def update_time_labels(self):
-        # current_state = action.get_state().get_boolean()
-        # print("current state is", current_state)
-        action = self.app.lookup_action("ros2_node_state")
-        node_is_running = action.get_state().get_boolean() if action is not None else False
+        node_is_running = self.app.lookup_action("ros2_node_is_running").get_state().get_boolean()
 
         if not node_is_running:
             self.time_box.set_visible(False)

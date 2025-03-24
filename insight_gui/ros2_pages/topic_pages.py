@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# topic_pages.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from operator import itemgetter
 from typing import Dict
@@ -26,7 +33,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
 from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
@@ -38,19 +44,15 @@ from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 class TopicListPage(ContentPage):
     __gtype_name__ = "TopicListPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(empty_page_text="Refresh to show topics", **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         super().set_title("Topic List")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+        super().set_empty_page_text("Refresh to show topics")
         super().set_search_entry_placeholder_text("Search for topics")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
         self.topic_ns_groups: Dict[PrefGroup] = {}
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_topics = sorted(
             get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True), key=itemgetter(0)
         )
@@ -59,7 +61,7 @@ class TopicListPage(ContentPage):
             return False
         return True
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         for i, (topic_name, topic_types) in enumerate(self.available_topics):
             # topic_types is a list, as multiple servers can advertise different types to the same topic
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
@@ -90,13 +92,14 @@ class TopicListPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
-                topic_name=topic_name,
-                topic_types=topic_types,
-                ros2_connector=self.ros2_connector,
+                subpage_kwargs={
+                    "topic_name": topic_name,
+                    "topic_types": topic_types,
+                },
             )
             group.add_row(row)
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         for group in reversed(self.topic_ns_groups.values()):
             self.pref_page.remove_group(group)
         self.topic_ns_groups.clear()
@@ -105,29 +108,16 @@ class TopicListPage(ContentPage):
 class TopicInfoPage(ContentPage):
     __gtype_name__ = "TopicInfoPage"
 
-    def __init__(
-        self,
-        topic_name: str,
-        topic_types: str | list[str],
-        nav_view: Adw.NavigationView = None,
-        ros2_connector: ROS2Connector = None,
-        **kwargs,
-    ):
+    def __init__(self, topic_name: str, topic_types: str | list[str], **kwargs):
         super().__init__(searchable=True, refreshable=False, **kwargs)
         super().set_title(f"Topic <{topic_name}>")
 
         self.topic_name = topic_name
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
+        self.topic_types = topic_types
+        self.detach_kwargs = {"topic_name": topic_name, "topic_types": topic_types}
 
-        super().set_dedock_page(
-            type(self),
-            dedock_kwargs={
-                "topic_name": self.topic_name,
-                "topic_types": topic_types,
-                "ros2_connector": self.ros2_connector,
-            },
-        )
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         # Message Type
         message_type_group = self.pref_page.add_group(title="Message Type")
@@ -137,14 +127,14 @@ class TopicInfoPage(ContentPage):
             msg_row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=MessageTypeInfoPage,
-                msg_type_full_name=msg_type_full_name,
+                subpage_kwargs={"msg_type_full_name": msg_type_full_name},
             )
             message_type_group.add_row(msg_row)
 
-        if isinstance(topic_types, str):
-            add_msg_type_row(topic_types)
-        elif isinstance(topic_types, list):
-            for msg_type in topic_types:
+        if isinstance(self.topic_types, str):
+            add_msg_type_row(self.topic_types)
+        elif isinstance(self.topic_types, list):
+            for msg_type in self.topic_types:
                 add_msg_type_row(msg_type)
 
         # first, gather all nodes, to check which of them is a pub/sub of this topic
@@ -173,10 +163,11 @@ class TopicInfoPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    node_name=node_name,
-                    node_namespace=node_namespace,
-                    node_full_name=node_full_name,
-                    ros2_connector=self.ros2_connector,
+                    subpage_kwargs={
+                        "node_name": node_name,
+                        "node_namespace": node_namespace,
+                        "node_full_name": node_full_name,
+                    },
                 )
                 publishers_group.add_row(row)
 
@@ -193,10 +184,11 @@ class TopicInfoPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    node_name=node_name,
-                    node_namespace=node_namespace,
-                    node_full_name=node_full_name,
-                    ros2_connector=self.ros2_connector,
+                    subpage_kwargs={
+                        "node_name": node_name,
+                        "node_namespace": node_namespace,
+                        "node_full_name": node_full_name,
+                    },
                 )
                 subscribers_group.add_row(row)
 

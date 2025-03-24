@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# doctor_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 import re
 
@@ -23,7 +30,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.widgets.buttons import CopyButton
@@ -32,15 +38,13 @@ from insight_gui.widgets.buttons import CopyButton
 class DoctorPage(ContentPage):
     __gtype_name__ = "DoctorPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Doctor")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
         super().set_search_entry_placeholder_text("Ask the doctor")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
+
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         self.network_config_group = self.pref_page.add_group(
             title="NETWORK CONFIGURATION", empty_group_text="Refresh to show network configuration"
@@ -62,11 +66,11 @@ class DoctorPage(ContentPage):
         )
         self.topic_list_group = self.pref_page.add_group(title="TOPIC LIST", empty_group_text="Refresh to show topics")
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.reports = generate_reports()
         return len(self.reports) > 0
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         for report in self.reports:
             if report.name == "NETWORK CONFIGURATION":
                 # TODO these should be somehow grouped by network device
@@ -177,7 +181,7 @@ class DoctorPage(ContentPage):
                 if self.topic_list_group.num_rows == 0:
                     self.topic_list_group.set_empty_group_text("No topics found. Refresh to try again.")
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.network_config_group.clear()
         self.package_versions_group.clear()
         self.platform_info_group.clear()

@@ -1,8 +1,10 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
-
 <!--
-    Copyright (C) 2025  Julian Müller
+    package.xml
+
+    This file is part of https://github.com/julianmueller/insight_gui
+    Copyright (C) 2025 Julian Müller
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,8 +18,9 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
--->
 
+    SPDX-License-Identifier: GPL-3.0-or-later
+-->
 <package format="3">
     <name>insight_gui</name>
     <version>0.0.1</version>

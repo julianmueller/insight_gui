@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# service_pages.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from operator import itemgetter
 from typing import Dict
@@ -38,19 +45,15 @@ from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 class ServiceListPage(ContentPage):
     __gtype_name__ = "ServiceListPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(empty_page_text="Refresh to show services", **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         super().set_title("Service List")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+        super().set_empty_page_text("Refresh to show services")
         super().set_search_entry_placeholder_text("Search for services")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
         self.service_ns_groups: Dict[PrefGroup] = {}
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_services = sorted(
             get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True), key=itemgetter(0)
         )
@@ -59,7 +62,7 @@ class ServiceListPage(ContentPage):
             return False
         return True
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         for service_name, service_types in self.available_services:
             # service_types is a list, as multiple servers can offer different types to the same service
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
@@ -90,13 +93,14 @@ class ServiceListPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
-                service_name=service_name,
-                service_types=service_types,
-                ros2_connector=self.ros2_connector,
+                subpage_kwargs={
+                    "service_name": service_name,
+                    "service_types": service_types,
+                },
             )
             group.add_row(row)
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         for group in reversed(self.service_ns_groups.values()):
             self.pref_page.remove_group(group)
         self.service_ns_groups.clear()
@@ -105,29 +109,16 @@ class ServiceListPage(ContentPage):
 class ServiceInfoPage(ContentPage):
     __gtype_name__ = "ServiceInfoPage"
 
-    def __init__(
-        self,
-        service_name: str,
-        service_types: str | list[str],
-        nav_view: Adw.NavigationView = None,
-        ros2_connector: ROS2Connector = None,
-        **kwargs,
-    ):
+    def __init__(self, service_name: str, service_types: str | list[str], **kwargs):
         super().__init__(searchable=True, refreshable=False, **kwargs)
         super().set_title(f"Service <{service_name}>")
 
         self.service_name = service_name
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
+        self.service_types = service_types
+        self.detach_kwargs = {"service_name": service_name, "service_types": service_types}
 
-        super().set_dedock_page(
-            type(self),
-            dedock_kwargs={
-                "service_name": self.service_name,
-                "service_types": service_types,
-                "ros2_connector": self.ros2_connector,
-            },
-        )
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         # Service Type
         service_type_group = self.pref_page.add_group(title="Service Type")
@@ -137,14 +128,14 @@ class ServiceInfoPage(ContentPage):
             srv_type_row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceTypeInfoPage,
-                srv_type_full_name=srv_type,
+                subpage_kwargs={"srv_type_full_name": srv_type},
             )
             service_type_group.add_row(srv_type_row)
 
-        if isinstance(service_types, str):
-            add_srv_type_row(service_types)
-        elif isinstance(service_types, list):
-            for srv_type in service_types:
+        if isinstance(self.service_types, str):
+            add_srv_type_row(self.service_types)
+        elif isinstance(self.service_types, list):
+            for srv_type in self.service_types:
                 add_srv_type_row(srv_type)
 
         # first, gather all nodes, to check which of them is a server/client of the service
@@ -174,10 +165,11 @@ class ServiceInfoPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    node_name=node_name,
-                    node_namespace=node_namespace,
-                    node_full_name=node_full_name,
-                    ros2_connector=self.ros2_connector,
+                    subpage_kwargs={
+                        "node_name": node_name,
+                        "node_namespace": node_namespace,
+                        "node_full_name": node_full_name,
+                    },
                 )
                 service_servers_group.add_row(row)
 
@@ -193,10 +185,11 @@ class ServiceInfoPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    node_name=node_name,
-                    node_namespace=node_namespace,
-                    node_full_name=node_full_name,
-                    ros2_connector=self.ros2_connector,
+                    subpage_kwargs={
+                        "node_name": node_name,
+                        "node_namespace": node_namespace,
+                        "node_full_name": node_full_name,
+                    },
                 )
                 service_clients_group.add_row(row)
 

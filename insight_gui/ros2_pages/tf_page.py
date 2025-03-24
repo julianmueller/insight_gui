@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# tf_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 import yaml
 import time
@@ -28,7 +35,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 
@@ -36,17 +42,15 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 class TransformsPage(ContentPage):
     __gtype_name__ = "TransformsPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Transforms")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
         super().set_search_entry_placeholder_text("Search for Frames")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-        # TODO add a button rowthat shows a dialog with a tf-tree
+    def on_realize(self, *args):
+        super().on_realize(*args)
+
+        # TODO add a button row that shows a dialog with a tf-tree
 
         self.calc_group = self.pref_page.add_group(title="Calculate Transform", filterable=False)
         self.calc_group.add_suffix_btn(
@@ -91,7 +95,7 @@ class TransformsPage(ContentPage):
         self.frames_group = self.pref_page.add_group(title="Frames", empty_group_text="Refresh to show frames")
         self.frames_dict = {}
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         super().show_toast("Listening to tf data for 5.0 seconds...")
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
@@ -117,7 +121,7 @@ class TransformsPage(ContentPage):
             self.calc_button.set_sensitive(False)
             return False
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         # create an expander row for each frame and add all the info as rows
         frame_rows = []
         for frame_name, frame_info in self.frames_dict.items():
@@ -163,7 +167,7 @@ class TransformsPage(ContentPage):
             self.source_frame_row.set_selected(0)
             self.target_frame_row.set_selected(0)
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.frames_group.clear()
         self.result_text_row.set_visible(False)
         self.frames_list_store.remove_all()

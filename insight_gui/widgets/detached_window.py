@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-
 # =============================================================================
-# main.py
+# detached_window.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
@@ -22,32 +20,37 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import signal
 from pathlib import Path
+from typing import Type
 
-from ament_index_python import get_package_share_directory
+import gi
 
-from insight_gui.application import Ros2GuiApp
-
-
-def main(args=None):
-    # Set the global variable for all code to find the shared data directory
-    share_dir = Path(get_package_share_directory("insight_gui")) / "data"
-
-    # Enable Ctrl+C handling
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    # import debugpy
-    # debugpy.listen(("0.0.0.0", 5678))
-    # debugpy.wait_for_client()
-
-    try:
-        gui_app = Ros2GuiApp(share_dir)
-        signal.signal(signal.SIGINT, lambda *_: gui_app.shutdown())
-        gui_app.run(None)
-    except Exception as e:
-        gui_app.shutdown()
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw
 
 
-if __name__ == "__main__":
-    main()
+class DetachedWindow(Adw.ApplicationWindow):
+    __gtype_name__ = "DetachedWindow"
+
+    def __init__(self, application: Adw.Application, nav_page_class: Type, nav_page_kwargs: dict, **kwargs):
+        super().__init__(**kwargs)
+
+        super().set_destroy_with_parent(True)
+        super().set_default_size(800, 600)
+
+        self.nav_view: Adw.NavigationView = Adw.NavigationView()
+        super().set_content(self.nav_view)
+
+        self.app: Adw.Application = application  # backref to application
+        self.nav_page: Adw.NavigationPage = nav_page_class(**nav_page_kwargs)
+        self.nav_page.detach_btn.set_visible(False)
+        self.nav_view.add(self.nav_page)
+
+    # @property
+    # def app(self):
+    #     return self.app
+
+    @property
+    def ros2_connector(self):
+        return self.app.ros2_connector

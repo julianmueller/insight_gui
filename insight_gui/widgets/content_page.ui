@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (C) 2025  Julian Müller
+    content_page.ui
+
+    This file is part of https://github.com/julianmueller/insight_gui
+    Copyright (C) 2025 Julian Müller
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,6 +17,8 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <interface>
     <requires lib="gtk" version="4.0" />
@@ -60,10 +65,10 @@
                 </child>
 
                 <child type="end">
-                    <object class="GtkButton" id="dedock_btn">
+                    <object class="GtkButton" id="detach_btn">
                         <property name="icon-name">external-link-symbolic</property>
                         <property name="tooltip-text">Open in separate window</property>
-                        <property name="visible">false</property>
+                        <!-- <property name="visible">false</property> -->
                     </object>
                 </child>
             </object>

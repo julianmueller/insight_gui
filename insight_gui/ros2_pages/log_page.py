@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# log_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from datetime import datetime
 
@@ -69,16 +76,17 @@ class LogMessage(GObject.Object):
 class LoggerPage(ContentPage):
     __gtype_name__ = "LoggerPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(refreshable=False, searchable=False, **kwargs)
         super().set_title("Logger")
 
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
-
         self.is_logging = False
+
+    def on_realize(self, *args):
+        super().on_realize(*args)
+
+        # create subscription to the rosout topic via the ros2 connector
+        self.rosout_sub = self.ros2_connector.add_subsciption(Log, "/rosout", self.log_callback)
 
         # Btn for opening the online link to msg definition
         self.play_pause_btn = super().add_bottom_widget(
@@ -157,8 +165,6 @@ class LoggerPage(ContentPage):
         self.column_view_row.add_column("Message", "message", is_sortable=False, is_numeric=False, expand=True)
         self.column_view_row.add_column("Node", "node", is_sortable=True, is_numeric=False, expand=False)
 
-        self.rosout_sub = self.ros2_connector.add_subsciption(Log, "/rosout", self.log_callback)
-
         # # Get the default ROS logger and attach a custom log handler
         # logger = get_logger("custom_logger")
         # logger.set_handler(custom_log_handler)
@@ -166,6 +172,21 @@ class LoggerPage(ContentPage):
     # @property
     # def is_logging(self) -> bool:
     #     return self.play_pause_btn.is_active
+
+    def on_unrealize(self, *args):
+        # super().on_unrealize(*args)
+        # TODO remove subscription
+        # self.ros2_connector.remove_subscription(self.rosout_sub)
+        pass
+
+    def on_map(self, *args):
+        # TODO make the logger start (again) logging when page is currently visible
+        # super().on_map(*args)
+        pass
+
+    def on_unmap(self, *args):
+        # TODO make the logger stop logging when page is currently not visible
+        pass
 
     def on_severities_changed(self, widget: MultiToggleButtonRow, *args):
         active_log_levels = widget.get_active_buttons()

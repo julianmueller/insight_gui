@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# service_call_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 import yaml
 
@@ -26,10 +33,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_page import PrefPage
-from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, SearchRow, TextViewRow
+from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 
 # from insight_gui.widgets.entry_row import EntryRow
 
@@ -39,14 +44,12 @@ from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
 class ServiceCallPage(ContentPage):
     __gtype_name__ = "ServiceCallPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Service Call")
 
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         # select group
         self.select_group = self.pref_page.add_group(title="Select Service")
@@ -94,13 +97,13 @@ class ServiceCallPage(ContentPage):
         )
         self.response_text_row = self.response_group.add_row(TextViewRow(editable=False))
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_services = sorted(
             get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True)
         )
         return len(self.available_services) > 0
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         # Check if there are services to call
         if len(self.available_services) > 0:
             self.call_btn.set_sensitive(True)
@@ -132,7 +135,7 @@ class ServiceCallPage(ContentPage):
         self.service_select_row.set_factory(factory)
         # self.service_select_row.set_selected(0)
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         # clear previous service list
         self.service_list_store.remove_all()
 
@@ -151,7 +154,7 @@ class ServiceCallPage(ContentPage):
         self.selected_service_type_row.set_subpage_link(
             nav_view=self.nav_view,
             subpage_class=ServiceTypeInfoPage,
-            srv_type_full_name=self.selected_service_type,
+            subpage_kwargs={"srv_type_full_name": self.selected_service_type},
         )
 
         self.request_class = self.service_class.Request

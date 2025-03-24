@@ -1,17 +1,24 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# interface_browser_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 import subprocess
 
@@ -28,7 +35,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import (
     MessageTypeInfoPage,
     ServiceTypeInfoPage,
@@ -41,32 +47,30 @@ from insight_gui.widgets.pref_rows import PrefRow
 class InterfaceBrowserPage(ContentPage):
     __gtype_name__ = "InterfaceBrowserPage"
 
-    def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(empty_page_text="Refresh to show interfaces", **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         super().set_title("Interface Browser")
-
-        self.nav_view = nav_view if nav_view else self.get_parent()
-        self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
-
+        super().set_empty_page_text("Refresh to show interfaces")
         super().set_search_entry_placeholder_text("Search for interfaces")
-        super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-        btm_widgets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, css_classes=["linked"])
-        super().add_bottom_widget(btm_widgets, position="center")
+    def on_realize(self, *args):
+        super().on_realize(*args)
 
         # TODO make these buttons work
+        btm_widgets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, css_classes=["linked"])
+        super().add_bottom_widget(btm_widgets, position="center")
         btm_widgets.append(Gtk.ToggleButton(label="msgs", active=True))
         btm_widgets.append(Gtk.ToggleButton(label="srvs", active=True))
         btm_widgets.append(Gtk.ToggleButton(label="acts", active=True))
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         self.available_msgs = get_message_interfaces()
         self.available_srvs = get_service_interfaces()
         self.available_action_msgs = get_action_interfaces()
 
         return len(self.available_msgs) + len(self.available_srvs) + len(self.available_action_msgs) > 0
 
-    def refresh_gui(self):
+    def on_refresh_gui(self):
         # add all the message interfaces
         for pkg_name, msgs_list in sorted(self.available_msgs.items()):
             msg_group = self.pref_page.add_group(title=pkg_name)
@@ -93,7 +97,7 @@ class InterfaceBrowserPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=MessageTypeInfoPage,
-                    msg_type_full_name=msg_type_full_name,
+                    subpage_kwargs={"msg_type_full_name": msg_type_full_name},
                 )
                 msg_rows.append(row)
             msg_group.add_rows_idle(msg_rows)
@@ -112,7 +116,7 @@ class InterfaceBrowserPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ServiceTypeInfoPage,
-                    srv_type_full_name=srv_type_full_name,
+                    subpage_kwargs={"srv_type_full_name": srv_type_full_name},
                 )
                 srv_rows.append(row)
             srv_group.add_rows_idle(srv_rows)
@@ -131,7 +135,7 @@ class InterfaceBrowserPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ActionTypeInfoPage,
-                    act_type_full_name=act_type_full_name,
+                    subpage_kwargs={"act_type_full_name": act_type_full_name},
                 )
                 act_rows.append(row)
             actions_group.add_rows_idle(act_rows)
@@ -139,7 +143,7 @@ class InterfaceBrowserPage(ContentPage):
         if self.pref_page.num_groups == 0:
             self.pref_page.set_empty_page_text("No interfaces found. Refresh to try again.")
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         self.pref_page.clear()
 
     def on_interface_filters_changed(self, *args):

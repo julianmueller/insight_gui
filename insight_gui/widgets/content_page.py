@@ -1,17 +1,21 @@
-# Copyright (C) 2025  Julian Müller
-
+# content_page.py
+#
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from pathlib import Path
 from typing import Callable
@@ -24,6 +28,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, GLib
 
 from insight_gui.widgets.pref_page import PrefPage
+from insight_gui.widgets.detached_window import DetachedWindow
 
 
 class ContentPage(Adw.NavigationPage):
@@ -33,9 +38,14 @@ class ContentPage(Adw.NavigationPage):
         self,
         searchable: bool = True,
         refreshable: bool = True,
-        empty_page_text: str = "",
         **kwargs,
     ):
+        super().__init__(**kwargs)
+        super().connect("realize", self.on_realize)
+        # super().connect("unrealize", self.on_unrealize) # TODO
+        # super().connect("map", self.on_map)
+        # super().connect("unmap", self.on_unmap)
+
         builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
         self.toolbar_view: Adw.ToolbarView = builder.get_object("toolbar_view")
@@ -47,8 +57,8 @@ class ContentPage(Adw.NavigationPage):
         self.refresh_icon: Gtk.Image = builder.get_object("refresh_icon")
         self.refresh_spinner: Gtk.Spinner = builder.get_object("refresh_spinner")
 
-        self.dedock_btn: Gtk.Button = builder.get_object("dedock_btn")
-        self.dedock_btn.connect("clicked", self.on_dedock)
+        self.detach_btn: Gtk.Button = builder.get_object("detach_btn")
+        self.detach_btn.connect("clicked", self.on_detach)
 
         self.search_bar: Gtk.SearchBar = builder.get_object("search_bar")
         self.search_entry: Gtk.SearchEntry = builder.get_object("search_entry")
@@ -62,21 +72,18 @@ class ContentPage(Adw.NavigationPage):
         self.empty_search_page: Adw.StatusPage = builder.get_object("empty_search_page")
         self.bottom_bar: Gtk.ActionBar = builder.get_object("bottom_bar")
 
-        super().__init__(**kwargs)
         super().set_child(self.toolbar_view)
-
-        self.dedock_page_class = None
-        self.dedock_kwargs = {}
 
         self.searchable = searchable
         self.refreshable = refreshable
+        self.detach_kwargs = {}
         self.refreshing = False
         self.refresh_thread: GLib.Thread = None
 
         self.toggle_search_btn(searchable)
         self.toggle_refresh_btn(refreshable)
 
-        self.pref_page = PrefPage(empty_page_text=empty_page_text)
+        self.pref_page = PrefPage()
         self.content_stack.add_child(self.pref_page)
         # if refreshable: # TODO necessary?
         #     self.content_stack.set_visible_child(self.refresh_page)
@@ -88,8 +95,24 @@ class ContentPage(Adw.NavigationPage):
             "active", self.search_bar, "search-mode-enabled", GObject.BindingFlags.BIDIRECTIONAL
         )
 
+    # @property
+    # def ros2_connector(self):
+    #     return self.get_root().ros2_connector
+
+    def on_realize(self, *args):
+        self.nav_view = self.get_ancestor(Adw.NavigationView)
+        self.ros2_connector = self.get_root().ros2_connector
+
     def on_search_changed(self, *args):
         self.pref_page.apply_filter(self.search_entry.get_text())
+
+    def on_detach(self, *args):
+        detached_window = DetachedWindow(
+            application=self.get_root().get_application(),
+            nav_page_class=self.__class__,
+            nav_page_kwargs=self.detach_kwargs,
+        )
+        detached_window.show()
 
     def on_refresh(self, *args):
         """Executed, when the refresh button is clicked."""
@@ -116,13 +139,13 @@ class ContentPage(Adw.NavigationPage):
             GLib.idle_add(prepare_refresh)
 
             try:
-                refresh_result = self.refresh_blocking()
+                refresh_result = self.on_refresh_blocking()
             except Exception as e:
                 self.show_toast(f"Refresh failed! Error: {e}")
 
             if refresh_result:
-                GLib.idle_add(self.clear_gui)
-                GLib.idle_add(self.refresh_gui)
+                GLib.idle_add(self.on_clear_gui)
+                GLib.idle_add(self.on_refresh_gui)
 
             GLib.idle_add(finish_refresh)
 
@@ -131,29 +154,17 @@ class ContentPage(Adw.NavigationPage):
             self.refresh_thread = threading.Thread(target=refresh_wrapper, daemon=True)
             self.refresh_thread.start()
 
-    def refresh_blocking(self) -> bool:
+    def on_refresh_blocking(self) -> bool:
         """Child class should override this with blocking, long-running computation."""
-        raise NotImplementedError("Child class must implement refresh_blocking()!")
+        raise NotImplementedError("Child class must implement on_refresh_blocking()!")
 
-    def refresh_gui(self, *args):
+    def on_refresh_gui(self, *args):
         """Child class should override this to update the UI with the result of the blocking refresh."""
-        raise NotImplementedError("Child class must implement refresh_gui()!")
+        raise NotImplementedError("Child class must implement on_refresh_gui()!")
 
-    def clear_gui(self):
+    def on_clear_gui(self):
         """Child class should override this to clear the UI before a refresh."""
-        raise NotImplementedError("Child class must implement clear_gui()!")
-
-    # TODO rework after ContentPage update
-    def on_dedock(self, *args):
-        if self.dedock_page_class:
-            nav_view = Adw.NavigationView()
-            win = Adw.Window(content=nav_view, destroy_with_parent=True, default_height=600, default_width=800)
-
-            nav_page = self.dedock_page_class(nav_view=nav_view, **self.dedock_kwargs)
-            nav_page.dedock_btn.set_visible(False)
-
-            nav_view.add(nav_page)
-            win.show()
+        raise NotImplementedError("Child class must implement on_clear_gui()!")
 
     def show_toast(self, toast_text: str):
         self.toast_overlay.add_toast(Adw.Toast(title=str(toast_text)))
@@ -220,10 +231,8 @@ class ContentPage(Adw.NavigationPage):
     def set_search_entry_placeholder_text(self, text: str):
         self.search_entry.set_placeholder_text(str(text))
 
-    def set_dedock_page(self, dedock_page_class: Gtk.Widget, dedock_kwargs: dict = {}):
-        self.dedock_page_class = dedock_page_class
-        self.dedock_kwargs = dedock_kwargs
-        self.dedock_btn.set_visible(True)
+    def set_empty_page_text(self, text: str):
+        self.pref_page.set_empty_page_text(str(text))
 
     def toggle_search_btn(self, enabled: bool):
         self.search_btn.set_visible(enabled)
