@@ -171,6 +171,15 @@ class NewPkgDialog(Adw.PreferencesDialog):
             show_toast_message("If set, library name and node name must be different.")
             return
 
+        if maintainer_name == "":
+            maintainer_name = str(os.getlogin())
+
+        if maintainer_mail == "":
+            maintainer_mail = f"{os.getlogin()}@TODO.com"
+
+        if description == "":
+            description = "TODO: Package description"
+
         buildtool_depends = []
         if build_type == "ament_cmake":
             if library_name:

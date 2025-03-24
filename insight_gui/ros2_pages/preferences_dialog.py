@@ -109,6 +109,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         # self.page2.add_group(title="Test", description="bla")
 
+    # TODO make this the refresh function, and add a btn to refresh the env vars
     def on_map(self, *args):
         env_auto_discovery = os.getenv("ROS_AUTOMATIC_DISCOVERY_RANGE", default="")
         self.env_auto_discovery_row.set_text(env_auto_discovery)

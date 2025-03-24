@@ -156,6 +156,8 @@ class TopicInfoPage(ContentPage):
         # Subscribers
         subscribers_group = self.pref_page.add_group(title="Subscribers", empty_group_text="Topic has no subscribers")
 
+        # TODO add a "echo" group, to listen to that specific topic
+
         for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
             # TODO maybe use self.ros2_connector.node.get_publishers_info_by_topic()
             # add those nodes, that publish that topic

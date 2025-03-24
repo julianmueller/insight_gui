@@ -97,21 +97,22 @@ ros2 run insight_gui main
     - make btns of img viewer work
     - add tf inspection page (show the stuff that rviz shows)
     - add a controller "/joy" page (also look into Workbench - Gamepad Demo)
+    - add a teleop page
+    - add an "echo" group for topics info page, to listen to current data on the topic (maybe also for services and actions?)
     - ?add every page of the gui as a ros2 executable, so a window with only this page starts
     - add constants to be visible in msg definitions (like ur_msgs/msg/SetIO)
     - add the ros wiki explainations for packages? like what are all possible subscribed/published topics? or just a btn?
-- improvements
     - find a way to load all "refresh" content on startup, also if one page updates "available_nodes" etc, all other pages that utilize this shall update as well
     - check continuous img stream
-    - check preferences dialog
-    - add GtkSpinner as a loading animation for refreshs
-    - add a "clear" method for all the pages
+    - extend preferences dialog
+    - add option to add new env variables in the pref dialog (and add a refresh btn)
+    - add a launch page to directly launch nodes with a set of arguments
 - cleanup
     - remove "status_page" in window.ui
-    - check that refresh funcs do not return a bool
+    - rename all function, to fit GTK style "on_xxx" and "do_xxx"
 - gnome/gtk4
-    - make shortcuts (eg CTRL+F) work and add shortcuts page
-    - add gtk action for all majoractions
+    - make shortcuts (eg CTRL+F) work and add shortcuts page (they should also work via actions and for detached windows)
+    - add gtk action for all major actions
     - add gtk settings
     - add Gtk/Gio Notifications
     - replace "webbrowser" stuff with gtk File/Web Launcher

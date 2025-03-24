@@ -34,12 +34,12 @@ from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-class JointStatesPage(ContentPage):
-    __gtype_name__ = "JointStatesPage"
+class TeleoperatorPage(ContentPage):
+    __gtype_name__ = "TeleoperatorPage"
 
     def __init__(self, nav_view: Adw.NavigationView = None, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title("Joint States")
+        super().set_title("Teleoperator")
 
         self.nav_view = nav_view if nav_view else self.get_parent()
         self.ros2_connector = ros2_connector if ros2_connector else self.get_root().ros2_connector
@@ -47,58 +47,66 @@ class JointStatesPage(ContentPage):
         super().set_search_entry_placeholder_text("Search for topics")
         super().set_dedock_page(type(self), dedock_kwargs={"ros2_connector": self.ros2_connector})
 
-        self.search_group = self.pref_page.add_group(filterable=False)
-        self.js_topic_row = self.search_group.add_row(
-            Adw.ComboRow(
-                title="Joint Topic",
-                enable_search=True,
-                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
-            )
-        )
-        self.js_topic_row.connect("notify::selected-item", self.on_joint_states_changed)
-        self.js_topic_list_store = Gio.ListStore.new(Gtk.StringObject)
-        self.js_topic_row.set_model(self.js_topic_list_store)
+        # TODO
+        # ros2 run teleop_twist_keyboard teleop_twist_keyboard
+        # ros2 run teleop_twist_joy teleop_twist_joy
 
-        self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
+        # self.search_group = self.pref_page.add_group(filterable=False)
+        # self.js_topic_row = self.search_group.add_row(
+        #     Adw.ComboRow(
+        #         title="Joint Topic",
+        #         enable_search=True,
+        #         expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+        #     )
+        # )
+        # self.js_topic_row.connect("notify::selected-item", self.on_joint_states_changed)
+        # self.js_topic_list_store = Gio.ListStore.new(Gtk.StringObject)
+        # self.js_topic_row.set_model(self.js_topic_list_store)
+
+        # self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
 
     def refresh_blocking(self) -> bool:
-        self.joint_states_topic_list = []
+        # self.joint_states_topic_list = []
 
-        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+        # available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
 
-        for i, (topic_name, topic_types) in enumerate(available_topics):
-            # topic_types is a list, as multiple servers can advertise different types to the same topic
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(topic_types) == 1:
-                topic_types = topic_types[0]
-            else:
-                topic_types = ", ".join(topic_types)
+        # for i, (topic_name, topic_types) in enumerate(available_topics):
+        #     # topic_types is a list, as multiple servers can advertise different types to the same topic
+        #     # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
+        #     if len(topic_types) == 1:
+        #         topic_types = topic_types[0]
+        #     else:
+        #         topic_types = ", ".join(topic_types)
 
-            if topic_types == "sensor_msgs/msg/JointState":
-                self.joint_states_topic_list.append(topic_name)
-        return len(self.joint_states_topic_list) > 0
+        #     if topic_types == "sensor_msgs/msg/JointState":
+        #         self.joint_states_topic_list.append(topic_name)
+        # return len(self.joint_states_topic_list) > 0
+        pass
 
     def refresh_gui(self):
-        for js_topic in self.joint_states_topic_list:
-            self.js_topic_list_store.append(Gtk.StringObject.new(js_topic))
+        # for js_topic in self.joint_states_topic_list:
+        #     self.js_topic_list_store.append(Gtk.StringObject.new(js_topic))
 
-        if self.js_topic_list_store.get_n_items() > 0:
-            self.js_topic_row.set_model(self.js_topic_list_store)
-            self.js_topic_row.set_selected(0)
-        else:
-            super().show_toast("No topic with joint_states found")
+        # if self.js_topic_list_store.get_n_items() > 0:
+        #     self.js_topic_row.set_model(self.js_topic_list_store)
+        #     self.js_topic_row.set_selected(0)
+        # else:
+        #     super().show_toast("No topic with joint_states found")
+        pass
 
     def clear_gui(self):
-        self.js_topic_list_store.remove_all()
-        self.joints_group.clear()
+        # self.js_topic_list_store.remove_all()
+        # self.joints_group.clear()
+        pass
 
     def on_joint_states_changed(self, *args):
-        if self.js_topic_list_store.get_n_items() <= 0:
-            return
+        # if self.js_topic_list_store.get_n_items() <= 0:
+        #     return
 
-        topic_name = self.js_topic_row.get_selected_item().get_string()
-        if topic_name:
-            self.sub = self.ros2_connector.add_subsciption(JointState, topic_name, self.on_ros_js_callback)
+        # topic_name = self.js_topic_row.get_selected_item().get_string()
+        # if topic_name:
+        #     self.sub = self.ros2_connector.add_subsciption(JointState, topic_name, self.on_ros_js_callback)
+        pass
 
     # TODO implement some rate limeting
     # TODO also pause, when the "tab" aka nav page is switched
