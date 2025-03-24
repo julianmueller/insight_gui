@@ -13,25 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from operator import itemgetter
-
-from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
-from ros2topic.api import get_topic_names_and_types
-from ros2node.api import _is_hidden_name, get_node_names
 from sensor_msgs.msg import JointState
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio
+from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
-from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 class TeleoperatorPage(ContentPage):

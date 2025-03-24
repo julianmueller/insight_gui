@@ -28,18 +28,13 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gdk, Gio, GLib
 
-from insight_gui.ros2_pages.node_pages import NodeListPage
-from insight_gui.ros2_pages.msg_type_browser_pages import (  # TODO remove
-    MessageTypeBrowserPage,
-    ServiceTypeBrowserPage,
-    ActionTypeBrowserPage,
-)
+from insight_gui.ros2_pages.pkg_list_page import PackageListPage
+from insight_gui.ros2_pages.node_list_page import NodeListPage
 from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
-from insight_gui.ros2_pages.pkg_pages import PackageListPage
 from insight_gui.ros2_pages.topic_pages import TopicListPage
-from insight_gui.ros2_pages.service_pages import ServiceListPage
+from insight_gui.ros2_pages.service_list_page import ServiceListPage
 from insight_gui.ros2_pages.service_call_page import ServiceCallPage
-from insight_gui.ros2_pages.action_pages import ActionListPage
+from insight_gui.ros2_pages.action_list_page import ActionListPage
 from insight_gui.ros2_pages.param_page import ParameterListPage
 from insight_gui.ros2_pages.tf_page import TransformsPage
 from insight_gui.ros2_pages.log_page import LoggerPage

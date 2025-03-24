@@ -1,5 +1,5 @@
 # =============================================================================
-# node_pages.py
+# node_info_page.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
@@ -24,7 +24,6 @@ from operator import itemgetter
 
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
-from ros2node.api import _is_hidden_name, get_node_names
 from ros2param.api import (
     call_list_parameters,
     call_get_parameters,
@@ -43,51 +42,6 @@ from insight_gui.ros2_pages.edit_param_dialog import EditParamDialog
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
-
-
-class NodeListPage(ContentPage):
-    __gtype_name__ = "NodeListPage"
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        super().set_title("Nodes")
-        super().set_search_entry_placeholder_text("Search for nodes")
-
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
-        self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
-
-    def on_refresh_blocking(self) -> bool:
-        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
-
-        if len(self.available_nodes) == 0:
-            self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
-            return False
-        return True
-
-    def on_refresh_gui(self):
-        rows = []
-        for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
-            row = PrefRow(title=node_name, subtitle=node_full_name)
-            if _is_hidden_name(node_name):
-                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
-
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=NodeInfoPage,
-                subpage_kwargs={
-                    "node_name": node_name,
-                    "node_namespace": node_namespace,
-                    "node_full_name": node_full_name,
-                },
-            )
-            rows.append(row)
-
-        self.node_list_group.add_rows_idle(rows)
-
-    def on_clear_gui(self):
-        self.node_list_group.clear()
 
 
 class NodeInfoPage(ContentPage):
@@ -111,8 +65,8 @@ class NodeInfoPage(ContentPage):
 
         # Imports here, to prevent circular imports # TODO find a nicer way?
         from insight_gui.ros2_pages.topic_pages import TopicInfoPage
-        from insight_gui.ros2_pages.service_pages import ServiceInfoPage
-        from insight_gui.ros2_pages.action_pages import ActionInfoPage
+        from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
+        from insight_gui.ros2_pages.action_info_page import ActionInfoPage
 
         # Publishers
         publishers_group = self.pref_page.add_group(title="Publishers", empty_group_text="Node has no publishers")

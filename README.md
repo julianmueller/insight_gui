@@ -108,9 +108,12 @@ ros2 run insight_gui main
     - add option to add new env variables in the pref dialog (and add a refresh btn)
     - add a launch page to directly launch nodes with a set of arguments
     - add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open
+    - add when a new window is opened as a detach, make it have the same content as the detached content_page
+    - add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length
 - cleanup
     - remove "status_page" in window.ui
     - rename all function, to fit GTK style "on_xxx" and "do_xxx"
+    - merge all "msg_type_info_page" etc into one class when differs in what it displays depending on the interface type
 - gnome/gtk4
     - make shortcuts (eg CTRL+F) work and add shortcuts page (they should also work via actions and for detached windows)
     - add gtk action for all major actions

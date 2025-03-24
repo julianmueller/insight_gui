@@ -34,7 +34,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
-from insight_gui.ros2_pages.node_pages import NodeInfoPage
+from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow

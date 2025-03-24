@@ -1,5 +1,5 @@
 # =============================================================================
-# pkg_pages.py
+# pkg_info_page.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
@@ -22,10 +22,9 @@
 
 import os
 from pathlib import Path
-import webbrowser
+import webbrowser  # TODO replace with gnome tools
 
 from ros2pkg.api import get_executable_paths
-from ament_index_python.packages import get_packages_with_prefixes
 
 import gi
 
@@ -33,61 +32,9 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.new_pkg_dialog import NewPkgDialog
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.widgets.buttons import CopyButton
-
-
-class PackageListPage(ContentPage):
-    __gtype_name__ = "PackageListPage"
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        super().set_title("Package List")
-        super().set_empty_page_text("Refresh to show packages")
-        super().set_search_entry_placeholder_text("Search for Packages")
-
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
-        self.pkg_list_group = self.pref_page.add_group(empty_group_text="Refresh to show packages")
-
-        super().add_bottom_left_btn(
-            icon_name="list-add-symbolic",
-            tooltip_text="Create New Package",
-            func=lambda: NewPkgDialog().present(self),
-        )
-
-        super().add_bottom_right_btn(
-            icon_name="webpage-symbolic",
-            tooltip_text="Open ROS Index",
-            func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
-        )
-
-    def on_refresh_blocking(self) -> bool:
-        self.available_pkgs = get_packages_with_prefixes()
-
-        if len(self.available_pkgs) == 0:
-            self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
-            return False
-        return True
-
-    def on_refresh_gui(self):
-        rows = []
-        for pkg_name, pkg_path in self.available_pkgs.items():
-            row = PrefRow(title=pkg_name, subtitle=pkg_path)
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=PackageInfoPage,
-                subpage_kwargs={"pkg_name": pkg_name, "pkg_path": pkg_path},
-            )
-            rows.append(row)
-
-        self.pkg_list_group.add_rows_idle(rows)
-
-    def on_clear_gui(self):
-        self.pkg_list_group.clear()
 
 
 class PackageInfoPage(ContentPage):
