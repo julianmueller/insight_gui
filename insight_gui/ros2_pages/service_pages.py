@@ -33,7 +33,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
 from insight_gui.ros2_pages.node_pages import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage

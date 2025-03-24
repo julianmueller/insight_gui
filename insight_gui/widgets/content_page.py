@@ -175,14 +175,13 @@ class ContentPage(Adw.NavigationPage):
         self.toast_overlay.add_toast(toast)
 
     def show_banner(self, banner_text: str):
-        self.banner.set_text(str(banner_text))
+        self.banner.set_title(str(banner_text))
         self.banner.set_revealed(True)
 
     def show_banner_w_btn(self, banner_text: str, btn_label: str, func: Callable, **func_kwargs):
-        self.banner.set_text(str(banner_text))
+        self.show_banner(banner_text=banner_text)
         self.banner.set_button_label(str(btn_label))
         self.banner.connect("button-clicked", lambda toast, *_: func(**func_kwargs))
-        self.banner.set_revealed(True)
 
     def hide_banner(self):
         self.banner.set_revealed(False)

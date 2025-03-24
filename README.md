@@ -107,6 +107,7 @@ ros2 run insight_gui main
     - extend preferences dialog
     - add option to add new env variables in the pref dialog (and add a refresh btn)
     - add a launch page to directly launch nodes with a set of arguments
+    - add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open
 - cleanup
     - remove "status_page" in window.ui
     - rename all function, to fit GTK style "on_xxx" and "do_xxx"
