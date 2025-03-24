@@ -82,9 +82,7 @@ class LoggerPage(ContentPage):
 
         self.is_logging = False
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         # create subscription to the rosout topic via the ros2 connector
         self.rosout_sub = self.ros2_connector.add_subsciption(Log, "/rosout", self.log_callback)
 

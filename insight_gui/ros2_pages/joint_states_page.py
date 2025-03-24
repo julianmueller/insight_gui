@@ -40,9 +40,7 @@ class JointStatesPage(ContentPage):
         super().set_title("Joint States")
         super().set_search_entry_placeholder_text("Search for topics")
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         self.search_group = self.pref_page.add_group(filterable=False)
         self.js_topic_row = self.search_group.add_row(
             Adw.ComboRow(

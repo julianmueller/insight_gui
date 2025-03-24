@@ -53,9 +53,7 @@ class EditParamDialog(Adw.PreferencesDialog):
         self.param_name = param_name
         self.ros2_connector = ros2_connector
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         self.page = PrefPage(title="Edit param", icon_name="document-edit-symbolic")
         super().add(self.page)
         group = self.page.add_group(title=f"Parameter: {self.param_name}", description=f"Node: {self.node_name}")

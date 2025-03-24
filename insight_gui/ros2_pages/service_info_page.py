@@ -41,19 +41,33 @@ class ServiceInfoPage(ContentPage):
     __gtype_name__ = "ServiceInfoPage"
 
     def __init__(self, service_name: str, service_types: str | list[str], **kwargs):
-        super().__init__(searchable=True, refreshable=False, **kwargs)
-        super().set_title(f"Service <{service_name}>")
+        super().__init__(searchable=True, refreshable=True, **kwargs)
+        super().set_title(f"Service {service_name}")
 
         self.service_name = service_name
         self.service_types = service_types
         self.detach_kwargs = {"service_name": service_name, "service_types": service_types}
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         # Service Type
-        service_type_group = self.pref_page.add_group(title="Service Type")
+        self.service_type_group = self.pref_page.add_group(title="Service Type")
 
+        # Service Servers
+        self.service_servers_group = self.pref_page.add_group(
+            title="Service Servers", empty_group_text="Service has no servers"
+        )
+
+        # Service Clients
+        self.service_clients_group = self.pref_page.add_group(
+            title="Service Clients", empty_group_text="Service has no clients"
+        )
+
+    def on_refresh_blocking(self) -> bool:
+        # first, gather all nodes, to check which of them is a server/client of the service
+        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=False)
+        return len(self.available_nodes) > 0
+
+    def on_refresh_gui(self):
         def add_srv_type_row(srv_type: str):
             srv_type_row = PrefRow(title=srv_type)  # , subtitle=node_full_name)
             srv_type_row.set_subpage_link(
@@ -61,7 +75,7 @@ class ServiceInfoPage(ContentPage):
                 subpage_class=ServiceTypeInfoPage,
                 subpage_kwargs={"srv_type_full_name": srv_type},
             )
-            service_type_group.add_row(srv_type_row)
+            self.service_type_group.add_row(srv_type_row)
 
         if isinstance(self.service_types, str):
             add_srv_type_row(self.service_types)
@@ -69,26 +83,13 @@ class ServiceInfoPage(ContentPage):
             for srv_type in self.service_types:
                 add_srv_type_row(srv_type)
 
-        # first, gather all nodes, to check which of them is a server/client of the service
-        available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=False)
-
-        # Service Servers
-        service_servers_group = self.pref_page.add_group(
-            title="Service Servers", empty_group_text="Service has no servers"
-        )
-
-        # Service Clients
-        service_clients_group = self.pref_page.add_group(
-            title="Service Clients", empty_group_text="Service has no clients"
-        )
-
-        for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
+        for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
             # add those nodes, that serve this service
-            service_server_list = self.ros2_connector.node.get_service_names_and_types_by_node(
+            self.service_server_list = self.ros2_connector.node.get_service_names_and_types_by_node(
                 node_name=node_name,
                 node_namespace=node_namespace,
             )
-            if any(self.service_name in service for service in service_server_list):
+            if any(self.service_name in service for service in self.service_server_list):
                 row = PrefRow(title=node_name, subtitle=node_full_name)
                 if _is_hidden_name(node_name):
                     row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
@@ -102,13 +103,13 @@ class ServiceInfoPage(ContentPage):
                         "node_full_name": node_full_name,
                     },
                 )
-                service_servers_group.add_row(row)
+                self.service_servers_group.add_row(row)
 
             # add those nodes, that are clients to this service
-            service_client_list = self.ros2_connector.node.get_client_names_and_types_by_node(
+            self.service_client_list = self.ros2_connector.node.get_client_names_and_types_by_node(
                 node_name=node_name, node_namespace=node_namespace
             )
-            if any(self.service_name in service for service in service_client_list):
+            if any(self.service_name in service for service in self.service_client_list):
                 row = PrefRow(title=node_name, subtitle=node_full_name)
                 if _is_hidden_name(node_name):
                     row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
@@ -122,8 +123,13 @@ class ServiceInfoPage(ContentPage):
                         "node_full_name": node_full_name,
                     },
                 )
-                service_clients_group.add_row(row)
+                self.service_clients_group.add_row(row)
 
         # add the counts as descriptions
-        service_servers_group.set_description_to_row_count()
-        service_clients_group.set_description_to_row_count()
+        self.service_servers_group.set_description_to_row_count()
+        self.service_clients_group.set_description_to_row_count()
+
+    def on_reset_gui(self):
+        self.service_type_group.clear()
+        self.service_servers_group.clear()
+        self.service_clients_group.clear()

@@ -45,18 +45,18 @@ class PackageListPage(ContentPage):
         super().set_empty_page_text("Refresh to show packages")
         super().set_search_entry_placeholder_text("Search for Packages")
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         self.pkg_list_group = self.pref_page.add_group(empty_group_text="Refresh to show packages")
 
         super().add_bottom_left_btn(
+            label="New Package",
             icon_name="list-add-symbolic",
-            tooltip_text="Create New Package",
-            func=lambda: NewPkgDialog().present(self),
+            tooltip_text="Create a new package",
+            func=lambda *_: NewPkgDialog().present(),
         )
 
         super().add_bottom_right_btn(
+            label="ROS Index",
             icon_name="webpage-symbolic",
             tooltip_text="Open ROS Index",
             func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
@@ -83,5 +83,5 @@ class PackageListPage(ContentPage):
 
         self.pkg_list_group.add_rows_idle(rows)
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         self.pkg_list_group.clear()

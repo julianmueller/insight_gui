@@ -97,8 +97,7 @@ class ServiceListPage(ContentPage):
             )
             group.add_row(row)
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         for group in reversed(self.service_ns_groups.values()):
             self.pref_page.remove_group(group)
         self.service_ns_groups.clear()
-

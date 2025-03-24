@@ -32,8 +32,7 @@ class TeleoperatorPage(ContentPage):
         super().set_title("Teleoperator")
         super().set_search_entry_placeholder_text("Search for topics")
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
+    def on_setup_gui(self):
         pass
 
         # TODO
@@ -83,7 +82,7 @@ class TeleoperatorPage(ContentPage):
         #     super().show_toast("No topic with joint_states found")
         pass
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         # self.js_topic_list_store.remove_all()
         # self.joints_group.clear()
         pass

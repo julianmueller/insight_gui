@@ -48,9 +48,7 @@ class ServiceCallPage(ContentPage):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Service Call")
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         # select group
         self.select_group = self.pref_page.add_group(title="Select Service")
 
@@ -135,7 +133,7 @@ class ServiceCallPage(ContentPage):
         self.service_select_row.set_factory(factory)
         # self.service_select_row.set_selected(0)
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         # clear previous service list
         self.service_list_store.remove_all()
 

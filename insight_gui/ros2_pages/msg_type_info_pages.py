@@ -54,7 +54,7 @@ class MessageTypeInfoPage(ContentPage):
 
     def __init__(self, msg_type_full_name: str, **kwargs):
         super().__init__(searchable=False, refreshable=False, **kwargs)
-        super().set_title(f"Message Type <{msg_type_full_name}>")
+        super().set_title(f"Message Type {msg_type_full_name}")
         super().set_search_entry_placeholder_text("Search for message types")
 
         self.msg_type_full_name = msg_type_full_name
@@ -99,7 +99,7 @@ class ServiceTypeInfoPage(ContentPage):
 
     def __init__(self, srv_type_full_name: str, **kwargs):
         super().__init__(searchable=False, refreshable=False, **kwargs)
-        super().set_title(f"Service Type <{srv_type_full_name}>")
+        super().set_title(f"Service Type {srv_type_full_name}")
         super().set_search_entry_placeholder_text("Search for service types")
 
         self.srv_type_full_name = srv_type_full_name
@@ -178,15 +178,13 @@ class ActionTypeInfoPage(ContentPage):
 
     def __init__(self, act_type_full_name: str, **kwargs):
         super().__init__(searchable=False, refreshable=False, **kwargs)
-        super().set_title(f"Action Type <{act_type_full_name}>")
+        super().set_title(f"Action Type {act_type_full_name}")
         super().set_search_entry_placeholder_text("Search for action types")
 
         self.act_type_full_name = act_type_full_name
         self.detach_kwargs = {"act_type_full_name": act_type_full_name}
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         # Load the action parent class
         act_class = get_action(self.act_type_full_name)
 

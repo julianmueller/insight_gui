@@ -46,9 +46,7 @@ class ImageViewerPage(ContentPage):
 
         self.cv_bridge = CvBridge()
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         self.img_group = self.pref_page.add_group(title="View Image", filterable=False)
         self.img_topic_row = self.img_group.add_row(
             Adw.ComboRow(
@@ -120,7 +118,7 @@ class ImageViewerPage(ContentPage):
         else:
             super().show_toast("No topic with images found")
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         self.img_topic_list_store.remove_all()
 
     def on_image_topic_changed(self, *args):

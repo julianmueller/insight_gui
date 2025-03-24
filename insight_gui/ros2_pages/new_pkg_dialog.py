@@ -59,9 +59,6 @@ class NewPkgDialog(Adw.PreferencesDialog):
         self.page = PrefPage(title="New pkg", icon_name="document-new-symbolic")
         super().add(self.page)
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
         # Get all licenses
         self.available_licenses = {}
         for shortname, entry in ament_copyright.get_licenses().items():

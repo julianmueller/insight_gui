@@ -47,9 +47,7 @@ class TransformsPage(ContentPage):
         super().set_title("Transforms")
         super().set_search_entry_placeholder_text("Search for Frames")
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         # TODO add a button row that shows a dialog with a tf-tree
 
         self.calc_group = self.pref_page.add_group(title="Calculate Transform", filterable=False)
@@ -167,7 +165,7 @@ class TransformsPage(ContentPage):
             self.source_frame_row.set_selected(0)
             self.target_frame_row.set_selected(0)
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         self.frames_group.clear()
         self.result_text_row.set_visible(False)
         self.frames_list_store.remove_all()

@@ -42,6 +42,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
     def __init__(self, ros2_connector: ROS2Connector, **kwargs):
         super().__init__(**kwargs)
+        super().connect("realize", self.on_realize)
         super().set_title("Settings")
 
         self.ros2_connector = ros2_connector

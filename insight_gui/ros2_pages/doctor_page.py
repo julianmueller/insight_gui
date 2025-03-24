@@ -43,9 +43,7 @@ class DoctorPage(ContentPage):
         super().set_title("Doctor")
         super().set_search_entry_placeholder_text("Ask the doctor")
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         self.network_config_group = self.pref_page.add_group(
             title="NETWORK CONFIGURATION", empty_group_text="Refresh to show network configuration"
         )
@@ -181,7 +179,7 @@ class DoctorPage(ContentPage):
                 if self.topic_list_group.num_rows == 0:
                     self.topic_list_group.set_empty_group_text("No topics found. Refresh to try again.")
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         self.network_config_group.clear()
         self.package_versions_group.clear()
         self.platform_info_group.clear()

@@ -43,8 +43,8 @@ class ActionInfoPage(ContentPage):
     __gtype_name__ = "ActionInfoPage"
 
     def __init__(self, action_name: str, action_types: str | list[str], **kwargs):
-        super().__init__(searchable=True, refreshable=False, **kwargs)
-        super().set_title(f"Action <{action_name}>")
+        super().__init__(searchable=True, refreshable=True, **kwargs)
+        super().set_title(f"Action {action_name}")
 
         self.action_name = action_name
         self.action_types = action_types
@@ -53,12 +53,26 @@ class ActionInfoPage(ContentPage):
             "action_types": action_types,
         }
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         # Action Type
-        action_type_group = self.pref_page.add_group(title="Action Type")
+        self.action_type_group = self.pref_page.add_group(title="Action Type")
 
+        # Action Servers
+        self.action_servers_group = self.pref_page.add_group(
+            title="Action Servers", empty_group_text="action has no servers"
+        )
+
+        # Subscribers
+        self.action_clients_group = self.pref_page.add_group(
+            title="Action Clients", empty_group_text="action has no clients"
+        )
+
+    def on_refresh_blocking(self) -> bool:
+        # first, gather all nodes, to check which of them is a server/client of this action
+        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
+        return len(self.available_nodes) > 0
+
+    def on_refresh_gui(self):
         def add_act_type_row(msg_type_full_name: str):
             msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
             msg_row.set_subpage_link(
@@ -66,7 +80,7 @@ class ActionInfoPage(ContentPage):
                 subpage_class=ActionTypeInfoPage,
                 subpage_kwargs={"act_type_full_name": msg_type_full_name},
             )
-            action_type_group.add_row(msg_row)
+            self.action_type_group.add_row(msg_row)
 
         if isinstance(self.action_types, str):
             add_act_type_row(self.action_types)
@@ -74,20 +88,7 @@ class ActionInfoPage(ContentPage):
             for msg_type in self.action_types:
                 add_act_type_row(msg_type)
 
-        # first, gather all nodes, to check which of them is a server/client of this action
-        available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
-
-        # Action Servers
-        action_servers_group = self.pref_page.add_group(
-            title="Action Servers", empty_group_text="action has no servers"
-        )
-
-        # Subscribers
-        action_clients_group = self.pref_page.add_group(
-            title="Action Clients", empty_group_text="action has no clients"
-        )
-
-        for node_name, node_namespace, node_full_name in sorted(available_nodes, key=itemgetter(0)):
+        for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
             # add those nodes, that are servers to the action
 
             action_servers_list = get_action_server_names_and_types_by_node(
@@ -107,7 +108,7 @@ class ActionInfoPage(ContentPage):
                         "node_full_name": node_full_name,
                     },
                 )
-                action_servers_group.add_row(row)
+                self.action_servers_group.add_row(row)
 
             # add those nodes, that are clients to the action
             action_clients_list = get_action_client_names_and_types_by_node(
@@ -127,8 +128,13 @@ class ActionInfoPage(ContentPage):
                         "node_full_name": node_full_name,
                     },
                 )
-                action_clients_group.add_row(row)
+                self.action_clients_group.add_row(row)
 
         # add the counts as descriptions
-        action_servers_group.set_description_to_row_count()
-        action_clients_group.set_description_to_row_count()
+        self.action_servers_group.set_description_to_row_count()
+        self.action_clients_group.set_description_to_row_count()
+
+    def on_reset_gui(self):
+        self.action_type_group.clear()
+        self.action_servers_group.clear()
+        self.action_clients_group.clear()

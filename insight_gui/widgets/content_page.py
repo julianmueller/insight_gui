@@ -100,19 +100,21 @@ class ContentPage(Adw.NavigationPage):
     #     return self.get_root().ros2_connector
 
     def on_realize(self, *args):
+        # get these properties, after the widget has been realized in the window
         self.nav_view = self.get_ancestor(Adw.NavigationView)
         self.ros2_connector = self.get_root().ros2_connector
 
-    def on_search_changed(self, *args):
-        self.pref_page.apply_filter(self.search_entry.get_text())
+        # for children to override!
+        self.on_setup_gui()
 
-    def on_detach(self, *args):
-        detached_window = DetachedWindow(
-            application=self.get_root().get_application(),
-            nav_page_class=self.__class__,
-            nav_page_kwargs=self.detach_kwargs,
-        )
-        detached_window.show()
+        # refresh the gui
+        if self.refreshable:
+            self.on_refresh()
+
+    def on_setup_gui(self):
+        """Child class should override this to setup the GUI."""
+        # raise NotImplementedError("Child class must implement on_setup_gui()!")
+        pass
 
     def on_refresh(self, *args):
         """Executed, when the refresh button is clicked."""
@@ -127,11 +129,16 @@ class ContentPage(Adw.NavigationPage):
             self.refreshing = True
             return False  # for Glib.idle_add to end after one iteration
 
-        def finish_refresh(*args):
+        def finish_refresh(refresh_result: bool, *args):
             self.refresh_spinner.stop()
             self.refresh_spinner.set_visible(False)
             self.refresh_icon.set_visible(True)
             self.refreshing = False
+
+            if refresh_result:
+                self.hide_banner()
+            else:
+                self.show_banner_w_btn("Refresh yielded no results! Retry?", "Refresh", self.on_refresh)
             return False  # for Glib.idle_add to end after one iteration
 
         def refresh_wrapper(*args):
@@ -144,10 +151,12 @@ class ContentPage(Adw.NavigationPage):
                 self.show_toast(f"Refresh failed! Error: {e}")
 
             if refresh_result:
-                GLib.idle_add(self.on_clear_gui)
+                GLib.idle_add(self.on_reset_gui)
                 GLib.idle_add(self.on_refresh_gui)
 
-            GLib.idle_add(finish_refresh)
+            GLib.idle_add(finish_refresh, refresh_result)
+
+            return refresh_result
 
         # start the refresh thread
         if self.refresh_thread is None or not self.refresh_thread.is_alive():
@@ -156,15 +165,29 @@ class ContentPage(Adw.NavigationPage):
 
     def on_refresh_blocking(self) -> bool:
         """Child class should override this with blocking, long-running computation."""
-        raise NotImplementedError("Child class must implement on_refresh_blocking()!")
+        # raise NotImplementedError("Child class must implement on_refresh_blocking()!")
+        pass
 
     def on_refresh_gui(self, *args):
-        """Child class should override this to update the UI with the result of the blocking refresh."""
-        raise NotImplementedError("Child class must implement on_refresh_gui()!")
+        """Child class should override this to update the GUI with the result of the blocking refresh."""
+        # raise NotImplementedError("Child class must implement on_refresh_gui()!")
+        pass
 
-    def on_clear_gui(self):
-        """Child class should override this to clear the UI before a refresh."""
-        raise NotImplementedError("Child class must implement on_clear_gui()!")
+    def on_reset_gui(self):
+        """Child class should override this to reset the GUI before a refresh."""
+        # raise NotImplementedError("Child class must implement on_reset_gui()!")
+        pass
+
+    def on_search_changed(self, *args):
+        self.pref_page.apply_filter(self.search_entry.get_text())
+
+    def on_detach(self, *args):
+        detached_window = DetachedWindow(
+            application=self.get_root().get_application(),
+            nav_page_class=self.__class__,
+            nav_page_kwargs=self.detach_kwargs,
+        )
+        detached_window.show()
 
     def show_toast(self, toast_text: str):
         self.toast_overlay.add_toast(Adw.Toast(title=str(toast_text)))
@@ -176,12 +199,19 @@ class ContentPage(Adw.NavigationPage):
 
     def show_banner(self, banner_text: str):
         self.banner.set_title(str(banner_text))
+        self.banner.set_button_label("")
         self.banner.set_revealed(True)
 
     def show_banner_w_btn(self, banner_text: str, btn_label: str, func: Callable, **func_kwargs):
-        self.show_banner(banner_text=banner_text)
+        self.banner.set_title(str(banner_text))
         self.banner.set_button_label(str(btn_label))
-        self.banner.connect("button-clicked", lambda toast, *_: func(**func_kwargs))
+        self.banner.set_revealed(True)
+
+        # TODO this causes problems!
+        if hasattr(self, "banner_signal_handler"):
+            self.disconnect(self.banner_signal_handler)
+
+        self.banner_signal_handler = self.banner.connect("button-clicked", func, func_kwargs)
 
     def hide_banner(self):
         self.banner.set_revealed(False)

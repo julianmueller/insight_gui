@@ -53,15 +53,13 @@ class InterfaceBrowserPage(ContentPage):
         super().set_empty_page_text("Refresh to show interfaces")
         super().set_search_entry_placeholder_text("Search for interfaces")
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         # TODO make these buttons work
         btm_widgets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, css_classes=["linked"])
         super().add_bottom_widget(btm_widgets, position="center")
-        btm_widgets.append(Gtk.ToggleButton(label="msgs", active=True))
-        btm_widgets.append(Gtk.ToggleButton(label="srvs", active=True))
-        btm_widgets.append(Gtk.ToggleButton(label="acts", active=True))
+        btm_widgets.append(Gtk.ToggleButton(label="msgs", active=True, width_request=100))
+        btm_widgets.append(Gtk.ToggleButton(label="srvs", active=True, width_request=100))
+        btm_widgets.append(Gtk.ToggleButton(label="acts", active=True, width_request=100))
 
     def on_refresh_blocking(self) -> bool:
         self.available_msgs = get_message_interfaces()
@@ -143,7 +141,7 @@ class InterfaceBrowserPage(ContentPage):
         if self.pref_page.num_groups == 0:
             self.pref_page.set_empty_page_text("No interfaces found. Refresh to try again.")
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         self.pref_page.clear()
 
     def on_interface_filters_changed(self, *args):

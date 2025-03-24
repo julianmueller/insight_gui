@@ -1,5 +1,5 @@
 # =============================================================================
-# action_list_page.py
+# topic_list_page.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
@@ -23,7 +23,8 @@
 from operator import itemgetter
 from typing import Dict
 
-from rclpy.action import get_action_names_and_types
+from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
+from ros2topic.api import get_topic_names_and_types
 
 import gi
 
@@ -31,67 +32,75 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.action_info_page import ActionInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-class ActionListPage(ContentPage):
-    __gtype_name__ = "ActionListPage"
+class TopicListPage(ContentPage):
+    __gtype_name__ = "TopicListPage"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        super().set_title("Actions")
-        super().set_empty_page_text("Refresh to show actions")
-        super().set_search_entry_placeholder_text("Search for actions")
+        super().set_title("Topic List")
+        super().set_empty_page_text("Refresh to show topics")
+        super().set_search_entry_placeholder_text("Search for topics")
 
     def on_setup_gui(self):
-        self.action_ns_groups: Dict[PrefGroup] = {}
+        self.topic_ns_groups: Dict[PrefGroup] = {}
 
     def on_refresh_blocking(self) -> bool:
-        self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
-
-        if len(self.available_actions) == 0:
-            self.show_banner_w_btn("No actions found. Refresh to try again.", "Refresh", self.on_refresh)
+        self.available_topics = sorted(
+            get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True), key=itemgetter(0)
+        )
+        if len(self.available_topics) == 0:
+            self.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
             return False
         return True
 
     def on_refresh_gui(self):
-        for action_name, action_types in self.available_actions:
-            # action_types is a list, as multiple servers can advertise different types to the same action
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(action_types) == 1:
-                action_types = action_types[0]
-            else:
-                action_types = ", ".join(action_types)
+        # TODO this is ugly
+        from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
 
-            # split action name into namespace and name
-            parts = action_name.rstrip("/").split("/")
+        for i, (topic_name, topic_types) in enumerate(self.available_topics):
+            # topic_types is a list, as multiple servers can advertise different types to the same topic
+            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
+            if len(topic_types) == 1:
+                topic_types = topic_types[0]
+            else:
+                topic_types = ", ".join(topic_types)
+
+            # split topic name into namespace and name
+            parts = topic_name.rstrip("/").split("/")
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
 
             # TODO add a button to enable/disable sorting into groups
-            # get the namespace group of the action
-            if namespace in self.action_ns_groups.keys():
-                group = self.action_ns_groups[namespace]
+            # get the namespace group of the topic
+            if namespace in self.topic_ns_groups.keys():
+                group = self.topic_ns_groups[namespace]
             else:
                 group = self.pref_page.add_group(title=namespace)
-                self.action_ns_groups[namespace] = group
+                self.topic_ns_groups[namespace] = group
 
             # TODO this somehow messes with the sorting :( again ...
 
-            row = PrefRow(title=name, subtitle=action_types)
-            # , is_hidden=action_or_service_is_hidden(action_name)) # TODO is_hidden possible for actions?
+            row = PrefRow(title=name, subtitle=topic_types)
+            if topic_or_service_is_hidden(topic_name):
+                row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
-                subpage_class=ActionInfoPage,
-                subpage_kwargs={"action_name": action_name, "action_types": action_types},
+                subpage_class=TopicInfoPage,
+                subpage_kwargs={
+                    "topic_name": topic_name,
+                    "topic_types": topic_types,
+                },
             )
             group.add_row(row)
 
     def on_reset_gui(self):
-        for group in reversed(self.action_ns_groups.values()):
+        for group in reversed(self.topic_ns_groups.values()):
             self.pref_page.remove_group(group)
-        self.action_ns_groups.clear()
+        self.topic_ns_groups.clear()

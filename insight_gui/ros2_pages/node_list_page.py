@@ -44,9 +44,7 @@ class NodeListPage(ContentPage):
         super().set_title("Nodes")
         super().set_search_entry_placeholder_text("Search for nodes")
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
 
     def on_refresh_blocking(self) -> bool:
@@ -77,5 +75,5 @@ class NodeListPage(ContentPage):
 
         self.node_list_group.add_rows_idle(rows)
 
-    def on_clear_gui(self):
+    def on_reset_gui(self):
         self.node_list_group.clear()

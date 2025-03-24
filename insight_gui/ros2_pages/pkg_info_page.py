@@ -42,15 +42,13 @@ class PackageInfoPage(ContentPage):
 
     def __init__(self, pkg_name: str, pkg_path: str, **kwargs):
         super().__init__(searchable=True, refreshable=False, **kwargs)
-        super().set_title(f"Package <{pkg_name}>")
+        super().set_title(f"Package {pkg_name}")
 
         self.pkg_name = pkg_name
         self.pkg_path = pkg_path
         self.detach_kwargs = {"pkg_name": pkg_name, "pkg_path": pkg_path}
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
-
+    def on_setup_gui(self):
         self.link_group = self.pref_page.add_group(title="Links")
         self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
             icon_name="folder-symbolic",
