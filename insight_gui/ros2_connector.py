@@ -40,6 +40,9 @@ class ROS2Connector:
         self.is_running = False
         self.start_time = None
 
+        # list of subscribers
+        self.subs = []
+
         rclpy.init(args=None)
 
     def start_node(self, node_name: str = "insight_gui", *args, **kwargs):
@@ -93,9 +96,15 @@ class ROS2Connector:
 
     # TODO
     def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable):
-        # print("adding subsciption")
         sub = self.node.create_subscription(msg_type, topic_name, callback, 10)
+        self.subs.append(sub)
         return sub
+
+    def destroy_subscription(self, sub):
+        if sub in self.subs:
+            self.node.destroy_subscription(sub)
+        else:
+            raise RuntimeError("Subscription cannot be destroyed")
 
     # TODO this needs some refactoring and threading
     # from ros2service.verb.call import requester  # could also be used for that

@@ -31,7 +31,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, GLib
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import MultiToggleButtonRow, ColumnViewRow
@@ -215,18 +214,19 @@ class LoggerPage(ContentPage):
 
     def log_callback(self, msg: Log):
         def _idle():
-            if self.is_logging:
-                self.column_view_row.add_row(
-                    LogMessage(
-                        unix_time=float(msg.stamp.sec + msg.stamp.nanosec / 1e9),
-                        severity=LoggingSeverity(msg.level),
-                        message=msg.msg,
-                        node_name=msg.name,
-                    )
+            self.column_view_row.add_row(
+                LogMessage(
+                    unix_time=float(msg.stamp.sec + msg.stamp.nanosec / 1e9),
+                    severity=LoggingSeverity(msg.level),
+                    message=msg.msg,
+                    node_name=msg.name,
                 )
-            return False
+            )
 
-        GLib.idle_add(_idle)
+            return False  # make idle_add stop after one iteration
+
+        if self.is_logging:
+            GLib.idle_add(_idle)
 
     def on_clear_log(self, *args):
         self.column_view_row.clear_rows()

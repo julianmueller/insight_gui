@@ -214,6 +214,17 @@
                                     </object>
                                 </child>
 
+                                <!-- Topics -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">topic_echo</property>
+                                        <property name="title">Topic Listener</property>
+                                        <property name="child">
+                                            <object class="AdwNavigationView" id="topic_echo_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
                                 <!-- Services -->
                                 <child>
                                     <object class="GtkStackPage">

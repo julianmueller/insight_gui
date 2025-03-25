@@ -45,6 +45,7 @@ class ImageViewerPage(ContentPage):
         super().set_title("Image Viewer")
 
         self.cv_bridge = CvBridge()
+        self.sub = None
 
     def on_setup_gui(self):
         self.img_group = self.pref_page.add_group(title="View Image", filterable=False)
@@ -116,7 +117,7 @@ class ImageViewerPage(ContentPage):
             self.img_topic_row.set_model(self.img_topic_list_store)
             self.img_topic_row.set_selected(0)
         else:
-            super().show_toast("No topic with images found")
+            super().show_banner("No topic with images found")  # TODO add refresh btn
 
     def on_reset_gui(self):
         self.img_topic_list_store.remove_all()
@@ -125,8 +126,12 @@ class ImageViewerPage(ContentPage):
         if self.img_topic_list_store.get_n_items() <= 0:
             return
 
+        if self.sub:
+            self.ros2_connector.destroy_subscription(self.sub)
+
         topic_name = self.img_topic_row.get_selected_item().get_string()
         if topic_name:
+            # TODO maybe add another button to actually subscribe to the topic and not create it by changing the name?
             self.sub = self.ros2_connector.add_subsciption(Image, topic_name, self.on_ros_img_callback)
             self.single_img_done = False
             self.img_row.reset_image_to_default_icon()

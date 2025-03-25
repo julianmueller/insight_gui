@@ -32,6 +32,7 @@ from insight_gui.ros2_pages.pkg_list_page import PackageListPage
 from insight_gui.ros2_pages.node_list_page import NodeListPage
 from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
 from insight_gui.ros2_pages.topic_list_page import TopicListPage
+from insight_gui.ros2_pages.topic_echo_page import TopicEchoPage
 from insight_gui.ros2_pages.service_list_page import ServiceListPage
 from insight_gui.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.ros2_pages.action_list_page import ActionListPage
@@ -63,6 +64,7 @@ class MainWindow(Adw.ApplicationWindow):
     pkg_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
     node_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
     topic_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    topic_echo_nav_view: Adw.NavigationView = Gtk.Template.Child()
     service_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
     srv_caller_nav_view: Adw.NavigationView = Gtk.Template.Child()
     action_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
@@ -94,6 +96,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.pkg_list_nav_view.add(PackageListPage())
         self.node_list_nav_view.add(NodeListPage())
         self.topic_list_nav_view.add(TopicListPage())
+        self.topic_echo_nav_view.add(TopicEchoPage())
         self.service_list_nav_view.add(ServiceListPage())
         self.srv_caller_nav_view.add(ServiceCallPage())
         self.action_list_nav_view.add(ActionListPage())
