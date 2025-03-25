@@ -86,43 +86,6 @@ ros2 run insight_gui main
 - show ros2 doctor inspection with available package updates etc
 - every page is deteachable into its own floating window
 
-
-## TODO List
-
-- marketing
-    - make a proper logo (help!)
-    - redo all screenshots before release
-- features
-    - make "set parameter" work
-    - make btns of img viewer work
-    - add tf inspection page (show the stuff that rviz shows)
-    - add a controller "/joy" page (also look into Workbench - Gamepad Demo)
-    - add a teleop page
-    - add an "echo" group for topics info page, to listen to current data on the topic (maybe also for services and actions?)
-    - ?add every page of the gui as a ros2 executable, so a window with only this page starts
-    - add constants to be visible in msg definitions (like ur_msgs/msg/SetIO)
-    - add the ros wiki explainations for packages? like what are all possible subscribed/published topics? or just a btn?
-    - find a way to load all "refresh" content on startup, also if one page updates "available_nodes" etc, all other pages that utilize this shall update as well
-    - check continuous img stream
-    - extend preferences dialog
-    - add option to add new env variables in the pref dialog (and add a refresh btn)
-    - add a launch page to directly launch nodes with a set of arguments
-    - add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open
-    - add when a new window is opened as a detach, make it have the same content as the detached content_page
-    - add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length
-- cleanup
-    - remove "status_page" in window.ui
-    - rename all function, to fit GTK style "on_xxx" and "do_xxx"
-    - merge all "msg_type_info_page" etc into one class when differs in what it displays depending on the interface type
-    - clean up the mess of XXX.connect_(..., func(**func_kwargs)) and connect_data(...) and rather use connect(..., data)
-    - banner reload throws an error!
-- gnome/gtk4
-    - make shortcuts (eg CTRL+F) work and add shortcuts page (they should also work via actions and for detached windows)
-    - add gtk action for all major actions
-    - add gtk settings
-    - add Gtk/Gio Notifications
-    - replace "webbrowser" stuff with gtk File/Web Launcher
-
 ## License
 
 GPLv3. See [LICENSE](LICENSE).
