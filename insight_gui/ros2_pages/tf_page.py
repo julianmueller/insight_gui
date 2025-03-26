@@ -28,6 +28,7 @@ import rclpy
 # from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from tf2_ros import Buffer, TransformListener, LookupException, ConnectivityException, ExtrapolationException
 from geometry_msgs.msg import TransformStamped
+from rosidl_runtime_py import message_to_yaml
 
 import gi
 
@@ -82,6 +83,8 @@ class TransformsPage(ContentPage):
         )
 
         # result row that displays the result of the calculation
+        # TODO maybe make this into individual rows for each tf component (position xyz, orientation xyzw, etc) that
+        # are copyable, instead of a generic text field?
         self.result_text_row = self.calc_group.add_row(TextViewRow(title="Result", show_copy_btn=True, visible=False))
 
         # gio store that will hold all the frames
@@ -130,7 +133,7 @@ class TransformsPage(ContentPage):
             expander_row.add_row(parent_frame_row)
 
             tf_row = TextViewRow(title="Transform", show_copy_btn=True)
-            tf_row.set_text(self._tf_stamped_to_text(frame_info["transform"]))
+            tf_row.set_text(message_to_yaml(frame_info["transform"]))
             expander_row.add_row(tf_row)
 
             broadcaster_row = PrefRow(title="Broadcaster")
@@ -191,31 +194,23 @@ class TransformsPage(ContentPage):
 
         try:
             # Lookup transform
-            transform: TransformStamped = self.tf_buffer.lookup_transform_async(
-                target_frame=source_frame, source_frame=target_frame, time=rclpy.time.Time()
+            transform: TransformStamped = self.tf_buffer.lookup_transform(
+                target_frame=source_frame,
+                source_frame=target_frame,
+                time=rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=5),
             )
 
-            text = self._tf_stamped_to_text(transform)
+            # TODO check if transform is valid, eg frames are connected in some way
+            # and if not give an error like "not connected" etc
+
+            text = message_to_yaml(transform.transform)
 
             self.result_text_row.set_subtitle(f"from <{source_frame}> to <{target_frame}>")
             self.result_text_row.set_text(text)
             self.result_text_row.set_visible(True)
 
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
-            self.get_logger().error(f"Could not calculate transform: {e}")
             super().show_toast(f"Could not calculate transform: {e}")
             self.result_text_row.set_text("")
             self.result_text_row.set_visible(False)
-
-    def _tf_stamped_to_text(self, tf: TransformStamped):
-        return (
-            "Translation:\n"
-            + f"  x: {tf.transform.translation.x:.8f},\n"
-            + f"  y: {tf.transform.translation.y:.8f},\n"
-            + f"  z: {tf.transform.translation.z:.8f}\n"
-            + "Rotation:\n"
-            + f"  x: {tf.transform.rotation.x:.8f},\n"
-            + f"  y: {tf.transform.rotation.y:.8f},\n"
-            + f"  z: {tf.transform.rotation.z:.8f},\n"
-            + f"  w: {tf.transform.rotation.w:.8f}"
-        )
