@@ -36,6 +36,7 @@ from insight_gui.ros2_pages.topic_echo_page import TopicEchoPage
 from insight_gui.ros2_pages.service_list_page import ServiceListPage
 from insight_gui.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.ros2_pages.action_list_page import ActionListPage
+from insight_gui.ros2_pages.graph_page import GraphPage
 from insight_gui.ros2_pages.param_page import ParameterListPage
 from insight_gui.ros2_pages.tf_page import TransformsPage
 from insight_gui.ros2_pages.log_page import LoggerPage
@@ -69,6 +70,7 @@ class MainWindow(Adw.ApplicationWindow):
     srv_caller_nav_view: Adw.NavigationView = Gtk.Template.Child()
     action_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
     interface_browser_nav_view: Adw.NavigationView = Gtk.Template.Child()
+    scrolled_graph_parent: Gtk.ScrolledWindow = Gtk.Template.Child()
     param_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
     tf_nav_view: Adw.NavigationView = Gtk.Template.Child()
     img_viewer_nav_view: Adw.NavigationView = Gtk.Template.Child()
@@ -101,6 +103,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.srv_caller_nav_view.add(ServiceCallPage())
         self.action_list_nav_view.add(ActionListPage())
         self.interface_browser_nav_view.add(InterfaceBrowserPage())
+        self.scrolled_graph_parent.set_child(GraphPage(self.ros2_connector))
         self.param_list_nav_view.add(ParameterListPage())
         self.tf_nav_view.add(TransformsPage())
         self.img_viewer_nav_view.add(ImageViewerPage())

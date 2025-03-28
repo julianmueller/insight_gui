@@ -50,6 +50,7 @@
 - clean up the mess of XXX.connect_(..., func(**func_kwargs)) and connect_data(...) and rather use connect(..., data)
 - replace "webbrowser" stuff with gtk File/Web Launcher
 - look into `from rclpy.expand_topic_name import expand_topic_name`
+- maybe separate the header with the buttons etc from the content page, so that the canvas can also use the header etc?
 
 ## Bug Fixes
 

@@ -181,6 +181,8 @@
                         <property name="child">
                             <object class="GtkStack" id="content_stack">
 
+                                <!-- TODO welcome/startup page? -->
+
                                 <!-- Package List -->
                                 <child>
                                     <object class="GtkStackPage">
@@ -265,6 +267,17 @@
                                         <property name="title">Interfaces</property>
                                         <property name="child">
                                             <object class="AdwNavigationView" id="interface_browser_nav_view" />
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Package List -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">graph_page</property>
+                                        <property name="title">Graph</property>
+                                        <property name="child">
+                                            <object class="GtkScrolledWindow" id="scrolled_graph_parent" />
                                         </property>
                                     </object>
                                 </child>
