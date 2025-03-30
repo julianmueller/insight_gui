@@ -53,7 +53,6 @@ class InterfaceBrowserPage(ContentPage):
         super().set_empty_page_text("Refresh to show interfaces")
         super().set_search_entry_placeholder_text("Search for interfaces")
 
-    def on_setup_gui(self):
         # TODO make these buttons work
         btm_widgets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, css_classes=["linked"])
         super().add_bottom_widget(btm_widgets, position="center")

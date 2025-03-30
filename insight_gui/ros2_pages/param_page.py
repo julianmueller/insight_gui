@@ -41,7 +41,7 @@ from gi.repository import Gtk, Adw
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.ros2_pages.edit_param_dialog import EditParamDialog
+from insight_gui.ros2_pages.param_edit_dialog import ParamEditDialog
 
 
 class ParameterListPage(ContentPage):
@@ -53,7 +53,6 @@ class ParameterListPage(ContentPage):
         super().set_empty_page_text("Refresh to show parameters")
         super().set_search_entry_placeholder_text("Search for parameters")
 
-    def on_setup_gui(self):
         self.parameter_lists: Dict[PrefGroup] = {}
 
     def on_refresh_blocking(self) -> bool:
@@ -112,7 +111,7 @@ class ParameterListPage(ContentPage):
         self.pref_page.clear()
 
     def on_edit_param(self, *args, node_name: str, param_name: str):
-        EditParamDialog(
+        ParamEditDialog(
             node_name=node_name,
             param_name=param_name,
             ros2_connector=self.ros2_connector,

@@ -22,7 +22,7 @@
 
 from ros2topic.api import get_topic_names_and_types
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
+from cv_bridge import CvBridge, CvBridgeError
 
 import gi
 
@@ -47,7 +47,6 @@ class ImageViewerPage(ContentPage):
         self.cv_bridge = CvBridge()
         self.sub = None
 
-    def on_setup_gui(self):
         self.img_group = self.pref_page.add_group(title="View Image", filterable=False)
         self.img_topic_row = self.img_group.add_row(
             Adw.ComboRow(
@@ -141,8 +140,13 @@ class ImageViewerPage(ContentPage):
     def on_ros_img_callback(self, msg: Image, *args):
         if self.continuous_img_stream or not self.single_img_done:
             # Convert sensor_msgs/Image to a BGR8 numpy array (default behavior).
-            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-            self.img_row.set_image_from_opencv(cv_image)
+
+            try:
+                cv_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+                self.img_row.set_image_from_opencv(cv_image)
+
+            except (RuntimeError, AttributeError, CvBridgeError) as e:
+                self.show_toast(f"Error: {e}")
 
             # TODO fill the info rows
             self.width_lbl.set_label(str(msg.width))

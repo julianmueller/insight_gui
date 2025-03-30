@@ -79,17 +79,14 @@ class LoggerPage(ContentPage):
         super().__init__(refreshable=False, searchable=False, **kwargs)
         super().set_title("Logger")
 
-        self.is_logging = False
-
-    def on_setup_gui(self):
-        # create subscription to the rosout topic via the ros2 connector
-        self.rosout_sub = self.ros2_connector.add_subsciption(Log, "/rosout", self.log_callback)
+        # self.is_logging = False
+        self.rosout_sub = None
 
         # Btn for opening the online link to msg definition
         self.play_pause_btn = super().add_bottom_widget(
             PlayPauseButton(
-                default_active=self.is_logging,
-                func=self.on_toggle_logging,
+                default_active=False,
+                func=self.on_logging_btn_toggled,
                 labels=("Stop logging", "Start logging"),
             ),
             position="start",
@@ -166,9 +163,18 @@ class LoggerPage(ContentPage):
         # logger = get_logger("custom_logger")
         # logger.set_handler(custom_log_handler)
 
-    # @property
-    # def is_logging(self) -> bool:
-    #     return self.play_pause_btn.is_active
+    @GObject.Property(type=bool, default=False)
+    def is_logging(self) -> bool:
+        return self.play_pause_btn.is_active
+
+    @is_logging.setter
+    def is_logging(self, value: bool):
+        if value:
+            # create subscription to the rosout topic via the ros2 connector
+            self.rosout_sub = self.ros2_connector.add_subsciption(Log, "/rosout", self.log_callback)
+        else:
+            self.ros2_connector.destroy_subscription(self.rosout_sub)
+            self.rosout_sub = None
 
     def on_unrealize(self, *args):
         # super().on_unrealize(*args)
@@ -209,7 +215,7 @@ class LoggerPage(ContentPage):
     #         self.node_list_store.append(Gtk.StringObject.new(node_full_name))
     #     self.node_filter_row.set_model(self.node_list_store)
 
-    def on_toggle_logging(self, btn: Gtk.Widget, playing: bool, *args):
+    def on_logging_btn_toggled(self, btn: Gtk.Widget, playing: bool, *args):
         self.is_logging = playing
 
     def log_callback(self, msg: Log):

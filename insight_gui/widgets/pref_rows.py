@@ -211,6 +211,12 @@ class PrefRow(Adw.ActionRow, GenericRow):
         super().set_activatable(True)
         self.next_page_icon.set_visible(True)
 
+    def set_subtitle(self, subtitle: str, max_lines: int = 1):
+        # TODO concat lines of the subtitle!
+        # if len(subtitle)
+        # subtitle =
+        super().set_subtitle(subtitle)
+
 
 class AdditionalContentRow(PrefRow):
     __gtype_name__ = "AdditionalContentRow"
@@ -557,6 +563,9 @@ class ImageViewRow(AdditionalContentRow):
             self.frame.set_child(self.icon_image)
 
     def set_image_from_opencv(self, cv_image):
+        if cv_image is None:
+            raise RuntimeError("Image has no data")
+
         if self.image is None:
             self.image = Gtk.Picture()
             self.frame.set_child(self.image)
@@ -783,7 +792,7 @@ class MultiToggleButtonRow(AdditionalContentRow):
         self.content_box.set_properties(
             orientation=Gtk.Orientation.HORIZONTAL,
             spacing=0,
-            homogeneous=True,
+            halign=Gtk.Align.CENTER,
             css_classes=["linked"],
         )
 

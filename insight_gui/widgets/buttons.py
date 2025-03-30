@@ -26,7 +26,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import GObject, Gtk, Adw
 
 from insight_gui.utils.constants import ON_ICON, OFF_ICON
 
@@ -134,7 +134,14 @@ class PlayPauseButton(ToggleButton):
             icon_names=("media-playback-pause-symbolic", "media-playback-start-symbolic"),
             **kwargs,
         )
-        pass
+
+    @GObject.Property(type=bool, default=False)
+    def playing(self) -> bool:
+        return super().get_active()
+
+    @playing.setter
+    def playing(self, value: bool):
+        super().set_active(value)
 
 
 # class PlayPauseButton(Gtk.Button):

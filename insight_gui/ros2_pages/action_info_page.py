@@ -53,7 +53,6 @@ class ActionInfoPage(ContentPage):
             "action_types": action_types,
         }
 
-    def on_setup_gui(self):
         # Action Type
         self.action_type_group = self.pref_page.add_group(title="Action Type")
 

@@ -104,17 +104,9 @@ class ContentPage(Adw.NavigationPage):
         self.nav_view = self.get_ancestor(Adw.NavigationView)
         self.ros2_connector = self.get_root().ros2_connector
 
-        # for children to override!
-        self.on_setup_gui()
-
         # refresh the gui
         if self.refreshable:
             self.on_refresh()
-
-    def on_setup_gui(self):
-        """Child class should override this to setup the GUI."""
-        # raise NotImplementedError("Child class must implement on_setup_gui()!")
-        pass
 
     def on_refresh(self, *args):
         """Executed, when the refresh button is clicked."""
@@ -138,7 +130,8 @@ class ContentPage(Adw.NavigationPage):
             if refresh_result:
                 self.hide_banner()
             else:
-                self.show_banner_w_btn("Refresh yielded no results! Retry?", "Refresh", self.on_refresh)
+                # self.show_banner_w_btn("Refresh yielded no results! Retry?", "Refresh", self.on_refresh) # TODO this causes problems
+                self.show_banner("Refresh yielded no results")
             return False  # for Glib.idle_add to end after one iteration
 
         def refresh_wrapper(*args):
@@ -166,7 +159,7 @@ class ContentPage(Adw.NavigationPage):
     def on_refresh_blocking(self) -> bool:
         """Child class should override this with blocking, long-running computation."""
         # raise NotImplementedError("Child class must implement on_refresh_blocking()!")
-        pass
+        return True
 
     def on_refresh_gui(self, *args):
         """Child class should override this to update the GUI with the result of the blocking refresh."""
@@ -179,6 +172,8 @@ class ContentPage(Adw.NavigationPage):
         pass
 
     def on_search_changed(self, *args):
+        if not self.searchable:
+            return
         self.pref_page.apply_filter(self.search_entry.get_text())
 
     def on_detach(self, *args):
@@ -207,11 +202,12 @@ class ContentPage(Adw.NavigationPage):
         self.banner.set_button_label(str(btn_label))
         self.banner.set_revealed(True)
 
-        # TODO this causes problems!
-        if hasattr(self, "banner_signal_handler"):
-            self.disconnect(self.banner_signal_handler)
+        # TODO this causes problems! this gets executed multiple times, and
+        # if hasattr(self, "banner_signal_handler") and self.banner_signal_handler is not None:
+        #     self.disconnect(self.banner_signal_handler)
 
-        self.banner_signal_handler = self.banner.connect("button-clicked", func, func_kwargs)
+        # self.banner_signal_handler = self.banner.connect("button-clicked", func, func_kwargs)
+        # print(self.banner_signal_handler)
 
     def hide_banner(self):
         self.banner.set_revealed(False)

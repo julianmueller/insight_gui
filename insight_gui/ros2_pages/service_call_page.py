@@ -31,7 +31,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GLib
+from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
@@ -48,7 +48,6 @@ class ServiceCallPage(ContentPage):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Service Call")
 
-    def on_setup_gui(self):
         # select group
         self.select_group = self.pref_page.add_group(title="Select Service")
 
@@ -111,7 +110,7 @@ class ServiceCallPage(ContentPage):
             return
 
         def on_setup(factory, list_item):
-            label = Gtk.Label(xalign=0, wrap=True, hexpand=True)
+            label = Gtk.Label(xalign=0, wrap=True, hexpand=True, ellipsize=Pango.EllipsizeMode.END)
             list_item.set_child(label)
 
         def on_bind(factory, list_item):

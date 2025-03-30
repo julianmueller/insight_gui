@@ -182,7 +182,6 @@ class ActionTypeInfoPage(ContentPage):
         self.act_type_full_name = act_type_full_name
         self.detach_kwargs = {"act_type_full_name": act_type_full_name}
 
-    def on_setup_gui(self):
         # Load the action parent class
         act_class = get_action(self.act_type_full_name)
 

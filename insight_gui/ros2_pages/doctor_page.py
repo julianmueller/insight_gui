@@ -43,7 +43,6 @@ class DoctorPage(ContentPage):
         super().set_title("Doctor")
         super().set_search_entry_placeholder_text("Ask the doctor")
 
-    def on_setup_gui(self):
         self.network_config_group = self.pref_page.add_group(
             title="NETWORK CONFIGURATION", empty_group_text="Refresh to show network configuration"
         )

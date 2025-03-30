@@ -48,7 +48,6 @@ class TransformsPage(ContentPage):
         super().set_title("Transforms")
         super().set_search_entry_placeholder_text("Search for Frames")
 
-    def on_setup_gui(self):
         # TODO add a button row that shows a dialog with a tf-tree
 
         self.calc_group = self.pref_page.add_group(title="Calculate Transform", filterable=False)

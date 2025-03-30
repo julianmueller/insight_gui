@@ -50,7 +50,6 @@ class TopicEchoPage(ContentPage):
         self.is_echoing = False
         self.sub = None
 
-    def on_setup_gui(self):
         # Btn for opening the online link to msg definition
         self.play_pause_btn = super().add_bottom_widget(
             PlayPauseButton(

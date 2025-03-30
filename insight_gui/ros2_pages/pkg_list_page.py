@@ -30,7 +30,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.new_pkg_dialog import NewPkgDialog
+from insight_gui.ros2_pages.pkg_new_dialog import PackageNewDialog
 from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
@@ -45,14 +45,13 @@ class PackageListPage(ContentPage):
         super().set_empty_page_text("Refresh to show packages")
         super().set_search_entry_placeholder_text("Search for Packages")
 
-    def on_setup_gui(self):
         self.pkg_list_group = self.pref_page.add_group(empty_group_text="Refresh to show packages")
 
         super().add_bottom_left_btn(
             label="New Package",
             icon_name="list-add-symbolic",
             tooltip_text="Create a new package",
-            func=lambda *_: NewPkgDialog().present(),
+            func=lambda *_: PackageNewDialog().present(),
         )
 
         super().add_bottom_right_btn(

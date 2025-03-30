@@ -27,7 +27,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Gio
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
@@ -42,12 +42,12 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
     def __init__(self, ros2_connector: ROS2Connector, **kwargs):
         super().__init__(**kwargs)
-        super().connect("realize", self.on_realize)
         super().set_title("Settings")
+        super().set_size_request(300, 500)
+        super().connect("realize", self.on_realize)
+        super().connect("close-attempt", self.on_close_attempt)
 
         self.ros2_connector = ros2_connector
-
-    def on_realize(self, *args):
         # Page with ROS2 Settings
         self.ros2_page = PrefPage(title="ROS2", icon_name="applications-other-symbolic")
         super().add(self.ros2_page)
@@ -87,18 +87,12 @@ class PreferencesDialog(Adw.PreferencesDialog):
         # Group for ROS2 Node Controls
         node_group = self.ros2_page.add_group(title="ROS2 Node")
 
-        controls_row: PrefRow = node_group.add_row(PrefRow(title="Controls"))
-        # controls_row.add_suffix(
-        #     PlayPauseButton(tooltip_texts=("Start Node", "Stop Node"), func=self.on_toggle_ros2_node)
-        # )
-        start_btn = controls_row.add_suffix_btn(
-            icon_name="media-playback-start-symbolic", tooltip_text="Start", func=lambda: None
+        self.controls_row: PrefRow = node_group.add_row(PrefRow(title="Controls"))
+        self.controls_row.add_suffix(
+            PlayPauseButton(
+                tooltip_texts=("Start Node", "Stop Node"), func=self.on_toggle_ros2_node, default_active=True
+            )
         )
-        start_btn.set_action_name("app.ros2_node_start")  # TODO not working
-        stop_btn = controls_row.add_suffix_btn(
-            icon_name="media-playback-stop-symbolic", tooltip_text="Stop", func=lambda: None
-        )
-        stop_btn.set_action_name("app.ros2_node_start")  # TODO not working
 
         # settings_group = self.ros2_page.add_group(title="Settings", description="bla")
         # row_node_name = settings_group.add_row(Adw.EntryRow(title="ros2_gui_node_name", show_apply_button=True))
@@ -116,6 +110,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
         # self.add(self.page2)
 
         # self.page2.add_group(title="Test", description="bla")
+
+    def on_realize(self, *args):
+        is_running_action = self.get_root().app.lookup_action("ros2_node_is_running")
+        self.node_state_changed_handler = is_running_action.connect("notify::state", self.on_change_node_running_state)
 
         # update env vars
         self.update_env_vars()
@@ -150,11 +148,17 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         self.add_toast(Adw.Toast(title=f"ROS2 Node is {is_running_str}"))
 
-    # def on_toggle_ros2_node(self, active: bool, *args):
-    #     # self.get_application().lookup_action("ros2_node_is_running").get_state().get_boolean()
-    #     if active:
-    #         self.get_root().app.activate_action("ros2_node_stop", None)
-    #         self.add_toast(Adw.Toast(title="Stopped ROS2 Node"))
-    #     else:
-    #         self.get_root().app.activate_action("ros2_node_start", None)
-    #         self.add_toast(Adw.Toast(title="Started ROS2 Node"))
+    def on_toggle_ros2_node(self, btn: PlayPauseButton, active: bool, *args):
+        if active:
+            self.get_root().app.activate_action("ros2_node_start", None)
+            self.add_toast(Adw.Toast(title="Started ROS2 Node"))
+        else:
+            self.get_root().app.activate_action("ros2_node_stop", None)
+            self.add_toast(Adw.Toast(title="Stopped ROS2 Node"))
+
+    def on_change_node_running_state(self, action: Gio.Action, state):
+        is_running = action.get_state().get_boolean()
+        self.controls_row.set_subtitle(f"ROS2 Node is {'running' if is_running else 'not running'}")
+
+    def on_close_attempt(self, *args):
+        self.disconnect(self.node_state_changed_handler)

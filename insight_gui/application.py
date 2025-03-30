@@ -62,23 +62,27 @@ class Ros2GuiApp(Adw.Application):
         self.connect("activate", self.on_activate)
 
         # ros2 connector handles all connections to the ros2 node
-        self.ros2_connector = ROS2Connector()
+        self.ros2_connector = ROS2Connector(application=self)
 
         # Define "app.ros2_node_sstart" action
-        start_action = Gio.SimpleAction.new("ros2_node_start", None)
-        start_action.connect("activate", lambda *_: self.ros2_connector.start_node())
-        self.add_action(start_action)
+        ros2_node_start_action = Gio.SimpleAction.new("ros2_node_start", None)
+        ros2_node_start_action.connect("activate", lambda *_: self.ros2_connector.start_node())
+        self.add_action(ros2_node_start_action)
 
         # Define "app.ros2_node_stop" action
-        stop_action = Gio.SimpleAction.new("ros2_node_stop", None)
-        stop_action.connect("activate", lambda *_: self.ros2_connector.stop_node())
-        self.add_action(stop_action)
+        ros2_node_stop_action = Gio.SimpleAction.new("ros2_node_stop", None)
+        ros2_node_stop_action.connect("activate", lambda *_: self.ros2_connector.stop_node())
+        self.add_action(ros2_node_stop_action)
 
         # Define "app.ros2_node_is_running" as a stateful action
-        is_running_action = Gio.SimpleAction.new_stateful(
+        ros2_node_is_running_action = Gio.SimpleAction.new_stateful(
             "ros2_node_is_running", None, GLib.Variant.new_boolean(self.ros2_connector.is_running)
         )
-        self.add_action(is_running_action)
+        ros2_node_is_running_action.connect("notify::state", self.ros2_connector.on_node_state_changed)
+        self.add_action(ros2_node_is_running_action)
+
+        # start the ros2 node
+        self.ros2_connector.start_node()
 
     def on_activate(self, app):
         if not self.window:

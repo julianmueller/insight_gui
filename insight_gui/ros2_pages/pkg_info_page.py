@@ -48,7 +48,6 @@ class PackageInfoPage(ContentPage):
         self.pkg_path = pkg_path
         self.detach_kwargs = {"pkg_name": pkg_name, "pkg_path": pkg_path}
 
-    def on_setup_gui(self):
         self.link_group = self.pref_page.add_group(title="Links")
         self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
             icon_name="folder-symbolic",

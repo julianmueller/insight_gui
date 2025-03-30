@@ -33,8 +33,10 @@ from gi.repository import GLib, Gio
 
 
 class ROS2Connector:
-    def __init__(self):
+    def __init__(self, application):
         super().__init__()
+        self.app = application
+
         self.node: Node = None
         self.thread: GLib.Thread = None
         self.is_running = False
@@ -54,6 +56,7 @@ class ROS2Connector:
         self.start_time = self.node.get_clock().now()
         self.thread = GLib.Thread.new("ros2-thread", self.spin, None)
         self.is_running = True
+        self.app.lookup_action("ros2_node_is_running").set_state(GLib.Variant.new_boolean(True))
 
     def stop_node(self):
         if not self.is_running:
@@ -66,6 +69,7 @@ class ROS2Connector:
             self.thread = None
         self.node.destroy_node()
         self.node = None
+        self.app.lookup_action("ros2_node_is_running").set_state(GLib.Variant.new_boolean(False))
 
     def spin(self, *args, **kwargs):
         try:
@@ -83,18 +87,9 @@ class ROS2Connector:
         return False
 
     def on_node_state_changed(self, action: Gio.Action, value: GLib.Variant):
-        """
-        This callback is invoked when the action's state is requested to change.
-        'value' is a GLib.Variant wrapping the new boolean state.
-        """
-        new_state = value.get_boolean()
-        action.set_state(value)
-        if new_state:
-            self.start_node()
-        else:
-            self.stop_node()
+        action.set_state(GLib.Variant.new_boolean(self.is_running))
 
-    # TODO
+    # TODO check if this works
     def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable):
         sub = self.node.create_subscription(msg_type, topic_name, callback, 10)
         self.subs.append(sub)
@@ -115,7 +110,7 @@ class ROS2Connector:
         client = self.node.create_client(srv_type, srv_name)
 
         if not client.service_is_ready():
-            print("waiting for service to become available...")
+            print("waiting for service to become available...")  # TODO this freezes the gui
             client.wait_for_service()
 
         future = client.call_async(request)

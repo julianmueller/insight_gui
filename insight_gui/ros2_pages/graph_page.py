@@ -30,49 +30,58 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gdk
 
-from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.utils.constants import HIDDEN_OBJ_ICON
-
-# class GraphPage(ContentPage):
-#     def __init__(self, ros2_connector: ROS2Connector):
-#         super().__init__("Graph")
-#         self.graph_canvas = GraphCanvas(ros2_connector)
-#         self.add(self.graph_canvas)
+from insight_gui.widgets.canvas_blocks import NodeBlock, TopicBlock, InterfaceBlock
 
 
-class GraphPage(Gtk.Fixed):
+class GraphPage(ContentPage):
     __gtype_name__ = "GraphPage"
 
-    def __init__(self, ros2_connector: ROS2Connector):
-        super().__init__()
-        self.ros2_connector = ros2_connector
-        self.set_size_request(1000, 1000)  # Arbitrary size for now
-        self.nodes = {}
-        self.topics = {}
+    def __init__(self):
+        super().__init__(searchable=False)
+        super().set_title("Graph")
+        self.content_stack.remove(self.pref_page)
+        del self.pref_page
+
+        self.scolled_window = Gtk.ScrolledWindow()
+        self.content_stack.add_child(self.scolled_window)
+
+        self.graph_canvas = Gtk.Fixed(width_request=1000, height_request=1000)
+        self.scolled_window.set_child(self.graph_canvas)
+
+        self.node_blocks = []
+        self.topic_blocks = []
+        self.interface_blocks = []
         self.connections = []
 
-        self.refresh_graph()
+    # def on_refresh_blocking(self):
+    #     return True
 
-    def refresh_graph(self):
-        child1 = GraphChild("Node 1")
-        self.put(child1, 50, 50)
-        pass
-        # self.clear_graph()
-        # node_names = self.ros2_connector.get_node_names()
+    def on_refresh_gui(self):
+        self.clear_graph()
+        self.add_node_block("node1", 50, 50)
+        self.add_node_block("node2", 50, 150)
 
-        # x, y = 50, 50
-        # spacing = 150
+        self.add_topic_block("topic1", 250, 50)
+        self.add_topic_block("topic2", 250, 150)
 
-        # for node_name in node_names:
-        #     node_bin = self.create_node_bin(node_name)
-        #     self.put(node_bin, x, y)
-        #     self.nodes[node_name] = node_bin
-        #     y += spacing
+    def on_reset_gui(self):
+        self.clear_graph()
 
-        # self.show_all()
+    def add_node_block(self, name: str, x: int, y: int):
+        node_block = NodeBlock(name)
+        self.node_blocks.append(node_block)
+        self.graph_canvas.put(node_block, x, y)
+
+    def add_topic_block(self, name: str, x: int, y: int):
+        topic_block = TopicBlock(name)
+        self.topic_blocks.append(topic_block)
+        self.graph_canvas.put(topic_block, x, y)
+
+    def add_interface_block(self, name: str, x: int, y: int):
+        interface_block = InterfaceBlock(name)
+        self.interface_blocks.append(interface_block)
+        self.graph_canvas.put(interface_block, x, y)
 
     def create_node_bin(self, name: str):
         bin_widget = Adw.Bin()
@@ -89,37 +98,14 @@ class GraphPage(Gtk.Fixed):
             print(f"Node clicked: {widget.get_name()}")
 
     def clear_graph(self):
-        # for child in self.get_children():
-        #     self.remove(child)
-        # self.nodes.clear()
-        # self.topics.clear()
-        # self.connections.clear()
-        pass
+        for node_block in reversed(self.node_blocks):
+            self.graph_canvas.remove(node_block)
+            self.node_blocks.remove(node_block)
 
+        for topic_block in reversed(self.topic_blocks):
+            self.graph_canvas.remove(topic_block)
+            self.topic_blocks.remove(topic_block)
 
-class GraphChild(Adw.Bin):
-    __gtype_name__ = "GraphChild"
-
-    def __init__(self, title: str):
-        super().__init__()
-        self.set_size_request(120, 70)
-        frame = Gtk.Frame(css_classes=["card"])
-        self.set_child(frame)
-
-        box = Gtk.Box(
-            orientation=Gtk.Orientation.VERTICAL, spacing=5, margin_top=4, margin_bottom=4, margin_start=4, margin_end=4
-        )
-        frame.set_child(box)
-
-        label = Gtk.Label(label=title)
-        label.set_xalign(0.5)
-        box.append(label)
-
-        button = Gtk.Button(label="Action")
-        button.connect("clicked", self.on_button_clicked)
-        box.append(button)
-
-        # self.set_child(box)
-
-    def on_button_clicked(self, button):
-        print(f"Button clicked on: {self.get_name()}")
+        for interface_block in reversed(self.interface_blocks):
+            self.graph_canvas.remove(interface_block)
+            self.interface_blocks.remove(interface_block)

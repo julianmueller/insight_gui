@@ -26,7 +26,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gdk, Gio, GLib
+from gi.repository import Gtk, Adw, Gdk, Gio, GLib, GObject
 
 from insight_gui.ros2_pages.pkg_list_page import PackageListPage
 from insight_gui.ros2_pages.node_list_page import NodeListPage
@@ -55,10 +55,11 @@ class MainWindow(Adw.ApplicationWindow):
     split_view: Adw.NavigationSplitView = Gtk.Template.Child()
 
     nav_header_bar: Adw.HeaderBar = Gtk.Template.Child()
-    refresh_btn: Gtk.Button = Gtk.Template.Child()
+    # refresh_btn: Gtk.Button = Gtk.Template.Child()
     menu_btn: Gtk.Button = Gtk.Template.Child()
 
     # content_header_bar: Adw.HeaderBar = Gtk.Template.Child()
+    stack_sidebar: Gtk.StackSidebar = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
 
     # all nav views for the pages
@@ -70,7 +71,7 @@ class MainWindow(Adw.ApplicationWindow):
     srv_caller_nav_view: Adw.NavigationView = Gtk.Template.Child()
     action_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
     interface_browser_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    scrolled_graph_parent: Gtk.ScrolledWindow = Gtk.Template.Child()
+    graph_nav_view: Adw.NavigationView = Gtk.Template.Child()
     param_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
     tf_nav_view: Adw.NavigationView = Gtk.Template.Child()
     img_viewer_nav_view: Adw.NavigationView = Gtk.Template.Child()
@@ -90,9 +91,7 @@ class MainWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
         self._setup_accent_colors()
 
-        self.ros2_connector.start_node()
-
-        self.refresh_btn.set_visible(False)  # TODO do i still need this?
+        self.content_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
 
         # content of the stack
         self.pkg_list_nav_view.add(PackageListPage())
@@ -103,7 +102,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.srv_caller_nav_view.add(ServiceCallPage())
         self.action_list_nav_view.add(ActionListPage())
         self.interface_browser_nav_view.add(InterfaceBrowserPage())
-        self.scrolled_graph_parent.set_child(GraphPage(self.ros2_connector))
+        self.graph_nav_view.add(GraphPage())
         self.param_list_nav_view.add(ParameterListPage())
         self.tf_nav_view.add(TransformsPage())
         self.img_viewer_nav_view.add(ImageViewerPage())
@@ -211,6 +210,12 @@ class MainWindow(Adw.ApplicationWindow):
 
     def on_detach_shortcut(self, *args):
         self.content_stack.get_visible_child().get_visible_page().on_detach()
+
+    def on_stack_page_changed(self, stack: Gtk.Stack, stack_name: GObject.GParamSpec):
+        if self.split_view.get_collapsed():
+            self.split_view.set_show_content(True)
+        else:
+            self.split_view.set_show_content(False)
 
     def update_time_labels(self):
         node_is_running = self.app.lookup_action("ros2_node_is_running").get_state().get_boolean()

@@ -1,5 +1,5 @@
 # =============================================================================
-# new_pkg_dialog.py
+# pkg_new_dialog.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
@@ -49,8 +49,8 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow
 # TODO add setting to show/hide hidden nodes/topics etc
 
 
-class NewPkgDialog(Adw.PreferencesDialog):
-    __gtype_name__ = "NewPkgDialog"
+class PackageNewDialog(Adw.PreferencesDialog):
+    __gtype_name__ = "PackageNewDialog"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

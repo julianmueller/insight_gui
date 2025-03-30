@@ -32,9 +32,6 @@ class TeleoperatorPage(ContentPage):
         super().set_title("Teleoperator")
         super().set_search_entry_placeholder_text("Search for topics")
 
-    def on_setup_gui(self):
-        pass
-
         # TODO
         # ros2 run teleop_twist_keyboard teleop_twist_keyboard
         # ros2 run teleop_twist_joy teleop_twist_joy

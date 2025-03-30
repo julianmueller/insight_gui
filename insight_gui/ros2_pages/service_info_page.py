@@ -48,7 +48,6 @@ class ServiceInfoPage(ContentPage):
         self.service_types = service_types
         self.detach_kwargs = {"service_name": service_name, "service_types": service_types}
 
-    def on_setup_gui(self):
         # Service Type
         self.service_type_group = self.pref_page.add_group(title="Service Type")
 

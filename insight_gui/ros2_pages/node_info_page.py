@@ -38,7 +38,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.edit_param_dialog import EditParamDialog
+from insight_gui.ros2_pages.param_edit_dialog import ParamEditDialog
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
@@ -60,7 +60,6 @@ class NodeInfoPage(ContentPage):
             "node_full_name": node_full_name,
         }
 
-    def on_setup_gui(self):
         # Publishers
         self.publishers_group = self.pref_page.add_group(title="Publishers", empty_group_text="Node has no publishers")
 
@@ -284,7 +283,7 @@ class NodeInfoPage(ContentPage):
         self.parameters_group.clear()
 
     def on_edit_param(self, *args, node_name: str, param_name: str):
-        EditParamDialog(
+        ParamEditDialog(
             node_name=node_name,
             param_name=param_name,
             ros2_connector=self.ros2_connector,

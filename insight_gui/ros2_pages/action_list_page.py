@@ -47,14 +47,13 @@ class ActionListPage(ContentPage):
         super().set_empty_page_text("Refresh to show actions")
         super().set_search_entry_placeholder_text("Search for actions")
 
-    def on_setup_gui(self):
         self.action_ns_groups: Dict[PrefGroup] = {}
 
     def on_refresh_blocking(self) -> bool:
         self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
 
         if len(self.available_actions) == 0:
-            self.show_banner_w_btn("No actions found. Refresh to try again.", "Refresh", self.on_refresh)
+            # self.show_banner_w_btn("No actions found. Refresh to try again.", "Refresh", self.on_refresh)
             return False
         return True
 

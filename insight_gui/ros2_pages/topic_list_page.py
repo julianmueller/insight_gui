@@ -47,7 +47,6 @@ class TopicListPage(ContentPage):
         super().set_empty_page_text("Refresh to show topics")
         super().set_search_entry_placeholder_text("Search for topics")
 
-    def on_setup_gui(self):
         self.topic_ns_groups: Dict[PrefGroup] = {}
 
     def on_refresh_blocking(self) -> bool:

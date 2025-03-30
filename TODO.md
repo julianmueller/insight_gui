@@ -15,6 +15,7 @@
     - add gtk action for all major actions
 
 - additional pages
+    - add a `rqt_graph` equivalent page
     - add a teleop page
     - add tf inspection subpage (show the stuff that rviz shows)
     - add a controller "/joy" page (also look into Workbench - Gamepad Demo)
@@ -41,6 +42,8 @@
     - make btns of img viewer work
     - check continuous img stream
     - make btns in interface list filtering work
+    - resizing of the window also resizes the preference pages, or maybe even hides the sidebar (but it shall show no warnings!)
+    - some rows shall vexpand (like the logs) which is currently not working
 
 ## Refactor
 
@@ -58,3 +61,6 @@
 - gui still sometimes freezes
 - Search bar does not always have "focus" when a subpage is popped from the nav_view - then the row has focus?
 - fix ros2 clock (broken since actions update)
+- when the sidebar is collapsed and a different stack page is chosen, the "realize" function gets called again for the content pages and they dupe their rows etc
+- icons, that were added as gresource are not available in white when dark style is activated (see https://developer.gnome.org/documentation/tutorials/themed-icons.html#symbolic-icons)
+- gui freezes when calling a non available service

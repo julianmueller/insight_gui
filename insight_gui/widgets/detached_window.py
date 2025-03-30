@@ -37,7 +37,8 @@ class DetachedWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
 
         super().set_destroy_with_parent(True)
-        super().set_default_size(800, 600)
+        super().set_size_request(480, 500)
+        super().set_default_size(480, 500)
 
         self.nav_view: Adw.NavigationView = Adw.NavigationView()
         super().set_content(self.nav_view)

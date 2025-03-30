@@ -48,7 +48,6 @@ class TopicInfoPage(ContentPage):
         self.topic_types = topic_types
         self.detach_kwargs = {"topic_name": topic_name, "topic_types": topic_types}
 
-    def on_setup_gui(self):
         # Message Type
         self.message_type_group = self.pref_page.add_group(title="Message Type")
 
