@@ -96,11 +96,7 @@ class ServiceInfoPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    subpage_kwargs={
-                        "node_name": node_name,
-                        "node_namespace": node_namespace,
-                        "node_full_name": node_full_name,
-                    },
+                    subpage_kwargs={"node_full_name": node_full_name},
                 )
                 self.service_servers_group.add_row(row)
 
@@ -116,11 +112,7 @@ class ServiceInfoPage(ContentPage):
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    subpage_kwargs={
-                        "node_name": node_name,
-                        "node_namespace": node_namespace,
-                        "node_full_name": node_full_name,
-                    },
+                    subpage_kwargs={"node_full_name": node_full_name},
                 )
                 self.service_clients_group.add_row(row)
 

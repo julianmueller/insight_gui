@@ -31,6 +31,7 @@ from ros2param.api import (
     get_value,
     get_parameter_type_string,
 )
+from ros2node.api import parse_node_name
 
 import gi
 
@@ -47,18 +48,18 @@ from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 class NodeInfoPage(ContentPage):
     __gtype_name__ = "NodeInfoPage"
 
-    def __init__(self, node_name: str, node_namespace: str, node_full_name: str, **kwargs):
+    def __init__(self, node_full_name: str, **kwargs):
         super().__init__(searchable=True, refreshable=True, **kwargs)
         super().set_title(f"Node {node_full_name}")
 
-        self.node_name = node_name
-        self.node_namespace = node_namespace
         self.node_full_name = node_full_name
         self.detach_kwargs = {
-            "node_name": node_name,
-            "node_namespace": node_namespace,
             "node_full_name": node_full_name,
         }
+
+        parsed_name = parse_node_name(node_full_name)
+        self.node_name = parsed_name.name
+        self.node_namespace = parsed_name.namespace
 
         # Publishers
         self.publishers_group = self.pref_page.add_group(title="Publishers", empty_group_text="Node has no publishers")

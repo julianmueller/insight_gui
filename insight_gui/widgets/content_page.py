@@ -101,8 +101,8 @@ class ContentPage(Adw.NavigationPage):
 
     def on_realize(self, *args):
         # get these properties, after the widget has been realized in the window
-        self.nav_view = self.get_ancestor(Adw.NavigationView)
-        self.ros2_connector = self.get_root().ros2_connector
+        self.nav_view = super().get_ancestor(Adw.NavigationView)
+        self.ros2_connector = super().get_root().ros2_connector
 
         # refresh the gui
         if self.refreshable:

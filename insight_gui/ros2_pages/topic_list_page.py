@@ -62,7 +62,7 @@ class TopicListPage(ContentPage):
         # TODO this is ugly
         from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
 
-        for i, (topic_name, topic_types) in enumerate(self.available_topics):
+        for topic_name, topic_types in self.available_topics:
             # topic_types is a list, as multiple servers can advertise different types to the same topic
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
             if len(topic_types) == 1:

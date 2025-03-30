@@ -20,9 +20,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+import math
+import random
 from operator import itemgetter
 
 from ros2node.api import _is_hidden_name, get_node_names
+from ros2topic.api import get_topic_names_and_types
 
 import gi
 
@@ -31,7 +34,9 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gdk
 
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.canvas_blocks import NodeBlock, TopicBlock, InterfaceBlock
+from insight_gui.widgets.canvas_blocks import BaseBlock, NodeBlock, TopicBlock, InterfaceBlock
+
+# look into: https://github.com/ros-visualization/rqt_graph/tree/jazzy
 
 
 class GraphPage(ContentPage):
@@ -46,7 +51,10 @@ class GraphPage(ContentPage):
         self.scolled_window = Gtk.ScrolledWindow()
         self.content_stack.add_child(self.scolled_window)
 
-        self.graph_canvas = Gtk.Fixed(width_request=1000, height_request=1000)
+        self.canvas_width = 1000
+        self.canvas_height = 1000
+
+        self.graph_canvas = Gtk.Fixed(width_request=self.canvas_width, height_request=self.canvas_height)
         self.scolled_window.set_child(self.graph_canvas)
 
         self.node_blocks = []
@@ -54,48 +62,95 @@ class GraphPage(ContentPage):
         self.interface_blocks = []
         self.connections = []
 
-    # def on_refresh_blocking(self):
-    #     return True
+    def on_refresh_blocking(self):
+        self.available_nodes = sorted(
+            get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True), key=itemgetter(0)
+        )
+        self.available_topics = sorted(
+            get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True), key=itemgetter(0)
+        )
+        return len(self.available_nodes) + len(self.available_topics) > 0
 
     def on_refresh_gui(self):
         self.clear_graph()
-        self.add_node_block("node1", 50, 50)
-        self.add_node_block("node2", 50, 150)
+        y_index = 1  # TODO dummy
 
-        self.add_topic_block("topic1", 250, 50)
-        self.add_topic_block("topic2", 250, 150)
+        for node_name, node_namespace, node_full_name in self.available_nodes:
+            self.add_node_block(node_full_name, 50, y_index * 50)
+            y_index += 1
+
+        for topic_name, topic_types in self.available_topics:
+            self.add_topic_block(topic_name, topic_types, 50, y_index * 50)
+            y_index += 1
+
+        # self._layout_nodes()
 
     def on_reset_gui(self):
         self.clear_graph()
 
-    def add_node_block(self, name: str, x: int, y: int):
-        node_block = NodeBlock(name)
+    def add_node_block(self, node_full_name: str, x: int = -1, y: int = -1):
+        node_block = NodeBlock(node_full_name)
         self.node_blocks.append(node_block)
-        self.graph_canvas.put(node_block, x, y)
+        self.add_block(node_block, x, y)
 
-    def add_topic_block(self, name: str, x: int, y: int):
-        topic_block = TopicBlock(name)
+    def add_topic_block(self, topic_name: str, topic_types: str | list[str], x: int = -1, y: int = -1):
+        topic_block = TopicBlock(topic_name, topic_types)
         self.topic_blocks.append(topic_block)
-        self.graph_canvas.put(topic_block, x, y)
+        self.add_block(topic_block, x, y)
 
-    def add_interface_block(self, name: str, x: int, y: int):
+    def add_interface_block(self, name: str, x: int = -1, y: int = -1):
         interface_block = InterfaceBlock(name)
         self.interface_blocks.append(interface_block)
-        self.graph_canvas.put(interface_block, x, y)
+        self.add_block(interface_block, x, y)
 
-    def create_node_bin(self, name: str):
-        bin_widget = Adw.Bin()
-        label = Gtk.Label(label=name)
-        bin_widget.set_child(label)
-        bin_widget.set_size_request(100, 50)
-        bin_widget.set_name(name)
+    def add_block(self, block: BaseBlock, x: int = -1, y: int = -1):
+        if x == -1:
+            x = random.uniform(0, self.canvas_width)
+        if y == -1:
+            y = random.uniform(0, self.canvas_height)
 
-        bin_widget.connect("button-press-event", self.on_node_clicked)
-        return bin_widget
+        self.graph_canvas.put(block, *self._calc_block_position(block, x, y))
 
-    def on_node_clicked(self, widget, event):
-        if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 1:
-            print(f"Node clicked: {widget.get_name()}")
+    def _calc_block_position(self, block: BaseBlock, x: int, y: int, margin: int = 12):
+        max_x = max(0, self.canvas_width - block.width - margin)
+        max_y = max(0, self.canvas_height - block.height - margin)
+
+        clamped_x = min(max(x, margin), max_x)
+        clamped_y = min(max(y, margin), max_y)
+
+        return clamped_x, clamped_y
+
+    def _layout_nodes(self, iterations: int = 100):
+        """Basic force-directed layout algorithm to position nodes without overlap."""
+        for _ in range(iterations):
+            forces = {node: [0, 0] for node in self.nodes}
+
+            # Repulsion between all nodes
+            for node_a, pos_a in self.positions.items():
+                for node_b, pos_b in self.positions.items():
+                    if node_a == node_b:
+                        continue
+                    dx = pos_a[0] - pos_b[0]
+                    dy = pos_a[1] - pos_b[1]
+                    distance = math.sqrt(dx * dx + dy * dy)
+                    if distance < 1:
+                        distance = 1
+                    repulsive_force = 1000 / (distance * distance)
+
+                    forces[node_a][0] += (dx / distance) * repulsive_force
+                    forces[node_a][1] += (dy / distance) * repulsive_force
+
+            # Apply forces
+            for node, force in forces.items():
+                self.positions[node][0] += force[0] * 0.01
+                self.positions[node][1] += force[1] * 0.01
+
+                # Keep nodes within the bounds
+                self.positions[node][0] = min(max(self.positions[node][0], 0), 980)
+                self.positions[node][1] = min(max(self.positions[node][1], 0), 980)
+
+                # Update widget position
+                self.move(self.nodes[node], *self.positions[node])
 
     def clear_graph(self):
         for node_block in reversed(self.node_blocks):

@@ -26,7 +26,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio
+from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango
 
 from insight_gui.widgets.buttons import ToggleButton, CopyButton
 from insight_gui.utils.constants import ON_ICON, OFF_ICON
@@ -103,7 +103,9 @@ class PrefRow(Adw.ActionRow, GenericRow):
         # self.suffixes_box.set_visible(False)
 
         self.title_lbl: Gtk.Label = self.title_box.get_first_child()
+        self.title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         self.subtitle_lbl: Gtk.Label = self.title_lbl.get_next_sibling()
+        self.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.END)
 
         # react to hide header
         if not title and not subtitle:

@@ -47,7 +47,9 @@ class NodeListPage(ContentPage):
         self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
 
     def on_refresh_blocking(self) -> bool:
-        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
+        self.available_nodes = sorted(
+            get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True), key=itemgetter(0)
+        )
 
         if len(self.available_nodes) == 0:
             self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
@@ -56,7 +58,7 @@ class NodeListPage(ContentPage):
 
     def on_refresh_gui(self):
         rows = []
-        for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
+        for node_name, node_namespace, node_full_name in self.available_nodes:
             row = PrefRow(title=node_name, subtitle=node_full_name)
             if _is_hidden_name(node_name):
                 row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
@@ -64,11 +66,7 @@ class NodeListPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=NodeInfoPage,
-                subpage_kwargs={
-                    "node_name": node_name,
-                    "node_namespace": node_namespace,
-                    "node_full_name": node_full_name,
-                },
+                subpage_kwargs={"node_full_name": node_full_name},
             )
             rows.append(row)
 

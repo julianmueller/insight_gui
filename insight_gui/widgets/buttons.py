@@ -236,3 +236,32 @@ class CopyButton(Gtk.Button):
 
         if self.toast_host:
             self.toast_host.add_toast(Adw.Toast(title=f"Copied '{self.copy_text}' to clipboard"))
+
+
+class RevealButton(Gtk.ToggleButton):
+    __gtype_name__ = "RevealButton"
+
+    def __init__(self, reveal_target: Gtk.Revealer, **kwargs):
+        super().__init__(
+            icon_name="pan-down-symbolic",
+            tooltip_text="Expand",
+            vexpand=False,
+            hexpand=False,
+            css_classes=["flat"],
+            **kwargs,
+        )
+        self.reveal_target = reveal_target
+        self.connect("toggled", self.on_reveal_button_toggled)
+
+    @property
+    def revealed(self):
+        return self.get_active()
+
+    def on_reveal_button_toggled(self, *args):
+        if self.revealed:
+            # self.set_icon_name("pan-down-symbolic")
+            self.reveal_target.set_reveal_child(True)
+
+        else:
+            # self.set_icon_name("pan-end-symbolic")
+            self.reveal_target.set_reveal_child(False)

@@ -39,10 +39,11 @@
                 </child>
 
                 <child>
-                    <object class="GtkButton" id="header_btn">
-                        <property name="icon-name">settings-symbolic</property>
-                        <property name="tooltip-text">Preferences</property>
-                        <property name="valign">center</property>
+                    <object class="GtkButton" id="subpage_btn">
+                        <property name="icon-name">pan-end-symbolic</property>
+                        <property name="tooltip-text">Open as subpage</property>
+                        <property name="vexpand">false</property>
+                        <property name="hexpand">false</property>
 
                         <style>
                             <class name="flat" />
@@ -54,41 +55,50 @@
         </child>
 
         <child>
-            <object class="GtkSeparator">
-                <property name="orientation">horizontal</property>
-            </object>
-        </child>
-
-        <child>
-            <object class="GtkBox" id="content_box">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">10</property>
-                <property name="valign">center</property>
-                <property name="margin-start">10</property>
-                <property name="margin-end">10</property>
-                <property name="margin-top">10</property>
-                <property name="margin-bottom">10</property>
+            <object class="GtkRevealer" id="revealer">
+                <!-- <property name="transition-type">slide-down</property> -->
+                <property name="reveal-child">false</property>
 
                 <child>
-                    <object class="GtkBox" id="left_box">
-                        <property name="orientation">vertical</property>
-                        <property name="spacing">10</property>
-                        <property name="vexpand">true</property>
-                        <property name="hexpand">true</property>
-                        <property name="halign">start</property>
+
+                    <object class="GtkSeparator">
+                        <property name="orientation">horizontal</property>
                     </object>
                 </child>
 
                 <child>
-                    <object class="GtkBox" id="right_box">
-                        <property name="orientation">vertical</property>
+                    <object class="GtkBox" id="content_box">
+                        <property name="orientation">horizontal</property>
                         <property name="spacing">10</property>
-                        <property name="vexpand">true</property>
-                        <property name="hexpand">true</property>
-                        <property name="halign">end</property>
+                        <property name="valign">center</property>
+                        <property name="margin-start">10</property>
+                        <property name="margin-end">10</property>
+                        <property name="margin-top">10</property>
+                        <property name="margin-bottom">10</property>
+
+                        <child>
+                            <object class="GtkBox" id="left_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">10</property>
+                                <property name="vexpand">true</property>
+                                <property name="hexpand">true</property>
+                                <property name="halign">start</property>
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="GtkBox" id="right_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">10</property>
+                                <property name="vexpand">true</property>
+                                <property name="hexpand">true</property>
+                                <property name="halign">end</property>
+                            </object>
+                        </child>
                     </object>
                 </child>
             </object>
         </child>
+
     </object>
 </interface>
