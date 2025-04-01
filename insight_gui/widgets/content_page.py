@@ -95,10 +95,6 @@ class ContentPage(Adw.NavigationPage):
             "active", self.search_bar, "search-mode-enabled", GObject.BindingFlags.BIDIRECTIONAL
         )
 
-    # @property
-    # def ros2_connector(self):
-    #     return self.get_root().ros2_connector
-
     def on_realize(self, *args):
         # get these properties, after the widget has been realized in the window
         self.nav_view = super().get_ancestor(Adw.NavigationView)
@@ -113,48 +109,41 @@ class ContentPage(Adw.NavigationPage):
         if not self.refreshable or self.refreshing:
             return
 
-        def prepare_refresh(*args):
-            self.search_bar.set_search_mode(False)
-            self.refresh_icon.set_visible(False)
-            self.refresh_spinner.set_visible(True)
-            self.refresh_spinner.start()
-            self.refreshing = True
-            return False  # for Glib.idle_add to end after one iteration
+        # refresh started
+        self.refreshing = True
+        self.search_bar.set_search_mode(False)
+        self.refresh_spinner.start()
+        self.refresh_icon.set_visible(False)
+        self.refresh_spinner.set_visible(True)
 
-        def finish_refresh(refresh_result: bool, *args):
-            self.refresh_spinner.stop()
-            self.refresh_spinner.set_visible(False)
-            self.refresh_icon.set_visible(True)
-            self.refreshing = False
-
-            if refresh_result:
-                self.hide_banner()
-            else:
-                # self.show_banner_w_btn("Refresh yielded no results! Retry?", "Refresh", self.on_refresh) # TODO this causes problems
-                self.show_banner("Refresh yielded no results")
-            return False  # for Glib.idle_add to end after one iteration
-
-        def refresh_wrapper(*args):
+        def background_task(*args):
             # TODO add, that if the ros2_connector is not running, a toast is shown
-            GLib.idle_add(prepare_refresh)
-
             try:
                 refresh_result = self.on_refresh_blocking()
             except Exception as e:
                 self.show_toast(f"Refresh failed! Error: {e}")
+                refresh_result = False
 
+            GLib.idle_add(finish_thread, refresh_result)
+
+        def finish_thread(refresh_result: bool):
             if refresh_result:
-                GLib.idle_add(self.on_reset_gui)
-                GLib.idle_add(self.on_refresh_gui)
+                self.hide_banner()
+                self.on_reset_gui()
+                self.on_refresh_gui()
+            else:
+                self.show_banner("Refresh yielded no results")
 
-            GLib.idle_add(finish_refresh, refresh_result)
-
-            return refresh_result
+            # finish refresh
+            self.refresh_spinner.set_visible(False)
+            self.refresh_icon.set_visible(True)
+            self.refresh_spinner.stop()
+            self.refreshing = False
+            return False  # Ensure idle_add runs once
 
         # start the refresh thread
-        if self.refresh_thread is None or not self.refresh_thread.is_alive():
-            self.refresh_thread = threading.Thread(target=refresh_wrapper, daemon=True)
-            self.refresh_thread.start()
+        self.refresh_thread = threading.Thread(target=background_task, daemon=True)
+        self.refresh_thread.start()
 
     def on_refresh_blocking(self) -> bool:
         """Child class should override this with blocking, long-running computation."""
