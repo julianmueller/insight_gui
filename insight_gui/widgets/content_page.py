@@ -38,6 +38,7 @@ class ContentPage(Adw.NavigationPage):
         self,
         searchable: bool = True,
         refreshable: bool = True,
+        detachable: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -75,6 +76,8 @@ class ContentPage(Adw.NavigationPage):
 
         self.searchable = searchable
         self.refreshable = refreshable
+        self.detachable = detachable
+
         self.detach_kwargs = {}
         self.refreshing = False
         self.refresh_thread: GLib.Thread = None
@@ -102,6 +105,15 @@ class ContentPage(Adw.NavigationPage):
         # refresh the gui
         if self.refreshable:
             self.on_refresh()
+
+    def refresh(self):
+        print("refreshing")
+
+    def detach(self):
+        print("detaching")
+
+    def toggle_search(self):
+        print("toggling search")
 
     def on_refresh(self, *args):
         """Executed, when the refresh button is clicked."""

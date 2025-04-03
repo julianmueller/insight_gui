@@ -27,7 +27,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Gio, Gdk
+
+from insight_gui.ros2_connector import ROS2Connector
 
 
 class DetachedWindow(Adw.ApplicationWindow):
@@ -48,10 +50,75 @@ class DetachedWindow(Adw.ApplicationWindow):
         self.nav_page.detach_btn.set_visible(False)
         self.nav_view.add(self.nav_page)
 
+        action = Gio.SimpleAction.new("refresh", None)
+        action.connect("activate", self.on_refresh)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("toggle_search", None)
+        action.connect("activate", self.on_toggle_search)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("detach", None)
+        action.connect("activate", self.on_detach)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("quit", None)
+        action.connect("activate", self.on_quit)
+        self.app.add_action(action)
+
+        # Shortcuts # TODO make them also work in the detached windows
+        self.shortcut_controller = Gtk.ShortcutController()
+        self.shortcut_controller.set_scope(Gtk.ShortcutScope.LOCAL)  # Important!
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.AlternativeTrigger.new(
+                    Gtk.KeyvalTrigger.new(Gdk.KEY_r, Gdk.ModifierType.CONTROL_MASK),
+                    Gtk.KeyvalTrigger.new(Gdk.KEY_F5, Gdk.ModifierType.NO_MODIFIER_MASK),
+                ),
+                action=Gtk.NamedAction.new("win.refresh"),  # Use window-scoped action
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_f, Gdk.ModifierType.CONTROL_MASK),
+                action=Gtk.NamedAction.new("win.toggle_search"),
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_d, Gdk.ModifierType.CONTROL_MASK),
+                action=Gtk.NamedAction.new("win.detach"),
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.ShortcutTrigger.parse_string("<Control>w"),
+                action=Gtk.CallbackAction.new(lambda *_: self.close()),
+            )
+        )
+
+        # Add controller to window
+        self.add_controller(self.shortcut_controller)
+
     # @property
     # def app(self):
     #     return self.app
 
     @property
-    def ros2_connector(self):
+    def ros2_connector(self) -> ROS2Connector:
         return self.app.ros2_connector
+
+    def on_refresh(self, *args):
+        if self.nav_page.refreshable:
+            self.nav_page.refresh()
+
+    def on_detach(self, *args):
+        if self.nav_page.detachable:
+            self.nav_page.detach()
+
+    def on_toggle_search(self, *args):
+        if self.nav_page.searchable:
+            self.nav_page.toggle_search()
+
+    def on_quit(self, *args):
+        self.close()

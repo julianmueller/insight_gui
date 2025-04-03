@@ -64,7 +64,7 @@ class Ros2GuiApp(Adw.Application):
         # ros2 connector handles all connections to the ros2 node
         self.ros2_connector = ROS2Connector(application=self)
 
-        # Define "app.ros2_node_sstart" action
+        # Define "app.ros2_node_start" action
         ros2_node_start_action = Gio.SimpleAction.new("ros2_node_start", None)
         ros2_node_start_action.connect("activate", lambda *_: self.ros2_connector.start_node())
         self.add_action(ros2_node_start_action)
