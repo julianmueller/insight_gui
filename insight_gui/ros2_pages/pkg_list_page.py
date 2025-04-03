@@ -61,7 +61,7 @@ class PackageListPage(ContentPage):
             func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
         )
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.available_pkgs = get_packages_with_prefixes()
 
         if len(self.available_pkgs) == 0:
@@ -69,7 +69,7 @@ class PackageListPage(ContentPage):
             return False
         return True
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         rows = []
         for pkg_name, pkg_path in self.available_pkgs.items():
             row = PrefRow(title=pkg_name, subtitle=pkg_path)
@@ -82,5 +82,5 @@ class PackageListPage(ContentPage):
 
         self.pkg_list_group.add_rows_idle(rows)
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.pkg_list_group.clear()

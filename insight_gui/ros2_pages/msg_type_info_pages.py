@@ -265,7 +265,7 @@ class ActionTypeInfoPage(ContentPage):
 
 def _on_open_msg_type_dialog(btn: Gtk.Button = None, *, parent: Gtk.Widget, msg_type_full_name: str, msg_class):
     dialog = InterfaceTypeDialog(msg_type_full_name=msg_type_full_name, msg_class=msg_class)
-    dialog.present(parent=parent.get_root())
+    dialog.present()
 
 
 def _on_open_msg_webpage(btn: Gtk.Button = None, *, msg_type_full_name: str):

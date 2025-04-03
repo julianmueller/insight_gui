@@ -61,12 +61,12 @@ class TopicInfoPage(ContentPage):
 
         # TODO add a "echo" group, to listen to that specific topic
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a pub/sub of this topic
         self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
         return len(self.available_nodes) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         def add_msg_type_row(msg_type_full_name: str):
             msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
             msg_row.set_subpage_link(
@@ -122,7 +122,7 @@ class TopicInfoPage(ContentPage):
         self.publishers_group.set_description_to_row_count()
         self.subscribers_group.set_description_to_row_count()
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.message_type_group.clear()
         self.publishers_group.clear()
         self.subscribers_group.clear()

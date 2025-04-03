@@ -101,7 +101,7 @@ class TopicEchoPage(ContentPage):
 
         # TODO add rows that display infos about the topic, like qos and rate etc
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.topic_list = []
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
@@ -117,7 +117,7 @@ class TopicEchoPage(ContentPage):
             self.topic_list.append(topic_name)
         return len(self.topic_list) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         for topic in self.topic_list:
             self.topic_list_store.append(Gtk.StringObject.new(topic))
 
@@ -127,7 +127,7 @@ class TopicEchoPage(ContentPage):
         else:
             super().show_banner("No topic with found")
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.topic_list_store.remove_all()
 
     def on_unrealize(self, *args):

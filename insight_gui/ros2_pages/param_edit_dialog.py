@@ -48,6 +48,7 @@ class ParamEditDialog(Adw.PreferencesDialog):
     def __init__(self, node_name: str, param_name: str, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Edit Parameter")
+        super().set_size_request(300, 500)
         GLib.idle_add(self._deferred_init)
 
         self.node_name = node_name
@@ -99,7 +100,7 @@ class ParamEditDialog(Adw.PreferencesDialog):
 
         if param_descriptor.description:
             self.description_row.set_visible(True)
-            self.description_row.set_subtitle(subtitle=param_descriptor.description)
+            self.description_row.set_subtitle(subtitle=str(param_descriptor.description))
 
         if param_descriptor.additional_constraints:
             self.additional_constraints_row.set_properties(  # TODO does this work?
@@ -108,7 +109,7 @@ class ParamEditDialog(Adw.PreferencesDialog):
 
         if param_descriptor.dynamic_typing:
             self.dynamic_typing_row.set_visible(True)
-            self.dynamic_typing_row.set_subtitle(param_descriptor.dynamic_typing)
+            self.dynamic_typing_row.set_subtitle(str(param_descriptor.dynamic_typing))
 
         if param_descriptor.floating_point_range:
             self.floating_point_range_row.set_visible(True)
@@ -118,10 +119,11 @@ class ParamEditDialog(Adw.PreferencesDialog):
             self.integer_range_row.set_visible(True)
             self.integer_range_row.set_subtitle(str(param_descriptor.integer_range))
 
-        self.type_row.set_subtitle(get_parameter_type_string(param_descriptor.type))
+        self.type_row.set_subtitle(str(get_parameter_type_string(param_descriptor.type)))
 
         read_only = param_descriptor.read_only
-        self.read_only_row.set_subtitle(read_only, css_classes=["property"])
+        self.read_only_row.set_subtitle(str(read_only))
+        self.read_only_row.set_css_classes(["property"])
 
         # get the current value of the parameter
         param_value = get_value(
@@ -143,13 +145,13 @@ class ParamEditDialog(Adw.PreferencesDialog):
             self.current_text_value = str(param_value)
 
             self.current_text_value_row.set_visible(True)
-            self.current_text_value_row.set_subtitle(self.current_text_value)
+            self.current_text_value_row.set_subtitle(str(self.current_text_value))
             self.new_text_value_row.set_visible(True)
-            self.new_text_value_row.set_text(self.current_text_value)
+            self.new_text_value_row.set_text(str(self.current_text_value))
 
         # disable the change button
         if read_only:
-            self.new_value_row.set_sensitive(False)
+            self.new_bool_value_row.set_sensitive(False)
 
     def on_bool_value_change(self, *args):
         if self.new_bool_value_row.get_active() == self.current_bool_value:

@@ -60,14 +60,14 @@ class InterfaceBrowserPage(ContentPage):
         btm_widgets.append(Gtk.ToggleButton(label="srvs", active=True, width_request=100))
         btm_widgets.append(Gtk.ToggleButton(label="acts", active=True, width_request=100))
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()
         self.available_srvs = get_service_interfaces()
         self.available_action_msgs = get_action_interfaces()
 
         return len(self.available_msgs) + len(self.available_srvs) + len(self.available_action_msgs) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         # add all the message interfaces
         for pkg_name, msgs_list in sorted(self.available_msgs.items()):
             msg_group = self.pref_page.add_group(title=pkg_name)
@@ -140,7 +140,7 @@ class InterfaceBrowserPage(ContentPage):
         if self.pref_page.num_groups == 0:
             self.pref_page.set_empty_page_text("No interfaces found. Refresh to try again.")
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.pref_page.clear()
 
     def on_interface_filters_changed(self, *args):

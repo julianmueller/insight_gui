@@ -124,21 +124,21 @@ class MainWindow(Adw.ApplicationWindow):
         action.connect("activate", self.on_about_dialog)
         self.app.add_action(action)
 
+        action = Gio.SimpleAction.new("close", None)
+        action.connect("activate", self.on_close)
+        self.add_action(action)
+
         action = Gio.SimpleAction.new("refresh", None)
         action.connect("activate", self.on_refresh)
         self.add_action(action)
 
-        action = Gio.SimpleAction.new("toggle_search", None)
+        action = Gio.SimpleAction.new("toggle-search", None)
         action.connect("activate", self.on_toggle_search)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("detach", None)
         action.connect("activate", self.on_detach)
         self.add_action(action)
-
-        action = Gio.SimpleAction.new("quit", None)
-        action.connect("activate", self.on_quit)
-        self.app.add_action(action)
 
         # Shortcuts # TODO make them also work in the detached windows
         self.shortcut_controller = Gtk.ShortcutController()
@@ -155,7 +155,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.shortcut_controller.add_shortcut(
             shortcut=Gtk.Shortcut.new(
                 trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_f, Gdk.ModifierType.CONTROL_MASK),
-                action=Gtk.NamedAction.new("win.toggle_search"),
+                action=Gtk.NamedAction.new("win.toggle-search"),
             )
         )
         self.shortcut_controller.add_shortcut(
@@ -166,8 +166,14 @@ class MainWindow(Adw.ApplicationWindow):
         )
         self.shortcut_controller.add_shortcut(
             shortcut=Gtk.Shortcut.new(
-                trigger=Gtk.ShortcutTrigger.parse_string("<Control>w"),
-                action=Gtk.CallbackAction.new(lambda *_: self.close()),
+                trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_comma, Gdk.ModifierType.CONTROL_MASK),
+                action=Gtk.NamedAction.new("app.preferences"),
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_w, Gdk.ModifierType.CONTROL_MASK),
+                action=Gtk.NamedAction.new("win.close"),
             )
         )
 
@@ -203,14 +209,15 @@ class MainWindow(Adw.ApplicationWindow):
     #             refresh_func()
 
     def on_preferences_dialog(self, *args):
-        PreferencesDialog(ros2_connector=self.ros2_connector).present(self)
+        self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)
+        self.preferences_dialog.present(self)
 
     def on_shortcuts_dialog(self, *args):
         # ShortcutsDialog().present(self) # TODO
         print("not implemented yet")
 
     def on_about_dialog(self, *args):
-        about_dialog = Adw.AboutDialog(
+        self.about_dialog = Adw.AboutDialog(
             application_name="Insight",
             application_icon="insight-logo",
             developer_name="Julian Müller",
@@ -219,9 +226,9 @@ class MainWindow(Adw.ApplicationWindow):
             version="0.0.1",
             website="https://github.com/julianmueller/insight_gui",
         )
-        about_dialog.add_credit_section("Development", ["Julian Müller"])
-        about_dialog.add_credit_section("Inspiration", ["rqt", "ros2cli"])
-        about_dialog.present(self)
+        self.about_dialog.add_credit_section("Development", ["Julian Müller"])
+        self.about_dialog.add_credit_section("Inspiration", ["rqt", "ros2cli"])
+        self.about_dialog.present(self)
 
     def on_refresh(self, *args):
         if self.current_page and self.current_page.refreshable:
@@ -235,14 +242,8 @@ class MainWindow(Adw.ApplicationWindow):
         if self.current_page and self.current_page.searchable:
             self.current_page.toggle_search()
 
-    def on_quit(self, *args):
+    def on_close(self, *args):
         self.close()
-
-    def on_search_shortcut(self, *args):
-        self.content_stack.get_visible_child().get_visible_page().show_search_bar()
-
-    def on_refresh_shortcut(self, *args):
-        self.content_stack.get_visible_child().get_visible_page().on_refresh()
 
     def on_stack_page_changed(self, stack: Gtk.Stack, stack_name: GObject.GParamSpec):
         if self.split_view.get_collapsed():
@@ -251,7 +252,7 @@ class MainWindow(Adw.ApplicationWindow):
             self.split_view.set_show_content(False)
 
     def _update_time_labels(self):
-        node_is_running = self.app.lookup_action("ros2_node_is_running").get_state().get_boolean()
+        node_is_running = self.app.lookup_action("ros2-node-is-running").get_state().get_boolean()
 
         if not node_is_running:
             self.time_box.set_visible(False)

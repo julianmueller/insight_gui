@@ -62,7 +62,7 @@ class GraphPage(ContentPage):
         self.interface_blocks = []
         self.connections = []
 
-    def on_refresh_blocking(self):
+    def refresh_bg(self):
         self.available_nodes = sorted(
             get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True), key=itemgetter(0)
         )
@@ -71,7 +71,7 @@ class GraphPage(ContentPage):
         )
         return len(self.available_nodes) + len(self.available_topics) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         self.clear_graph()
         y_index = 1  # TODO dummy
 
@@ -85,7 +85,7 @@ class GraphPage(ContentPage):
 
         # self._layout_nodes()
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.clear_graph()
 
     def add_node_block(self, node_full_name: str, x: int = -1, y: int = -1):

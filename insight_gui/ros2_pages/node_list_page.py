@@ -46,7 +46,7 @@ class NodeListPage(ContentPage):
 
         self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.available_nodes = sorted(
             get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True), key=itemgetter(0)
         )
@@ -56,7 +56,7 @@ class NodeListPage(ContentPage):
             return False
         return True
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         rows = []
         for node_name, node_namespace, node_full_name in self.available_nodes:
             row = PrefRow(title=node_name, subtitle=node_full_name)
@@ -72,5 +72,5 @@ class NodeListPage(ContentPage):
 
         self.node_list_group.add_rows_idle(rows)
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.node_list_group.clear()

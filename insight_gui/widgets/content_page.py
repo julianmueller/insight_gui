@@ -42,6 +42,7 @@ class ContentPage(Adw.NavigationPage):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        super().connect("realize", self.on_realize)
         GLib.idle_add(self._deferred_init)
         # super().connect("map", self.on_map)
         # super().connect("unmap", self.on_unmap)
@@ -51,16 +52,22 @@ class ContentPage(Adw.NavigationPage):
         self.toolbar_view: Adw.ToolbarView = builder.get_object("toolbar_view")
         self.header_bar: Adw.HeaderBar = builder.get_object("header_bar")
         self.search_btn: Gtk.ToggleButton = builder.get_object("search_btn")
+        self.search_btn.set_action_name("win.toggle-search")
+        self.search_btn.set_sensitive(True)  # this is somehow needed
 
         self.refresh_btn: Gtk.Button = builder.get_object("refresh_btn")
-        self.refresh_btn.connect("clicked", self.on_refresh)
+        # self.refresh_btn.connect("clicked", self.on_refresh)
+        self.refresh_btn.set_action_name("win.refresh")
         self.refresh_icon: Gtk.Image = builder.get_object("refresh_icon")
         self.refresh_spinner: Gtk.Spinner = builder.get_object("refresh_spinner")
 
         self.detach_btn: Gtk.Button = builder.get_object("detach_btn")
-        self.detach_btn.connect("clicked", self.on_detach)
-
+        # self.detach_btn.connect("clicked", self.on_detach)
+        self.detach_btn.set_action_name("win.detach")
         self.search_bar: Gtk.SearchBar = builder.get_object("search_bar")
+        self.search_btn.bind_property(
+            "active", self.search_bar, "search-mode-enabled", GObject.BindingFlags.BIDIRECTIONAL
+        )
         self.search_entry: Gtk.SearchEntry = builder.get_object("search_entry")
         self.search_entry.connect("search-changed", self.on_search_changed)
 
@@ -80,10 +87,7 @@ class ContentPage(Adw.NavigationPage):
 
         self.detach_kwargs = {}
         self.refreshing = False
-        self.refresh_thread: GLib.Thread = None
-
-        self.toggle_search_btn(searchable)
-        self.toggle_refresh_btn(refreshable)
+        self.refresh_thread: threading.Thread = None
 
         self.pref_page = PrefPage()
         self.content_stack.add_child(self.pref_page)
@@ -92,31 +96,21 @@ class ContentPage(Adw.NavigationPage):
         # else:
         self.content_stack.set_visible_child(self.pref_page)
 
-        # self.search_bar.set_key_capture_widget(self.get_root())
-        self.search_btn.bind_property(
-            "active", self.search_bar, "search-mode-enabled", GObject.BindingFlags.BIDIRECTIONAL
-        )
-
     def _deferred_init(self):
         # get these properties, after the widget has been realized in the window
         self.nav_view = super().get_ancestor(Adw.NavigationView)
         self.ros2_connector = super().get_root().ros2_connector
 
+        self.search_btn.set_visible(self.searchable)
+        self.refresh_btn.set_visible(self.refreshable)
+        self.detach_btn.set_visible(self.detachable)
+
+    def on_realize(self, *args):
         # refresh the gui
         if self.refreshable:
-            self.on_refresh()
+            GLib.idle_add(self.refresh)
 
     def refresh(self):
-        print("refreshing")
-
-    def detach(self):
-        print("detaching")
-
-    def toggle_search(self):
-        print("toggling search")
-
-    def on_refresh(self, *args):
-        """Executed, when the refresh button is clicked."""
         if not self.refreshable or self.refreshing:
             return
 
@@ -130,7 +124,7 @@ class ContentPage(Adw.NavigationPage):
         def background_task(*args):
             # TODO add, that if the ros2_connector is not running, a toast is shown
             try:
-                refresh_result = self.on_refresh_blocking()
+                refresh_result = self.refresh_bg()
             except Exception as e:
                 self.show_toast(f"Refresh failed! Error: {e}")
                 refresh_result = False
@@ -140,8 +134,8 @@ class ContentPage(Adw.NavigationPage):
         def finish_thread(refresh_result: bool):
             if refresh_result:
                 self.hide_banner()
-                self.on_reset_gui()
-                self.on_refresh_gui()
+                self.reset_ui()
+                self.refresh_ui()
             else:
                 self.show_banner("Refresh yielded no results")
 
@@ -156,33 +150,39 @@ class ContentPage(Adw.NavigationPage):
         self.refresh_thread = threading.Thread(target=background_task, daemon=True)
         self.refresh_thread.start()
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         """Child class should override this with blocking, long-running computation."""
-        # raise NotImplementedError("Child class must implement on_refresh_blocking()!")
+        # raise NotImplementedError("Child class must implement refresh_bg()!")
         return True
 
-    def on_refresh_gui(self, *args):
-        """Child class should override this to update the GUI with the result of the blocking refresh."""
-        # raise NotImplementedError("Child class must implement on_refresh_gui()!")
+    def refresh_ui(self, *args):
+        """Child class should override this to update the UI with the result of the blocking refresh."""
+        # raise NotImplementedError("Child class must implement refresh_ui()!")
         pass
 
-    def on_reset_gui(self):
-        """Child class should override this to reset the GUI before a refresh."""
-        # raise NotImplementedError("Child class must implement on_reset_gui()!")
+    def reset_ui(self):
+        """Child class should override this to reset the UI before a refresh."""
+        # raise NotImplementedError("Child class must implement reset_ui()!")
         pass
+
+    def toggle_search(self):
+        if self.searchable:
+            self.search_bar.set_search_mode(not self.search_bar.get_search_mode())
+            # self.search_bar.set_search_mode(True)
 
     def on_search_changed(self, *args):
         if not self.searchable:
             return
         self.pref_page.apply_filter(self.search_entry.get_text())
 
-    def on_detach(self, *args):
-        detached_window = DetachedWindow(
-            application=self.get_root().get_application(),
-            nav_page_class=self.__class__,
-            nav_page_kwargs=self.detach_kwargs,
-        )
-        detached_window.show()
+    def detach(self, *args):
+        if self.detachable:
+            detached_window = DetachedWindow(
+                application=self.get_root().app,
+                nav_page_class=self.__class__,
+                nav_page_kwargs=self.detach_kwargs,
+            )
+            detached_window.show()
 
     def show_toast(self, toast_text: str):
         self.toast_overlay.add_toast(Adw.Toast(title=str(toast_text)))
@@ -258,13 +258,3 @@ class ContentPage(Adw.NavigationPage):
 
     def set_empty_page_text(self, text: str):
         self.pref_page.set_empty_page_text(str(text))
-
-    def toggle_search_btn(self, enabled: bool):
-        self.search_btn.set_visible(enabled)
-
-    def toggle_refresh_btn(self, enabled: bool):
-        self.refresh_btn.set_visible(enabled)
-
-    def show_search_bar(self):
-        if self.searchable:
-            self.search_bar.set_search_mode(True)

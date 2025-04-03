@@ -63,11 +63,11 @@ class DoctorPage(ContentPage):
         )
         self.topic_list_group = self.pref_page.add_group(title="TOPIC LIST", empty_group_text="Refresh to show topics")
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.reports = generate_reports()
         return len(self.reports) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         for report in self.reports:
             if report.name == "NETWORK CONFIGURATION":
                 # TODO these should be somehow grouped by network device
@@ -178,7 +178,7 @@ class DoctorPage(ContentPage):
                 if self.topic_list_group.num_rows == 0:
                     self.topic_list_group.set_empty_group_text("No topics found. Refresh to try again.")
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.network_config_group.clear()
         self.package_versions_group.clear()
         self.platform_info_group.clear()

@@ -104,8 +104,17 @@ class PrefRow(Adw.ActionRow, GenericRow):
 
         self.title_lbl: Gtk.Label = self.title_box.get_first_child()
         self.title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        self.title_lbl.set_hexpand(True)
+        self.title_lbl.set_halign(Gtk.Align.FILL)
+        self.title_lbl.set_single_line_mode(True)
+        self.title_lbl.set_width_chars(12)
+
         self.subtitle_lbl: Gtk.Label = self.title_lbl.get_next_sibling()
         self.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        self.subtitle_lbl.set_hexpand(True)
+        self.subtitle_lbl.set_halign(Gtk.Align.FILL)
+        self.subtitle_lbl.set_single_line_mode(True)
+        self.subtitle_lbl.set_width_chars(12)
 
         # react to hide header
         if not title and not subtitle:

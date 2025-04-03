@@ -113,7 +113,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
     def do_map(self):
         Adw.PreferencesDialog.do_map(self)
 
-        is_running_action = self.get_root().app.lookup_action("ros2_node_is_running")
+        is_running_action = self.get_root().app.lookup_action("ros2-node-is-running")
         self.node_state_changed_handler = is_running_action.connect("notify::state", self.on_change_node_running_state)
 
         # update env vars
@@ -151,10 +151,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
     def on_toggle_ros2_node(self, btn: PlayPauseButton, active: bool, *args):
         if active:
-            self.get_root().app.activate_action("ros2_node_start", None)
+            self.get_root().app.activate_action("ros2-node-start", None)
             self.add_toast(Adw.Toast(title="Started ROS2 Node"))
         else:
-            self.get_root().app.activate_action("ros2_node_stop", None)
+            self.get_root().app.activate_action("ros2-node-stop", None)
             self.add_toast(Adw.Toast(title="Stopped ROS2 Node"))
 
     def on_change_node_running_state(self, action: Gio.Action, state):

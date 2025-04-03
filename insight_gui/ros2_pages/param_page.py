@@ -55,7 +55,7 @@ class ParameterListPage(ContentPage):
 
         self.parameter_lists: Dict[PrefGroup] = {}
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
         if len(self.available_nodes) == 0:
@@ -78,7 +78,7 @@ class ParameterListPage(ContentPage):
             self.parameter_lists[node_name] = param_list
         return len(self.parameter_lists) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         # for every node with params add a group
         for node_name, param_list in sorted(self.parameter_lists.items(), key=itemgetter(0)):
             # create a group and add all parameters
@@ -107,7 +107,7 @@ class ParameterListPage(ContentPage):
 
             group.set_description_to_row_count()
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.pref_page.clear()
 
     def on_edit_param(self, *args, node_name: str, param_name: str):

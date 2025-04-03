@@ -56,7 +56,7 @@ class ROS2Connector:
         self.start_time = self.node.get_clock().now()
         self.thread = GLib.Thread.new("ros2-thread", self.spin, None)
         self.is_running = True
-        self.app.lookup_action("ros2_node_is_running").set_state(GLib.Variant.new_boolean(True))
+        self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(True))
 
     def stop_node(self):
         if not self.is_running:
@@ -69,7 +69,7 @@ class ROS2Connector:
             self.thread = None
         self.node.destroy_node()
         self.node = None
-        self.app.lookup_action("ros2_node_is_running").set_state(GLib.Variant.new_boolean(False))
+        self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(False))
 
     def spin(self, *args, **kwargs):
         try:

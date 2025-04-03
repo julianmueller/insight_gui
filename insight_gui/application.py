@@ -65,18 +65,18 @@ class Ros2GuiApp(Adw.Application):
         self.ros2_connector = ROS2Connector(application=self)
 
         # Define "app.ros2_node_start" action
-        ros2_node_start_action = Gio.SimpleAction.new("ros2_node_start", None)
+        ros2_node_start_action = Gio.SimpleAction.new("ros2-node-start", None)
         ros2_node_start_action.connect("activate", lambda *_: self.ros2_connector.start_node())
         self.add_action(ros2_node_start_action)
 
         # Define "app.ros2_node_stop" action
-        ros2_node_stop_action = Gio.SimpleAction.new("ros2_node_stop", None)
+        ros2_node_stop_action = Gio.SimpleAction.new("ros2-node-stop", None)
         ros2_node_stop_action.connect("activate", lambda *_: self.ros2_connector.stop_node())
         self.add_action(ros2_node_stop_action)
 
         # Define "app.ros2_node_is_running" as a stateful action
         ros2_node_is_running_action = Gio.SimpleAction.new_stateful(
-            "ros2_node_is_running", None, GLib.Variant.new_boolean(self.ros2_connector.is_running)
+            "ros2-node-is-running", None, GLib.Variant.new_boolean(self.ros2_connector.is_running)
         )
         ros2_node_is_running_action.connect("notify::state", self.ros2_connector.on_node_state_changed)
         self.add_action(ros2_node_is_running_action)

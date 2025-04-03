@@ -49,7 +49,7 @@ class ActionListPage(ContentPage):
 
         self.action_ns_groups: Dict[PrefGroup] = {}
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
 
         if len(self.available_actions) == 0:
@@ -57,7 +57,7 @@ class ActionListPage(ContentPage):
             return False
         return True
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         for action_name, action_types in self.available_actions:
             # action_types is a list, as multiple servers can advertise different types to the same action
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
@@ -90,7 +90,7 @@ class ActionListPage(ContentPage):
             )
             group.add_row(row)
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         for group in reversed(self.action_ns_groups.values()):
             self.pref_page.remove_group(group)
         self.action_ns_groups.clear()

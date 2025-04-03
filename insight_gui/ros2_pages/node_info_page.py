@@ -92,7 +92,7 @@ class NodeInfoPage(ContentPage):
         # Parameters
         self.parameters_group = self.pref_page.add_group(title="Parameters", empty_group_text="Node has no parameters")
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         # Publishers
         # self.publisher_list = get_publisher_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
         self.publisher_list = self.ros2_connector.node.get_publisher_names_and_types_by_node(
@@ -142,7 +142,7 @@ class NodeInfoPage(ContentPage):
             > 0
         )
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         # TODO this is ugly
         from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
         from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
@@ -274,7 +274,7 @@ class NodeInfoPage(ContentPage):
             self.parameters_group.add_row(row)
         self.parameters_group.set_description_to_row_count()
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.publishers_group.clear()
         self.subscribers_group.clear()
         self.service_servers_group.clear()

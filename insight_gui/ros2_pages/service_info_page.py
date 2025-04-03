@@ -61,12 +61,12 @@ class ServiceInfoPage(ContentPage):
             title="Service Clients", empty_group_text="Service has no clients"
         )
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a server/client of the service
         self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=False)
         return len(self.available_nodes) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         def add_srv_type_row(srv_type: str):
             srv_type_row = PrefRow(title=srv_type)  # , subtitle=node_full_name)
             srv_type_row.set_subpage_link(
@@ -120,7 +120,7 @@ class ServiceInfoPage(ContentPage):
         self.service_servers_group.set_description_to_row_count()
         self.service_clients_group.set_description_to_row_count()
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.service_type_group.clear()
         self.service_servers_group.clear()
         self.service_clients_group.clear()

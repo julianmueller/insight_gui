@@ -49,7 +49,7 @@ class TopicListPage(ContentPage):
 
         self.topic_ns_groups: Dict[PrefGroup] = {}
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.available_topics = sorted(
             get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True), key=itemgetter(0)
         )
@@ -58,7 +58,7 @@ class TopicListPage(ContentPage):
             return False
         return True
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         # TODO this is ugly
         from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
 
@@ -99,7 +99,7 @@ class TopicListPage(ContentPage):
             )
             group.add_row(row)
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         for group in reversed(self.topic_ns_groups.values()):
             self.pref_page.remove_group(group)
         self.topic_ns_groups.clear()

@@ -39,15 +39,15 @@ class DetachedWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
 
         super().set_destroy_with_parent(True)
-        super().set_size_request(480, 500)
-        super().set_default_size(480, 500)
+        super().set_size_request(480, 600)
+        super().set_default_size(480, 600)
 
         self.nav_view: Adw.NavigationView = Adw.NavigationView()
         super().set_content(self.nav_view)
 
         self.app: Adw.Application = application  # backref to application
+        # nav_page_kwargs.update({"detachable": False})  # make detached pages not detachable
         self.nav_page: Adw.NavigationPage = nav_page_class(**nav_page_kwargs)
-        self.nav_page.detach_btn.set_visible(False)
         self.nav_view.add(self.nav_page)
 
         action = Gio.SimpleAction.new("refresh", None)
@@ -62,9 +62,9 @@ class DetachedWindow(Adw.ApplicationWindow):
         action.connect("activate", self.on_detach)
         self.add_action(action)
 
-        action = Gio.SimpleAction.new("quit", None)
-        action.connect("activate", self.on_quit)
-        self.app.add_action(action)
+        action = Gio.SimpleAction.new("close", None)
+        action.connect("activate", self.on_close)
+        self.add_action(action)
 
         # Shortcuts # TODO make them also work in the detached windows
         self.shortcut_controller = Gtk.ShortcutController()
@@ -92,8 +92,8 @@ class DetachedWindow(Adw.ApplicationWindow):
         )
         self.shortcut_controller.add_shortcut(
             shortcut=Gtk.Shortcut.new(
-                trigger=Gtk.ShortcutTrigger.parse_string("<Control>w"),
-                action=Gtk.CallbackAction.new(lambda *_: self.close()),
+                trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_w, Gdk.ModifierType.CONTROL_MASK),
+                action=Gtk.NamedAction.new("win.close"),
             )
         )
 
@@ -120,5 +120,5 @@ class DetachedWindow(Adw.ApplicationWindow):
         if self.nav_page.searchable:
             self.nav_page.toggle_search()
 
-    def on_quit(self, *args):
+    def on_close(self, *args):
         self.close()

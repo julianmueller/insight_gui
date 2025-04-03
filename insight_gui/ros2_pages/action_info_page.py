@@ -66,12 +66,12 @@ class ActionInfoPage(ContentPage):
             title="Action Clients", empty_group_text="action has no clients"
         )
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a server/client of this action
         self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
         return len(self.available_nodes) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         def add_act_type_row(msg_type_full_name: str):
             msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
             msg_row.set_subpage_link(
@@ -125,7 +125,7 @@ class ActionInfoPage(ContentPage):
         self.action_servers_group.set_description_to_row_count()
         self.action_clients_group.set_description_to_row_count()
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.action_type_group.clear()
         self.action_servers_group.clear()
         self.action_clients_group.clear()

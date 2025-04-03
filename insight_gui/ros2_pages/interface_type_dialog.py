@@ -40,7 +40,7 @@ class InterfaceTypeDialog(Adw.PreferencesDialog):
     def __init__(self, msg_type_full_name: str, msg_class, **kwargs):
         super().__init__(**kwargs)
         super().set_title(str(msg_type_full_name))
-        super().set_size_request(width=300, height=500)
+        super().set_size_request(width=300, height=800)
 
         pref_page = PrefPage()
         super().add(pref_page)

@@ -94,13 +94,13 @@ class ServiceCallPage(ContentPage):
         )
         self.response_text_row = self.response_group.add_row(TextViewRow(editable=False))
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.available_services = sorted(
             get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True)
         )
         return len(self.available_services) > 0
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         # Check if there are services to call
         if len(self.available_services) > 0:
             self.call_btn.set_sensitive(True)
@@ -110,7 +110,15 @@ class ServiceCallPage(ContentPage):
             return
 
         def on_setup(factory, list_item):
-            label = Gtk.Label(xalign=0, wrap=True, hexpand=True, ellipsize=Pango.EllipsizeMode.END)
+            label = Gtk.Label(
+                xalign=0,
+                wrap=True,
+                hexpand=True,
+                ellipsize=Pango.EllipsizeMode.END,
+                halign=Gtk.Align.FILL,
+                single_line_mode=True,
+                width_chars=12,
+            )
             list_item.set_child(label)
 
         def on_bind(factory, list_item):
@@ -132,7 +140,7 @@ class ServiceCallPage(ContentPage):
         self.service_select_row.set_factory(factory)
         # self.service_select_row.set_selected(0)
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         # clear previous service list
         self.service_list_store.remove_all()
 

@@ -95,7 +95,7 @@ class TransformsPage(ContentPage):
         self.frames_group = self.pref_page.add_group(title="Frames", empty_group_text="Refresh to show frames")
         self.frames_dict = {}
 
-    def on_refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         super().show_toast("Listening to tf data for 5.0 seconds...")
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
@@ -121,7 +121,7 @@ class TransformsPage(ContentPage):
             self.calc_button.set_sensitive(False)
             return False
 
-    def on_refresh_gui(self):
+    def refresh_ui(self):
         # create an expander row for each frame and add all the info as rows
         frame_rows = []
         for frame_name, frame_info in self.frames_dict.items():
@@ -167,7 +167,7 @@ class TransformsPage(ContentPage):
             self.source_frame_row.set_selected(0)
             self.target_frame_row.set_selected(0)
 
-    def on_reset_gui(self):
+    def reset_ui(self):
         self.frames_group.clear()
         self.result_text_row.set_visible(False)
         self.frames_list_store.remove_all()

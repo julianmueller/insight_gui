@@ -54,7 +54,7 @@ class JointStatesPage(ContentPage):
 
         self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
 
-    def refresh_blocking(self) -> bool:
+    def refresh_bg(self) -> bool:
         self.joint_states_topic_list = []
 
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
@@ -71,7 +71,7 @@ class JointStatesPage(ContentPage):
                 self.joint_states_topic_list.append(topic_name)
         return len(self.joint_states_topic_list) > 0
 
-    def refresh_gui(self):
+    def refresh_ui(self):
         for js_topic in self.joint_states_topic_list:
             self.js_topic_list_store.append(Gtk.StringObject.new(js_topic))
 
@@ -81,7 +81,7 @@ class JointStatesPage(ContentPage):
         else:
             super().show_toast("No topic with joint_states found")
 
-    def clear_gui(self):
+    def reset_ui(self):
         self.js_topic_list_store.remove_all()
         self.joints_group.clear()
 
