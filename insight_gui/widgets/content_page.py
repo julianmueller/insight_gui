@@ -25,7 +25,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GObject, GLib
+from gi.repository import Gtk, Adw, GObject, GLib, Gio
 
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.detached_window import DetachedWindow
@@ -41,8 +41,7 @@ class ContentPage(Adw.NavigationPage):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        super().connect("realize", self.on_realize)
-        # super().connect("unrealize", self.on_unrealize) # TODO
+        GLib.idle_add(self._deferred_init)
         # super().connect("map", self.on_map)
         # super().connect("unmap", self.on_unmap)
 
@@ -95,7 +94,7 @@ class ContentPage(Adw.NavigationPage):
             "active", self.search_bar, "search-mode-enabled", GObject.BindingFlags.BIDIRECTIONAL
         )
 
-    def on_realize(self, *args):
+    def _deferred_init(self):
         # get these properties, after the widget has been realized in the window
         self.nav_view = super().get_ancestor(Adw.NavigationView)
         self.ros2_connector = super().get_root().ros2_connector

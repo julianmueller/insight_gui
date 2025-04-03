@@ -4,7 +4,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, GLib
 
 
 from insight_gui.utils.adw_colors import AdwAccentColor
@@ -18,7 +18,7 @@ class BaseBlock(Adw.Bin):
 
     def __init__(self, label: str, accent_color: AdwAccentColor = None, **kwargs):
         super().__init__()
-        super().connect("realize", self.on_realize)
+        GLib.idle_add(self._deferred_init)
 
         builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
@@ -51,7 +51,7 @@ class BaseBlock(Adw.Bin):
     def height(self):
         return super().get_height()
 
-    def on_realize(self, *args):
+    def _deferred_init(self, *args):
         self.nav_view = super().get_ancestor(Adw.NavigationView)
         self.ros2_connector = super().get_root().ros2_connector
 
@@ -65,9 +65,6 @@ class NodeBlock(BaseBlock):
     def __init__(self, node_full_name: str, **kwargs):
         super().__init__(label=node_full_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE, **kwargs)
         self.node_full_name = node_full_name
-
-    def on_realize(self, *args):
-        super().on_realize()
 
     def on_subpage_btn_clicked(self, button, *args):
         self.nav_view.push(NodeInfoPage(self.node_full_name))
@@ -88,9 +85,6 @@ class TopicBlock(BaseBlock):
         super().__init__(label=topic_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_ORANGE, **kwargs)
         self.topic_name = topic_name
         self.topic_types = topic_types
-
-    def on_realize(self, *args):
-        super().on_realize()
 
     def on_subpage_btn_clicked(self, button, *args):
         self.nav_view.push(TopicInfoPage(self.topic_name, self.topic_types))

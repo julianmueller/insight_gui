@@ -33,7 +33,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, GLib
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
@@ -48,7 +48,7 @@ class ParamEditDialog(Adw.PreferencesDialog):
     def __init__(self, node_name: str, param_name: str, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Edit Parameter")
-        super().connect("realize", self.on_realize)
+        GLib.idle_add(self._deferred_init)
 
         self.node_name = node_name
         self.param_name = param_name
@@ -91,7 +91,7 @@ class ParamEditDialog(Adw.PreferencesDialog):
         # finally the apply button
         self.apply_btn = self.group.add_row(ButtonRow(label="Apply change", func=self.on_apply_change, sensitive=False))
 
-    def on_realize(self, *args):
+    def _deferred_init(self):
         # get parameter infos
         param_descriptor = call_describe_parameters(
             node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[self.param_name]

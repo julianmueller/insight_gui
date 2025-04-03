@@ -27,7 +27,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio
+from gi.repository import Gtk, Adw, Gio, GLib
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
@@ -44,8 +44,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         super().__init__(**kwargs)
         super().set_title("Settings")
         super().set_size_request(300, 500)
-        super().connect("realize", self.on_realize)
-        super().connect("close-attempt", self.on_close_attempt)
+        super().connect("close-attempt", self.on_close_attempt)  # TODO change to do_func
 
         self.ros2_connector = ros2_connector
         # Page with ROS2 Settings
@@ -111,7 +110,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         # self.page2.add_group(title="Test", description="bla")
 
-    def on_realize(self, *args):
+    def do_map(self):
+        Adw.PreferencesDialog.do_map(self)
+
         is_running_action = self.get_root().app.lookup_action("ros2_node_is_running")
         self.node_state_changed_handler = is_running_action.connect("notify::state", self.on_change_node_running_state)
 

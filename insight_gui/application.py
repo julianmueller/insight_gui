@@ -58,8 +58,8 @@ class Ros2GuiApp(Adw.Application):
 
         self.window = None
 
-        # add event handles
-        self.connect("activate", self.on_activate)
+    def do_startup(self):
+        Adw.Application.do_startup(self)
 
         # ros2 connector handles all connections to the ros2 node
         self.ros2_connector = ROS2Connector(application=self)
@@ -84,14 +84,14 @@ class Ros2GuiApp(Adw.Application):
         # start the ros2 node
         self.ros2_connector.start_node()
 
-    def on_activate(self, app):
+    def do_activate(self):
         if not self.window:
-            self.window = MainWindow(application=app, title="Insight", icon_name="insight-logo")
+            self.window = MainWindow(application=self, title="Insight", icon_name="insight-logo")
 
         self.window.connect("close-request", self.shutdown)
         self.window.present()
 
-    def shutdown(self, widget=None):
+    def shutdown(self, *args):
         print("Shutting down GTK window.")
         self.ros2_connector.shutdown()
         Gtk.Application.quit(self)

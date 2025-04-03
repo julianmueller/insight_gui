@@ -28,7 +28,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, GLib
 
 from insight_gui.ros2_pages.pkg_new_dialog import PackageNewDialog
 from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage

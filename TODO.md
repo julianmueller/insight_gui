@@ -17,6 +17,7 @@
 - additional pages
     - add a `rqt_graph` equivalent page
     - add a teleop page
+    - add a page to visualize/load/save octomaps
     - add tf inspection subpage (show the stuff that rviz shows)
     - add a controller "/joy" page (also look into Workbench - Gamepad Demo)
     - add a launch page to directly launch nodes with a set of arguments

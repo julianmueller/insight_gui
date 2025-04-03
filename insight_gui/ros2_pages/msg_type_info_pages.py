@@ -58,8 +58,8 @@ class MessageTypeInfoPage(ContentPage):
         self.msg_type_full_name = msg_type_full_name
         self.detach_kwargs = {"msg_type_full_name": msg_type_full_name}
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
+    def _deferred_init(self):
+        super()._deferred_init()
 
         # Load the message parent class
         msg_class = get_message(self.msg_type_full_name)
@@ -103,8 +103,8 @@ class ServiceTypeInfoPage(ContentPage):
         self.srv_type_full_name = srv_type_full_name
         self.detach_kwargs = {"srv_type_full_name": srv_type_full_name}
 
-    def on_realize(self, *args):
-        super().on_realize(*args)
+    def _deferred_init(self):
+        super()._deferred_init()
 
         # Load the service parent class
         srv_class = get_service(self.srv_type_full_name)
