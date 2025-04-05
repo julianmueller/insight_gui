@@ -21,6 +21,7 @@
 # =============================================================================
 
 from pathlib import Path
+from typing import Type
 
 import gi
 
@@ -49,68 +50,14 @@ from insight_gui.utils.adw_colors import AdwAccentColor
 from insight_gui.ros2_connector import ROS2Connector
 
 
-@Gtk.Template(filename=str(Path(__file__).with_suffix(".ui")))
-class MainWindow(Adw.ApplicationWindow):
-    __gtype_name__ = "MainWindow"
-
-    split_view: Adw.NavigationSplitView = Gtk.Template.Child()
-
-    nav_header_bar: Adw.HeaderBar = Gtk.Template.Child()
-    # refresh_btn: Gtk.Button = Gtk.Template.Child()
-    menu_btn: Gtk.Button = Gtk.Template.Child()
-
-    # content_header_bar: Adw.HeaderBar = Gtk.Template.Child()
-    stack_sidebar: Gtk.StackSidebar = Gtk.Template.Child()
-    content_stack: Gtk.Stack = Gtk.Template.Child()
-
-    # all nav views for the pages
-    pkg_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    node_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    topic_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    topic_echo_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    service_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    srv_caller_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    action_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    interface_browser_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    graph_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    param_list_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    tf_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    img_viewer_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    joint_states_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    logger_nav_view: Adw.NavigationView = Gtk.Template.Child()
-    doctor_nav_view: Adw.NavigationView = Gtk.Template.Child()
-
-    # ros time
-    time_box: Gtk.Box = Gtk.Template.Child()
-    ros_time_lbl: Gtk.Label = Gtk.Template.Child()
-    ros_elapsed_time_lbl: Gtk.Label = Gtk.Template.Child()
-    wall_time_lbl: Gtk.Label = Gtk.Template.Child()
-    wall_elapsed_time_lbl: Gtk.Label = Gtk.Template.Child()
-    # TODO also add the boxes?
+class BaseWindow(Adw.ApplicationWindow):
+    __gtype_name__ = "BaseWindow"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._setup_accent_colors()
 
-        self.content_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
-
-        # content of the stack
-        self.pkg_list_nav_view.add(PackageListPage())
-        self.node_list_nav_view.add(NodeListPage())
-        self.topic_list_nav_view.add(TopicListPage())
-        self.topic_echo_nav_view.add(TopicEchoPage())
-        self.service_list_nav_view.add(ServiceListPage())
-        self.srv_caller_nav_view.add(ServiceCallPage())
-        self.action_list_nav_view.add(ActionListPage())
-        self.interface_browser_nav_view.add(InterfaceBrowserPage())
-        self.graph_nav_view.add(GraphPage())
-        self.param_list_nav_view.add(ParameterListPage())
-        self.tf_nav_view.add(TransformsPage())
-        self.img_viewer_nav_view.add(ImageViewerPage())
-        self.joint_states_nav_view.add(JointStatesPage())
-        self.logger_nav_view.add(LoggerPage())
-        self.doctor_nav_view.add(DoctorPage())
-
+        # window actions
         action = Gio.SimpleAction.new("close", None)
         action.connect("activate", self.on_close)
         self.add_action(action)
@@ -155,12 +102,7 @@ class MainWindow(Adw.ApplicationWindow):
                 action=Gtk.NamedAction.new("win.detach"),
             )
         )
-        self.shortcut_controller.add_shortcut(
-            shortcut=Gtk.Shortcut.new(
-                trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_comma, Gdk.ModifierType.CONTROL_MASK),
-                action=Gtk.NamedAction.new("app.preferences"),
-            )
-        )
+
         self.shortcut_controller.add_shortcut(
             shortcut=Gtk.Shortcut.new(
                 trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_Return, Gdk.ModifierType.CONTROL_MASK),
@@ -177,16 +119,143 @@ class MainWindow(Adw.ApplicationWindow):
         # Add controller to window
         self.add_controller(self.shortcut_controller)
 
-        # update time labels
-        GLib.idle_add(self._update_time_labels)
+    @property
+    def app(self) -> Adw.Application:
+        return self.get_application()
 
     @property
     def ros2_connector(self) -> ROS2Connector:
         return self.app.ros2_connector
 
-    @property
-    def app(self) -> Adw.Application:
-        return self.get_application()
+    def on_refresh(self, *args):
+        if self.current_page and self.current_page.refreshable:
+            self.current_page.refresh()
+
+    def on_detach(self, *args):
+        if self.current_page and self.current_page.detachable:
+            self.current_page.detach()
+
+    def on_toggle_search(self, *args):
+        if self.current_page and self.current_page.searchable:
+            self.current_page.toggle_search()
+
+    def on_page_trigger(self, *args):
+        if self.current_page:
+            self.current_page.trigger()
+
+    def on_close(self, *args):
+        self.close()
+
+    # add accent colors
+    def _setup_accent_colors(self):
+        css_string = ""
+
+        # assemble the css file as a string
+        for adw_col in list(AdwAccentColor):
+            css_string += adw_col.as_css_style() + "\n"
+
+        css_string += """
+        .small-button {
+            min-width: 24px;
+            min-height: 24px;
+        }
+        """
+
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_string(css_string)
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    def get_dark(self):
+        style_manager = Adw.StyleManager.get_default()
+        return style_manager.get_dark()
+
+
+class MainWindow(BaseWindow):
+    __gtype_name__ = "MainWindow"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        super().set_default_size(1200, 800)
+        super().set_size_request(480, 500)
+
+        builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
+
+        self.split_view: Adw.NavigationSplitView = builder.get_object("split_view")
+        super().set_content(self.split_view)
+        break_point = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 800sp"))
+        break_point.add_setter(self.split_view, "collapsed", True)
+        super().add_breakpoint(break_point)
+
+        self.nav_header_bar: Adw.HeaderBar = builder.get_object("nav_header_bar")
+        self.menu_btn: Gtk.Button = builder.get_object("menu_btn")
+        self.stack_sidebar: Gtk.StackSidebar = builder.get_object("stack_sidebar")
+        self.content_stack: Gtk.Stack = builder.get_object("content_stack")
+        self.content_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
+
+        # all nav pages
+        self.pkg_list_nav_view: Adw.NavigationView = builder.get_object("pkg_list_nav_view")
+        self.pkg_list_nav_view.add(PackageListPage())
+
+        self.node_list_nav_view: Adw.NavigationView = builder.get_object("node_list_nav_view")
+        self.node_list_nav_view.add(NodeListPage())
+
+        self.topic_list_nav_view: Adw.NavigationView = builder.get_object("topic_list_nav_view")
+        self.topic_list_nav_view.add(TopicListPage())
+
+        self.topic_echo_nav_view: Adw.NavigationView = builder.get_object("topic_echo_nav_view")
+        self.topic_echo_nav_view.add(TopicEchoPage())
+
+        self.service_list_nav_view: Adw.NavigationView = builder.get_object("service_list_nav_view")
+        self.service_list_nav_view.add(ServiceListPage())
+
+        self.srv_caller_nav_view: Adw.NavigationView = builder.get_object("srv_caller_nav_view")
+        self.srv_caller_nav_view.add(ServiceCallPage())
+
+        self.action_list_nav_view: Adw.NavigationView = builder.get_object("action_list_nav_view")
+        self.action_list_nav_view.add(ActionListPage())
+
+        self.interface_browser_nav_view: Adw.NavigationView = builder.get_object("interface_browser_nav_view")
+        self.interface_browser_nav_view.add(InterfaceBrowserPage())
+
+        self.graph_nav_view: Adw.NavigationView = builder.get_object("graph_nav_view")
+        self.graph_nav_view.add(GraphPage())
+
+        self.param_list_nav_view: Adw.NavigationView = builder.get_object("param_list_nav_view")
+        self.param_list_nav_view.add(ParameterListPage())
+
+        self.tf_nav_view: Adw.NavigationView = builder.get_object("tf_nav_view")
+        self.tf_nav_view.add(TransformsPage())
+
+        self.img_viewer_nav_view: Adw.NavigationView = builder.get_object("img_viewer_nav_view")
+        self.img_viewer_nav_view.add(ImageViewerPage())
+
+        self.joint_states_nav_view: Adw.NavigationView = builder.get_object("joint_states_nav_view")
+        self.joint_states_nav_view.add(JointStatesPage())
+
+        self.logger_nav_view: Adw.NavigationView = builder.get_object("logger_nav_view")
+        self.logger_nav_view.add(LoggerPage())
+
+        self.doctor_nav_view: Adw.NavigationView = builder.get_object("doctor_nav_view")
+        self.doctor_nav_view.add(DoctorPage())
+
+        # ros time
+        self.time_box: Gtk.Box = builder.get_object("time_box")
+        self.ros_time_lbl: Gtk.Label = builder.get_object("ros_time_lbl")
+        self.ros_elapsed_time_lbl: Gtk.Label = builder.get_object("ros_elapsed_time_lbl")
+        self.wall_time_lbl: Gtk.Label = builder.get_object("wall_time_lbl")
+        self.wall_elapsed_time_lbl: Gtk.Label = builder.get_object("wall_elapsed_time_lbl")
+
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_comma, Gdk.ModifierType.CONTROL_MASK),
+                action=Gtk.NamedAction.new("app.preferences"),
+            )
+        )
+
+        # update time labels
+        GLib.idle_add(self._update_time_labels)
 
     @property
     def current_page(self) -> Adw.NavigationPage:
@@ -213,25 +282,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.about_dialog.add_credit_section("Development", ["Julian Müller"])
         self.about_dialog.add_credit_section("Inspiration", ["rqt", "ros2cli"])
         self.about_dialog.present(self)
-
-    def on_refresh(self, *args):
-        if self.current_page and self.current_page.refreshable:
-            self.current_page.refresh()
-
-    def on_detach(self, *args):
-        if self.current_page and self.current_page.detachable:
-            self.current_page.detach()
-
-    def on_toggle_search(self, *args):
-        if self.current_page and self.current_page.searchable:
-            self.current_page.toggle_search()
-
-    def on_page_trigger(self, *args):
-        if self.current_page:
-            self.current_page.trigger()
-
-    def on_close(self, *args):
-        self.close()
 
     def on_stack_page_changed(self, stack: Gtk.Stack, stack_name: GObject.GParamSpec):
         if self.split_view.get_collapsed():
@@ -262,27 +312,23 @@ class MainWindow(Adw.ApplicationWindow):
 
         return True  # keep GLib thread running
 
-    # add accent colors
-    def _setup_accent_colors(self):
-        css_string = ""
 
-        # assemble the css file as a string
-        for adw_col in list(AdwAccentColor):
-            css_string += adw_col.as_css_style() + "\n"
+class DetachedWindow(BaseWindow):
+    __gtype_name__ = "DetachedWindow"
 
-        css_string += """
-        .small-button {
-            min-width: 24px;
-            min-height: 24px;
-        }
-        """
+    def __init__(self, nav_page_class: Type, nav_page_kwargs: dict, **kwargs):
+        super().__init__(**kwargs)
 
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_string(css_string)
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
+        super().set_destroy_with_parent(True)
+        super().set_size_request(480, 600)
+        super().set_default_size(480, 600)
 
-    def get_dark(self):
-        style_manager = Adw.StyleManager.get_default()
-        return style_manager.get_dark()
+        self.nav_view: Adw.NavigationView = Adw.NavigationView()
+        super().set_content(self.nav_view)
+
+        self.nav_page: Adw.NavigationPage = nav_page_class(**nav_page_kwargs)
+        self.nav_view.add(self.nav_page)
+
+    @property
+    def current_page(self) -> Adw.NavigationPage:
+        return self.nav_view.get_visible_page()

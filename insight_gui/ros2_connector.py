@@ -113,7 +113,7 @@ class ROS2Connector:
 
         if not client.service_is_ready():
             print("waiting for service to become available...")  # TODO this freezes the gui
-            client.wait_for_service()
+            client.wait_for_service(timeout_sec=2)
 
         future = client.call_async(request)
         rclpy.spin_until_future_complete(self.node, future)

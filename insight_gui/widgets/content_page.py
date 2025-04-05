@@ -25,10 +25,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GObject, GLib, Gio
+from gi.repository import Gtk, Adw, GObject, GLib
 
 from insight_gui.widgets.pref_page import PrefPage
-from insight_gui.widgets.detached_window import DetachedWindow
 
 
 class ContentPage(Adw.NavigationPage):
@@ -192,9 +191,11 @@ class ContentPage(Adw.NavigationPage):
         self.pref_page.apply_filter(self.search_entry.get_text())
 
     def detach(self, *args):
+        from insight_gui.window import DetachedWindow
+
         if self.detachable:
             detached_window = DetachedWindow(
-                application=self.get_root().app,
+                application=self.get_ancestor(Adw.ApplicationWindow).app,
                 nav_page_class=self.__class__,
                 nav_page_kwargs=self.detach_kwargs,
             )

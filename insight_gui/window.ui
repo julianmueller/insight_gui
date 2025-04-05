@@ -24,354 +24,340 @@
     <requires lib="gtk" version="4.0" />
     <requires lib="adw" version="1.0" />
 
-    <template class="MainWindow" parent="AdwApplicationWindow">
-        <property name="height-request">500</property>
-        <property name="width-request">480</property>
-        <property name="default-width">1200</property>
-        <property name="default-height">800</property>
+    <object class="AdwNavigationSplitView" id="split_view">
+        <property name="min-sidebar-width">150</property>
+        <property name="max-sidebar-width">250</property>
+        <property name="show-content">true</property>
 
-        <child>
-            <object class="AdwBreakpoint">
-                <condition>max-width: 800sp</condition>
-                <setter object="split_view" property="collapsed">true</setter>
-            </object>
-        </child>
+        <property name="sidebar">
+            <object class="AdwNavigationPage">
+                <property name="title">Navigation</property>
+                <property name="child">
+                    <object class="AdwToolbarView">
 
-        <property name="content">
-            <object class="AdwNavigationSplitView" id="split_view">
-                <property name="min-sidebar-width">150</property>
-                <property name="max-sidebar-width">250</property>
-                <property name="show-content">true</property>
-
-                <property name="sidebar">
-                    <object class="AdwNavigationPage">
-                        <property name="title">Navigation</property>
-                        <property name="child">
-                            <object class="AdwToolbarView">
-
-                                <child type="top">
-                                    <object class="AdwHeaderBar" id="nav_header_bar">
-                                        <child type="start">
-                                            <!-- TODO maybe turn this into a toggle to show/hide the sidebar navigation? -->
-                                            <!-- <object class="GtkButton" id="refresh_btn">
+                        <child type="top">
+                            <object class="AdwHeaderBar" id="nav_header_bar">
+                                <child type="start">
+                                    <!-- TODO maybe turn this into a toggle to show/hide the sidebar navigation? -->
+                                    <!-- <object class="GtkButton" id="refresh_btn">
                                                 <property name="icon-name">update-symbolic</property>
                                                 <property name="tooltip-text">Refresh all Lists</property>
                                                 <signal name="clicked" handler="on_refresh_btn_clicked" />
                                             </object> -->
-                                        </child>
-                                        <child type="end">
-                                            <object class="GtkMenuButton" id="menu_btn">
-                                                <property name="icon-name">open-menu-symbolic</property>
-                                                <property name="menu-model">menu</property>
-                                                <property name="primary">true</property>
-                                                <!-- <property name="tooltip-text">Open Preferences Dialog</property> -->
-                                                <!-- <signal name="clicked" handler="on_menu_btn_clicked" /> -->
-                                            </object>
-                                        </child>
+                                </child>
+                                <child type="end">
+                                    <object class="GtkMenuButton" id="menu_btn">
+                                        <property name="icon-name">open-menu-symbolic</property>
+                                        <property name="menu-model">menu</property>
+                                        <property name="primary">true</property>
+                                        <!-- <property name="tooltip-text">Open Preferences Dialog</property> -->
+                                        <!-- <signal name="clicked" handler="on_menu_btn_clicked" /> -->
                                     </object>
                                 </child>
+                            </object>
+                        </child>
 
-                                <property name="content">
-                                    <object class="GtkStackSidebar" id="stack_sidebar">
-                                        <property name="stack">content_stack</property>
-                                    </object>
-                                </property>
+                        <property name="content">
+                            <object class="GtkStackSidebar" id="stack_sidebar">
+                                <property name="stack">content_stack</property>
+                            </object>
+                        </property>
 
-                                <child type="bottom">
-                                    <object class="GtkBox" id="time_box">
-                                        <property name="orientation">vertical</property>
+                        <child type="bottom">
+                            <object class="GtkBox" id="time_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">12</property>
+                                <property name="margin-top">12</property>
+                                <property name="margin-bottom">12</property>
+                                <property name="margin-start">12</property>
+                                <property name="margin-end">12</property>
+
+                                <child>
+                                    <object class="GtkBox" id="ros_time_box">
+                                        <property name="orientation">horizontal</property>
                                         <property name="spacing">12</property>
-                                        <property name="margin-top">12</property>
-                                        <property name="margin-bottom">12</property>
-                                        <property name="margin-start">12</property>
-                                        <property name="margin-end">12</property>
-
+                                        <property name="tooltip-text">ROS2 Time</property>
                                         <child>
-                                            <object class="GtkBox" id="ros_time_box">
-                                                <property name="orientation">horizontal</property>
-                                                <property name="spacing">12</property>
-                                                <property name="tooltip-text">ROS2 Time</property>
-                                                <child>
-                                                    <object class="GtkImage">
-                                                        <property name="icon-name">preferences-system-time-symbolic</property>
-                                                    </object>
-                                                </child>
-                                                <child>
-                                                    <object class="GtkLabel" id="ros_time_lbl">
-                                                        <property name="label">ROS2 Time</property>
-                                                        <property name="hexpand">True</property>
-                                                        <property name="xalign">1.0</property>
-                                                    </object>
-                                                </child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">preferences-system-time-symbolic</property>
                                             </object>
                                         </child>
-
                                         <child>
-                                            <object class="GtkBox" id="ros_elapsed_time_box">
-                                                <property name="orientation">horizontal</property>
-                                                <property name="spacing">12</property>
-                                                <property name="tooltip-text">ROS2 Elapsed Time</property>
-                                                <child>
-                                                    <object class="GtkImage">
-                                                        <property name="icon-name">timer-symbolic</property>
-                                                    </object>
-                                                </child>
-
-                                                <child>
-                                                    <object class="GtkLabel" id="ros_elapsed_time_lbl">
-                                                        <property name="label">Elapsed Time</property>
-                                                        <property name="hexpand">True</property>
-                                                        <property name="xalign">1.0</property>
-                                                    </object>
-                                                </child>
-                                            </object>
-                                        </child>
-
-                                        <child>
-                                            <object class="GtkBox" id="wall_time_box">
-                                                <property name="orientation">horizontal</property>
-                                                <property name="spacing">12</property>
-                                                <property name="tooltip-text">Wall Time</property>
-                                                <property name="visible">False</property>
-                                                <child>
-                                                    <object class="GtkImage">
-                                                        <property name="icon-name">preferences-system-time-symbolic</property>
-                                                    </object>
-                                                </child>
-                                                <child>
-                                                    <object class="GtkLabel" id="wall_time_lbl">
-                                                        <property name="label">Wall Time</property>
-                                                        <property name="hexpand">True</property>
-                                                        <property name="xalign">1.0</property>
-                                                    </object>
-                                                </child>
-                                            </object>
-                                        </child>
-
-                                        <child>
-                                            <object class="GtkBox" id="wall_elapsed_time_box">
-                                                <property name="orientation">horizontal</property>
-                                                <property name="spacing">12</property>
-                                                <property name="tooltip-text">Wall Elapsed Time</property>
-                                                <property name="visible">False</property>
-                                                <child>
-                                                    <object class="GtkImage">
-                                                        <property name="icon-name">timer-symbolic</property>
-                                                    </object>
-                                                </child>
-
-                                                <child>
-                                                    <object class="GtkLabel" id="wall_elapsed_time_lbl">
-                                                        <property name="label">Wall Elapsed Time</property>
-                                                        <property name="hexpand">True</property>
-                                                        <property name="xalign">1.0</property>
-                                                    </object>
-                                                </child>
+                                            <object class="GtkLabel" id="ros_time_lbl">
+                                                <property name="label">ROS2 Time</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="xalign">1.0</property>
                                             </object>
                                         </child>
                                     </object>
                                 </child>
 
+                                <child>
+                                    <object class="GtkBox" id="ros_elapsed_time_box">
+                                        <property name="orientation">horizontal</property>
+                                        <property name="spacing">12</property>
+                                        <property name="tooltip-text">ROS2 Elapsed Time</property>
+                                        <child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">timer-symbolic</property>
+                                            </object>
+                                        </child>
+
+                                        <child>
+                                            <object class="GtkLabel" id="ros_elapsed_time_lbl">
+                                                <property name="label">Elapsed Time</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="xalign">1.0</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+
+                                <child>
+                                    <object class="GtkBox" id="wall_time_box">
+                                        <property name="orientation">horizontal</property>
+                                        <property name="spacing">12</property>
+                                        <property name="tooltip-text">Wall Time</property>
+                                        <property name="visible">False</property>
+                                        <child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">preferences-system-time-symbolic</property>
+                                            </object>
+                                        </child>
+                                        <child>
+                                            <object class="GtkLabel" id="wall_time_lbl">
+                                                <property name="label">Wall Time</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="xalign">1.0</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+
+                                <child>
+                                    <object class="GtkBox" id="wall_elapsed_time_box">
+                                        <property name="orientation">horizontal</property>
+                                        <property name="spacing">12</property>
+                                        <property name="tooltip-text">Wall Elapsed Time</property>
+                                        <property name="visible">False</property>
+                                        <child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">timer-symbolic</property>
+                                            </object>
+                                        </child>
+
+                                        <child>
+                                            <object class="GtkLabel" id="wall_elapsed_time_lbl">
+                                                <property name="label">Wall Elapsed Time</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="xalign">1.0</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
                             </object>
-                        </property>
-                    </object>
-                </property>
+                        </child>
 
-                <property name="content">
-                    <object class="AdwNavigationPage">
-                        <property name="title">Content</property>
-
-                        <property name="child">
-                            <object class="GtkStack" id="content_stack">
-
-                                <!-- TODO welcome/startup page? -->
-
-                                <!-- Package List -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">pkg_list_page</property>
-                                        <property name="title">Packages</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="pkg_list_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Node List -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">node_list</property>
-                                        <property name="title">Nodes</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="node_list_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Topics -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">topic_list</property>
-                                        <property name="title">Topics</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="topic_list_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Topics -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">topic_echo</property>
-                                        <property name="title">Topic Echoer</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="topic_echo_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Services -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">service_list</property>
-                                        <property name="title">Services</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="service_list_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Service Caller -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">srv_caller</property>
-                                        <property name="title">Service Caller</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="srv_caller_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Actions -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">action_list</property>
-                                        <property name="title">Actions</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="action_list_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Interfaces -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">interface_browser</property>
-                                        <property name="title">Interfaces</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="interface_browser_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Package List -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">graph_page</property>
-                                        <property name="title">Graph</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="graph_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Parameters -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">param_list</property>
-                                        <property name="title">Parameters</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="param_list_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Transforms -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">tf</property>
-                                        <property name="title">Transforms</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="tf_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Image Viewer -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">img_viewer</property>
-                                        <property name="title">Image Viewer</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="img_viewer_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Joint States -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">joint_states</property>
-                                        <property name="title">Joint States</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="joint_states_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Logger -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">logger</property>
-                                        <property name="title">Logger</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="logger_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Doctor -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">doctor</property>
-                                        <property name="title">Doctor</property>
-                                        <property name="child">
-                                            <object class="AdwNavigationView" id="doctor_nav_view" />
-                                        </property>
-                                    </object>
-                                </child>
-
-
-                            </object>
-                        </property>
                     </object>
                 </property>
             </object>
         </property>
-    </template>
+
+        <property name="content">
+            <object class="AdwNavigationPage">
+                <property name="title">Content</property>
+
+                <property name="child">
+                    <object class="GtkStack" id="content_stack">
+
+                        <!-- TODO welcome/startup page? -->
+
+                        <!-- Package List -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">pkg_list_page</property>
+                                <property name="title">Packages</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="pkg_list_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Node List -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">node_list</property>
+                                <property name="title">Nodes</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="node_list_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Topics -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">topic_list</property>
+                                <property name="title">Topics</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="topic_list_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Echo Topic -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">topic_echo</property>
+                                <property name="title">Echo Topic</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="topic_echo_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Services -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">service_list</property>
+                                <property name="title">Services</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="service_list_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Call Service -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">srv_caller</property>
+                                <property name="title">Call Service</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="srv_caller_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Actions -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">action_list</property>
+                                <property name="title">Actions</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="action_list_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Interfaces -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">interface_browser</property>
+                                <property name="title">Interfaces</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="interface_browser_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Package List -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">graph_page</property>
+                                <property name="title">Graph</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="graph_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Parameters -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">param_list</property>
+                                <property name="title">Parameters</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="param_list_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Transforms -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">tf</property>
+                                <property name="title">Transforms</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="tf_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Image Viewer -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">img_viewer</property>
+                                <property name="title">Image Viewer</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="img_viewer_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Joint States -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">joint_states</property>
+                                <property name="title">Joint States</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="joint_states_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Logger -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">logger</property>
+                                <property name="title">Logger</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="logger_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Doctor -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">doctor</property>
+                                <property name="title">Doctor</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="doctor_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+
+                    </object>
+                </property>
+            </object>
+        </property>
+    </object>
 
     <menu id="menu">
-        <item>
-            <attribute name="label">Preferences</attribute>
-            <attribute name="action">app.preferences</attribute>
-        </item>
         <section>
             <item>
-                <attribute name="label" translatable="yes">Keyboard Shortcuts</attribute>
+                <attribute name="label">Preferences</attribute>
+                <attribute name="action">app.preferences</attribute>
+            </item>
+        </section>
+        <section>
+            <item>
+                <attribute name="label">Keyboard Shortcuts</attribute>
                 <attribute name="action">app.shortcuts</attribute>
             </item>
             <item>
-                <attribute name="label" translatable="yes">About Insight</attribute>
+                <attribute name="label">About Insight</attribute>
                 <attribute name="action">app.about</attribute>
             </item>
         </section>
