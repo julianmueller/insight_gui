@@ -31,6 +31,7 @@ class TeleoperatorPage(ContentPage):
         super().__init__(**kwargs)
         super().set_title("Teleoperator")
         super().set_search_entry_placeholder_text("Search for topics")
+        super().set_refresh_fail_text("No actions found. Refresh to try again.")
 
         # TODO
         # ros2 run teleop_twist_keyboard teleop_twist_keyboard

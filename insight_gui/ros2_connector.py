@@ -89,13 +89,15 @@ class ROS2Connector:
     def on_node_state_changed(self, action: Gio.Action, value: GLib.Variant):
         action.set_state(GLib.Variant.new_boolean(self.is_running))
 
-    # TODO check if this works
     def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable):
         sub = self.node.create_subscription(msg_type, topic_name, callback, 10)
         self.subs.append(sub)
         return sub
 
     def destroy_subscription(self, sub):
+        if not self.node:
+            return
+
         if sub in self.subs:
             self.node.destroy_subscription(sub)
         else:
@@ -121,6 +123,9 @@ class ROS2Connector:
             raise RuntimeError("Exception while calling service: %r" % future.exception())
 
     def shutdown(self):
+        for sub in self.subs:
+            self.node.destroy_subscription(sub)
+
         # self.is_running = False
         self.stop_node()
         # rclpy.shutdown()

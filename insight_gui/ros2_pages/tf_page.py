@@ -47,6 +47,7 @@ class TransformsPage(ContentPage):
         super().__init__(**kwargs)
         super().set_title("Transforms")
         super().set_search_entry_placeholder_text("Search for Frames")
+        super().set_refresh_fail_text("No frames found. Refresh to try again.")
 
         # TODO add a button row that shows a dialog with a tf-tree
 
@@ -116,7 +117,6 @@ class TransformsPage(ContentPage):
             self.calc_button.set_sensitive(True)
             return True
         else:
-            super().show_toast("No frames found")
             self.frames_group.set_empty_group_text("No frames found. Refresh to try again.")
             self.calc_button.set_sensitive(False)
             return False
@@ -173,8 +173,8 @@ class TransformsPage(ContentPage):
         self.frames_list_store.remove_all()
 
     def on_switch_frames(self, *args):
-        if len(self.frames_dict.keys()) <= 1:
-            super().show_toast("not enough frames to switch")
+        if len(self.frames_dict) == 0:
+            super().show_toast("Not enough frames to switch")
             return
 
         current_source_index = self.source_frame_row.get_selected()

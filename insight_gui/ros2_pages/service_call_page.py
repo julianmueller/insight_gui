@@ -21,11 +21,12 @@
 # =============================================================================
 
 import yaml
+import json
 
 from ros2service.api import get_service_names_and_types, get_service_class
 from rosidl_runtime_py import set_message_fields
 from rosidl_runtime_py.utilities import get_service
-from rosidl_runtime_py import message_to_yaml
+from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
 
 import gi
 
@@ -35,6 +36,7 @@ from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
+from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 # from insight_gui.widgets.entry_row import EntryRow
 
@@ -44,55 +46,93 @@ from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
 class ServiceCallPage(ContentPage):
     __gtype_name__ = "ServiceCallPage"
 
-    def __init__(self, **kwargs):
+    def __init__(self, preselect_service: str = "", **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Service Call")
+        super().set_refresh_fail_text("No services found. Refresh to try again.")
+
+        self.preselect_service = preselect_service
+        self.request_class = None
+        self.request_instance = None
+        self.response_class = None
+        self.response_instance = None
+
+        self.call_btn = super().add_bottom_left_btn(
+            label="Call Service",
+            icon_name="call-start-symbolic",
+            func=self.on_call_service,
+            tooltip_text="Call the selected service",
+        )
+        super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
 
         # select group
         self.select_group = self.pref_page.add_group(title="Select Service")
-
-        self.service_select_row = self.select_group.add_row(
+        self.service_row = self.select_group.add_row(
             Adw.ComboRow(
                 title="Service",
                 enable_search=True,
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
-        self.service_select_row.connect("notify::selected-item", self.on_service_selected)
-        self.selected_service_type_row = self.select_group.add_row(
-            PrefRow(title="Service Type", css_classes=["property"])
-        )
+        self.service_row.connect("notify::selected-item", self.on_service_selected)
+        self.service_type_row = self.select_group.add_row(PrefRow(title="Service Type", css_classes=["property"]))
 
-        # Create a Gio.ListStore
+        # Create a Gio.ListStore to fill the ComboBox with
         self.service_list_store: Gio.ListStore = Gio.ListStore.new(Gtk.StringObject)
-        self.service_select_row.set_model(self.service_list_store)
+        self.service_row.set_model(self.service_list_store)
 
         # TODO maybe merge the two rows, to match the visuals of the service info page
         # TODO make that:
         # - the request and response groups have a btn in the header, that opens the type dialog for request/response
 
+        self.msg_format_row = self.select_group.add_row(
+            Adw.ComboRow(
+                title="Message Format",
+                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+            )
+        )
+        self.msg_format_row.connect("notify::selected-item", self.on_msg_format_changed)
+        self.msg_format_list_store = Gio.ListStore.new(Gtk.StringObject)
+        self.msg_format_list_store.append(Gtk.StringObject.new("YAML"))
+        # self.msg_format_list_store.append(Gtk.StringObject.new("CSV"))
+        self.msg_format_list_store.append(Gtk.StringObject.new("JSON"))
+        self.msg_format_row.set_model(self.msg_format_list_store)
+        self.msg_format = "YAML"
+
         # request group
         self.request_group = self.pref_page.add_group(title="Request")
         self.request_group.add_suffix_btn(
-            icon_name="edit-undo-symbolic", tooltip_text="Reset Request Text", func=self.on_service_selected
+            icon_name="edit-undo-symbolic", tooltip_text="Reset Request Text", func=self.update_request_text
         )
-        self.request_text_row = self.request_group.add_row(TextViewRow(editable=True))
+        self.request_group.add_suffix_btn(
+            icon_name="edit-copy-symbolic",
+            tooltip_text="Copy Request Text",
+            func=self.on_copy_request_to_clipboard,
+        )
+        self.request_text_view_row = self.request_group.add_row(TextViewRow(editable=True, wrap_mode=Gtk.WrapMode.NONE))
 
-        self.call_btn = self.request_group.add_row(
-            ButtonRow(
-                label="Call Service",
-                start_icon_name="call-start-symbolic",
-                func=lambda *_: GLib.idle_add(self.on_call_service),
-                sensitive=False,
-            )
-        )
+        # self.call_btn = self.request_group.add_row(
+        #     ButtonRow(
+        #         label="Call Service",
+        #         start_icon_name="call-start-symbolic",
+        #         func=self.on_call_service,
+        #         sensitive=False,
+        #     )
+        # )
 
         # response group
         self.response_group = self.pref_page.add_group(title="Response")
         self.response_group.add_suffix_btn(
-            icon_name="trash-symbolic", tooltip_text="Clear Response Text", func=self.on_clear_response
+            icon_name="edit-copy-symbolic",
+            tooltip_text="Copy Response Text",
+            func=self.on_copy_response_to_clipboard,
         )
-        self.response_text_row = self.response_group.add_row(TextViewRow(editable=False))
+        # self.response_group.add_suffix_btn(
+        #     icon_name="trash-symbolic", tooltip_text="Clear Response Text", func=self.on_clear_response
+        # )
+        self.response_text_view_row = self.response_group.add_row(
+            TextViewRow(editable=False, wrap_mode=Gtk.WrapMode.NONE)
+        )
 
     def refresh_bg(self) -> bool:
         self.available_services = sorted(
@@ -101,23 +141,15 @@ class ServiceCallPage(ContentPage):
         return len(self.available_services) > 0
 
     def refresh_ui(self):
-        # Check if there are services to call
-        if len(self.available_services) > 0:
-            self.call_btn.set_sensitive(True)
-        else:
-            super().show_toast("No services found")
-            self.call_btn.set_sensitive(False)
-            return
+        # fill the ComboBox/ListStore with available services
+        for service_name, service_types in self.available_services:
+            self.service_list_store.append(Gtk.StringObject.new(service_name))
 
         def on_setup(factory, list_item):
             label = Gtk.Label(
                 xalign=0,
-                wrap=True,
-                hexpand=True,
-                ellipsize=Pango.EllipsizeMode.END,
-                halign=Gtk.Align.FILL,
-                single_line_mode=True,
-                width_chars=12,
+                ellipsize=Pango.EllipsizeMode.MIDDLE,
+                max_width_chars=50,
             )
             list_item.set_child(label)
 
@@ -131,32 +163,41 @@ class ServiceCallPage(ContentPage):
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", on_setup)
         factory.connect("bind", on_bind)
+        self.service_row.set_factory(factory)
 
-        # fill the ComboBox/ListStore with available services
-        for service_name, service_types in self.available_services:
-            self.service_list_store.append(Gtk.StringObject.new(service_name))
-
-        # self.service_select_row.set_model(list_store)
-        self.service_select_row.set_factory(factory)
-        # self.service_select_row.set_selected(0)
+        found_index = find_str_in_list_store(self.service_list_store, self.preselect_service)
+        if found_index:
+            self.service_row.set_selected(found_index)
+        else:
+            self.service_row.set_selected(0)
 
     def reset_ui(self):
         # clear previous service list
         self.service_list_store.remove_all()
+        self.request_text_view_row.clear()
+        self.response_text_view_row.clear()
+        self.call_btn.set_sensitive(False)
+
+    def trigger(self):
+        self.call_service()
+
+    def on_clear_text(self, *args):
+        self.response_text_view_row.clear()
+        self.response_instance = None
 
     def on_service_selected(self, *args):
         if self.service_list_store.get_n_items() <= 0:
             return
 
-        self.selected_service_name = self.service_select_row.get_selected_item().get_string()
+        self.selected_service_name = self.service_row.get_selected_item().get_string()
         self.service_class = get_service_class(
             node=self.ros2_connector.node,
             service_name=self.selected_service_name,
             include_hidden_services=True,
         )
         self.selected_service_type = get_msg_full_name(self.service_class)
-        self.selected_service_type_row.set_subtitle(self.selected_service_type)
-        self.selected_service_type_row.set_subpage_link(
+        self.service_type_row.set_subtitle(self.selected_service_type)
+        self.service_type_row.set_subpage_link(
             nav_view=self.nav_view,
             subpage_class=ServiceTypeInfoPage,
             subpage_kwargs={"srv_type_full_name": self.selected_service_type},
@@ -164,23 +205,64 @@ class ServiceCallPage(ContentPage):
 
         self.request_class = self.service_class.Request
         self.request_instance = self.request_class()
-        yaml_text = message_to_yaml(self.request_instance).rstrip()
-        self.request_text_row.set_text(yaml_text)
+        self.call_btn.set_sensitive(True)
+        self.update_request_text()
 
-        # response_class = srv_class.Response
-        # msg_instance = response_class()
+    def on_msg_format_changed(self, *args):
+        if not self.request_instance:
+            return
+
+        self.msg_format = self.msg_format_row.get_selected_item().get_string()
+        self.update_request_text()
+        self.update_response_text()
+
+    def update_request_text(self):
+        if not self.request_instance:
+            return
+
+        def _idle():
+            self.request_text_view_row.set_text(request_text)
+
+        if self.msg_format == "YAML":
+            request_text = message_to_yaml(self.request_instance).rstrip()
+        elif self.msg_format == "JSON":
+            request_text = str(json.dumps(message_to_ordereddict(self.request_instance), indent=4))
+
+        GLib.idle_add(_idle)
+
+    def update_response_text(self):
+        if not self.response_instance:
+            return
+
+        def _idle():
+            self.response_text_view_row.set_text(response_text)
+
+        if self.msg_format == "YAML":
+            response_text = message_to_yaml(self.response_instance).rstrip()
+        elif self.msg_format == "JSON":
+            response_text = str(json.dumps(message_to_ordereddict(self.response_instance), indent=4))
+
+        GLib.idle_add(_idle)
 
     def on_call_service(self, *args):
-        if not self.ros2_connector.is_running:
-            super().show_toast_w_btn("ROS2 node not running", "Start Node", func=self.ros2_connector.start_node)
-            return False
+        self.call_service()
 
-        request_yaml = self.request_text_row.get_text()
-        try:
-            data_dict = yaml.safe_load(request_yaml)
-        except Exception as e:
-            super().show_toast("Invalid YAML")
-            return False
+    def call_service(self):
+        request_text = self.request_text_view_row.get_text()
+
+        if self.msg_format == "YAML":
+            try:
+                data_dict = yaml.safe_load(request_text)
+            except Exception as e:
+                super().show_toast(f"Invalid YAML: {e}")
+                return
+
+        elif self.msg_format == "JSON":
+            try:
+                data_dict = json.loads(request_text)
+            except Exception as e:
+                super().show_toast(f"Invalid JSON: {e}")
+                return
 
         try:
             set_message_fields(
@@ -188,24 +270,36 @@ class ServiceCallPage(ContentPage):
                 values=data_dict,
             )
         except Exception as e:
-            super().show_toast("Error parsing the request data")
-            return False
+            super().show_toast(f"Error parsing the request data: {e}")
+            return
 
-        response = self.ros2_connector.call_service(
-            srv_name=self.selected_service_name,
-            srv_type=self.service_class,
-            request=self.request_instance,
-        )
+        def _idle():
+            self.response_instance = self.ros2_connector.call_service(
+                srv_name=self.selected_service_name,
+                srv_type=self.service_class,
+                request=self.request_instance,
+            )
 
-        response_yaml = message_to_yaml(response).rstrip()
-        self.response_text_row.set_text(response_yaml)
+            if self.msg_format == "YAML":
+                response_text = message_to_yaml(self.response_instance)
+            elif self.msg_format == "JSON":
+                response_text = str(json.dumps(message_to_ordereddict(self.response_instance), indent=4))
 
-        super().show_toast("Service call was successful")
+            self.response_text_view_row.set_text(response_text)
 
-        return False  # stop the Glib.idle_add
+        GLib.idle_add(_idle)
 
-    def on_clear_response(self, *args):
-        self.response_text_row.clear()
+    def on_copy_request_to_clipboard(self, *args):
+        clip = self.get_clipboard()
+        text = self.request_text_view_row.get_text()
+        clip.set(str(text))
+        self.show_toast("Request text copied!")
+
+    def on_copy_response_to_clipboard(self, *args):
+        clip = self.get_clipboard()
+        text = self.response_text_view_row.get_text()
+        clip.set(str(text))
+        self.show_toast("Response text copied!")
 
 
 def get_msg_full_name(msg_class):

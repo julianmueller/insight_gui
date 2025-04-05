@@ -39,6 +39,7 @@ class JointStatesPage(ContentPage):
         super().__init__(**kwargs)
         super().set_title("Joint States")
         super().set_search_entry_placeholder_text("Search for topics")
+        super().set_refresh_fail_text("No joints found. Refresh to try again.")
 
         self.search_group = self.pref_page.add_group(filterable=False)
         self.js_topic_row = self.search_group.add_row(

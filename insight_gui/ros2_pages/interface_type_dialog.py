@@ -33,6 +33,8 @@ from gi.repository import Gtk, Adw
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.pref_rows import TextViewRow
 
+# TODO turn this into a content page
+
 
 class InterfaceTypeDialog(Adw.PreferencesDialog):
     __gtype_name__ = "InterfaceTypeDialog"

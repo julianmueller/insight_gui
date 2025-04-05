@@ -42,10 +42,12 @@ class ContentPage(Adw.NavigationPage):
         **kwargs,
     ):
         super().__init__(**kwargs)
+
         super().connect("realize", self.on_realize)
+        super().connect("unrealize", self.on_unrealize)
+        super().connect("map", self.on_map)
+        super().connect("unmap", self.on_unmap)
         GLib.idle_add(self._deferred_init)
-        # super().connect("map", self.on_map)
-        # super().connect("unmap", self.on_unmap)
 
         builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
@@ -88,6 +90,7 @@ class ContentPage(Adw.NavigationPage):
         self.detach_kwargs = {}
         self.refreshing = False
         self.refresh_thread: threading.Thread = None
+        self.refresh_fail_text = "Refresh yielded no results"
 
         self.pref_page = PrefPage()
         self.content_stack.add_child(self.pref_page)
@@ -109,6 +112,15 @@ class ContentPage(Adw.NavigationPage):
         # refresh the gui
         if self.refreshable:
             GLib.idle_add(self.refresh)
+
+    def on_unrealize(self, *args):
+        pass
+
+    def on_map(self, *args):
+        self.page_is_mapped = True
+
+    def on_unmap(self, *args):
+        self.page_is_mapped = False
 
     def refresh(self):
         if not self.refreshable or self.refreshing:
@@ -137,7 +149,7 @@ class ContentPage(Adw.NavigationPage):
                 self.reset_ui()
                 self.refresh_ui()
             else:
-                self.show_banner("Refresh yielded no results")
+                self.show_banner(self.refresh_fail_text)
 
             # finish refresh
             self.refresh_spinner.set_visible(False)
@@ -169,6 +181,10 @@ class ContentPage(Adw.NavigationPage):
         if self.searchable:
             self.search_bar.set_search_mode(not self.search_bar.get_search_mode())
             # self.search_bar.set_search_mode(True)
+
+    def trigger(self):
+        """Child class should override this to trigger some primary action of the page."""
+        pass
 
     def on_search_changed(self, *args):
         if not self.searchable:
@@ -258,3 +274,6 @@ class ContentPage(Adw.NavigationPage):
 
     def set_empty_page_text(self, text: str):
         self.pref_page.set_empty_page_text(str(text))
+
+    def set_refresh_fail_text(self, text: str):
+        self.refresh_fail_text = str(text)

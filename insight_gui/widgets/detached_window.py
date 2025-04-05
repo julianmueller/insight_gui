@@ -32,6 +32,7 @@ from gi.repository import Gtk, Adw, Gio, Gdk
 from insight_gui.ros2_connector import ROS2Connector
 
 
+# TODO make this inherit from MAINWINDOW
 class DetachedWindow(Adw.ApplicationWindow):
     __gtype_name__ = "DetachedWindow"
 

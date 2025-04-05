@@ -23,7 +23,7 @@
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, Gio
 
 
 # same order as with css margins
@@ -91,6 +91,22 @@ def add_css_classes(widget: Gtk.Widget, classes: list):
 
     for _class in classes:
         widget.add_css_class(_class)
+
+
+def find_str_in_list_store(list_store: Gio.ListStore, string: str) -> int:
+    """Find a string in a Gio.ListStore and return its index."""
+    for i in range(list_store.get_n_items()):
+        item = list_store.get_item(i)
+        if item.get_string() == string:
+            return i
+    else:
+        return False
+
+
+# TODO test and adopt this
+def copy_text_to_clipboard(text: str):
+    clip = Gtk.Clipboard.get(Gio.Application.get_default())
+    clip.set_text(text)
 
 
 def get_child_by_name(parent_widget, name):

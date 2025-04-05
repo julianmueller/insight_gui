@@ -43,6 +43,7 @@ class NodeListPage(ContentPage):
         super().__init__(**kwargs)
         super().set_title("Nodes")
         super().set_search_entry_placeholder_text("Search for nodes")
+        super().set_refresh_fail_text("No active nodes found. Refresh to try again.")
 
         self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
 

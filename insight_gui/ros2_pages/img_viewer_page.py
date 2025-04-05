@@ -20,6 +20,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+import time
+
 from ros2topic.api import get_topic_names_and_types
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -28,24 +30,45 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, Gdk, GLib
+from gi.repository import Gtk, Adw, Gio, Gdk, GLib, Pango, GObject
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
+from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
 class ImageViewerPage(ContentPage):
     __gtype_name__ = "ImageViewerPage"
 
-    def __init__(self, **kwargs):
+    def __init__(self, preselect_img_topic: str = "", **kwargs):
         super().__init__(searchable=False, **kwargs)
-        super().connect("map", self.on_map)
-        super().connect("unmap", self.on_unmap)
         super().set_title("Image Viewer")
+        super().set_refresh_fail_text("No image topics found. Refresh to try again.")
 
+        self.preselect_img_topic = preselect_img_topic
+        self.is_streaming = False
+        self.single_img_done = True
         self.cv_bridge = CvBridge()
         self.sub = None
+
+        self.last_update_time = 0
+        self.max_update_rate = 10  # in Hz
+
+        # main btns in bottom bar
+        self.play_pause_stream_btn = super().add_bottom_widget(
+            PlayPauseButton(
+                default_active=self.is_streaming,
+                func=self.on_play_pause_stream,
+                labels=("Stop Stream", "Start Stream"),
+                visible=False,
+            ),
+            position="start",
+        )
+        self.single_shot_btn = super().add_bottom_left_btn(
+            label="Single Shot", icon_name="camera-photo-symbolic", func=self.on_single_shot_img
+        )
+        super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_img)
 
         self.img_group = self.pref_page.add_group(title="View Image", filterable=False)
         self.img_topic_row = self.img_group.add_row(
@@ -55,23 +78,16 @@ class ImageViewerPage(ContentPage):
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
-        self.img_topic_row.connect("notify::selected-item", self.on_image_topic_changed)
+        self.img_topic_row.connect("notify::selected-item", self.on_img_topic_changed)
+        self.img_stream_type_toggle_row = self.img_group.add_row(
+            Adw.SwitchRow(title="Single Image / Continuous Stream")
+        )
+        self.img_stream_type_toggle_row.connect("notify::active", self.on_toggle_stream_type)
         self.img_row: ImageViewRow = self.img_group.add_row(ImageViewRow(title="Image"))
 
         # Create a Gio.ListStore to fill the ComboBox with
         self.img_topic_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.img_topic_row.set_model(self.img_topic_list_store)
-
-        self.continuous_img_stream = False
-        self.single_img_done = False
-        self.play_pause_btn = self.img_row.add_suffix(
-            PlayPauseButton(
-                default_active=self.continuous_img_stream,
-                labels=("Continuous", "Single"),
-                func=self.on_toggle_img_stream,
-            ),
-            prepend=True,
-        )
 
         # rows to display infos about the image
         self.info_group = self.pref_page.add_group(title="Infos", filterable=False)
@@ -82,14 +98,6 @@ class ImageViewerPage(ContentPage):
         self.width_lbl = self.width_row.add_suffix_lbl("")
         self.height_lbl = self.height_row.add_suffix_lbl("")
         self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
-
-    def on_map(self, *args):
-        # TODO make the img stream start (again) when page is currently visible
-        pass
-
-    def on_unmap(self, *args):
-        # TODO make the img stream stop when page is currently not visible
-        pass
 
     def refresh_bg(self) -> bool:
         self.img_topic_list = []
@@ -112,33 +120,93 @@ class ImageViewerPage(ContentPage):
         for img_topic in self.img_topic_list:
             self.img_topic_list_store.append(Gtk.StringObject.new(img_topic))
 
-        if self.img_topic_list_store.get_n_items() > 0:
-            self.img_topic_row.set_model(self.img_topic_list_store)
-            self.img_topic_row.set_selected(0)
+        def on_setup(factory, list_item):
+            label = Gtk.Label(
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.MIDDLE,
+                max_width_chars=50,
+            )
+            list_item.set_child(label)
+
+        def on_bind(factory, list_item):
+            item = list_item.get_item()
+            label = list_item.get_child()
+            if item and label:
+                label.set_text(item.get_string())
+
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", on_setup)
+        factory.connect("bind", on_bind)
+        self.img_topic_row.set_factory(factory)
+
+        found_index = find_str_in_list_store(self.img_topic_list_store, self.preselect_img_topic)
+        if found_index:
+            self.img_topic_row.set_selected(found_index)
         else:
-            super().show_banner("No topic with images found")  # TODO add refresh btn
+            self.img_topic_row.set_selected(0)
 
     def reset_ui(self):
         self.img_topic_list_store.remove_all()
+        self.single_img_done = True
+        self.img_row.reset_image_to_default_icon()
+        self.remove_sub()
 
-    def on_image_topic_changed(self, *args):
+    def remove_sub(self):
+        if self.sub:
+            self.ros2_connector.destroy_subscription(self.sub)
+            self.sub = None
+
+    def trigger(self):
+        if self.img_stream_type_toggle_row.get_active():
+            self.play_pause_stream_btn.playing = True
+
+    def on_unrealize(self, *args):
+        super().on_unrealize(*args)
+        self.remove_sub()
+
+    def on_clear_img(self, *args):
+        self.img_row.reset_image_to_default_icon()
+
+    def on_toggle_stream_type(self, *args):
+        # active = continuous stream, inactive = single shot
+        if self.img_stream_type_toggle_row.get_active():
+            self.single_shot_btn.set_visible(False)
+            self.play_pause_stream_btn.set_visible(True)
+        else:
+            self.single_shot_btn.set_visible(True)
+            self.play_pause_stream_btn.set_visible(False)
+
+        self.play_pause_stream_btn.playing = False
+
+    def on_single_shot_img(self, *args):
+        self.single_img_done = False
+
+    def on_play_pause_stream(self, *args):
+        self.is_streaming = self.play_pause_stream_btn.playing
+
+    def on_img_topic_changed(self, *args):
         if self.img_topic_list_store.get_n_items() <= 0:
             return
 
-        if self.sub:
-            self.ros2_connector.destroy_subscription(self.sub)
+        self.remove_sub()
 
         topic_name = self.img_topic_row.get_selected_item().get_string()
         if topic_name:
             # TODO maybe add another button to actually subscribe to the topic and not create it by changing the name?
-            self.sub = self.ros2_connector.add_subsciption(Image, topic_name, self.on_ros_img_callback)
-            self.single_img_done = False
+            self.sub = self.ros2_connector.add_subsciption(Image, topic_name, self.img_topic_callback)
+            self.single_img_done = True
             self.img_row.reset_image_to_default_icon()
 
-    # TODO implement some rate limeting
-    # TODO also pause, when the "tab" aka nav page is switched
-    def on_ros_img_callback(self, msg: Image, *args):
-        if self.continuous_img_stream or not self.single_img_done:
+    def img_topic_callback(self, msg: Image, *args):
+        if not self.page_is_mapped:
+            return
+
+        # apply rate limiting
+        now = time.time()
+        if now - self.last_update_time < 1.0 / self.max_update_rate:
+            return
+
+        if self.is_streaming or not self.single_img_done:
             # Convert sensor_msgs/Image to a BGR8 numpy array (default behavior).
 
             try:
@@ -154,7 +222,4 @@ class ImageViewerPage(ContentPage):
             self.encoding_lbl.set_label(str(msg.encoding))
 
             self.single_img_done = True
-
-    def on_toggle_img_stream(self, playing: bool, *args):
-        self.continuous_img_stream = playing
-        self.single_img_done = False
+            self.last_update_time = now

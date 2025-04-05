@@ -331,6 +331,7 @@ class TextViewRow(AdditionalContentRow):
         max_height: int = -1,
         editable: bool = True,
         show_copy_btn: bool = True,
+        wrap_mode: Gtk.WrapMode = Gtk.WrapMode.WORD_CHAR,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -344,7 +345,7 @@ class TextViewRow(AdditionalContentRow):
         self.content_box.append(self.frame)
 
         self.text_view = Gtk.TextView(
-            wrap_mode=Gtk.WrapMode.WORD_CHAR,
+            wrap_mode=wrap_mode,
             cursor_visible=editable,
             editable=editable,
             monospace=True,
@@ -543,7 +544,7 @@ class ImageViewRow(AdditionalContentRow):
         self.pending_frame = None  # Store the next frame to be displayed
         self.updating = False  # Prevent redundant updates
 
-    def reset_image_to_default_icon(self, tooltip_text: str = "No image selected"):
+    def reset_image_to_default_icon(self, tooltip_text: str = "No image"):
         self.set_image_from_icon_name(icon_name="dialog-error-symbolic", tooltip_text=tooltip_text)
 
     def set_image_from_icon_name(self, *, icon_name: str, tooltip_text: str = "", size: int = 100):
@@ -551,11 +552,12 @@ class ImageViewRow(AdditionalContentRow):
         if not display:
             return  # In case there's no display available
 
+        size = max(10, min(size, self.max_height))
         icon_theme = Gtk.IconTheme.get_for_display(display)
         icon_paintable = icon_theme.lookup_icon(
             icon_name,
             ["dialog-error-symbolic"],  # fallbacks
-            max(size, self.max_height),  # size
+            size,  # size
             1,  # scale
             Gtk.TextDirection.NONE,
             Gtk.IconLookupFlags.PRELOAD,
@@ -568,18 +570,17 @@ class ImageViewRow(AdditionalContentRow):
                 margin_bottom=12,
                 margin_start=12,
                 margin_end=12,
-                width_request=100,
-                height_request=100,
+                # width_request=size,
+                # height_request=size,
             )
             self.frame.set_child(self.icon_image)
+            self.frame.set_size_request(width=size, height=size)
 
     def set_image_from_opencv(self, cv_image):
         if cv_image is None:
             raise RuntimeError("Image has no data")
 
-        if self.image is None:
-            self.image = Gtk.Picture()
-            self.frame.set_child(self.image)
+        new_image = Gtk.Picture()
 
         # TODO also check for other datatypes
         # If necessary, convert BGR -> RGB (depends on your data format).
@@ -607,20 +608,21 @@ class ImageViewRow(AdditionalContentRow):
         self.pending_frame = new_texture
 
         # Thread-safe update of the widget's content on the GTK main loop.
-        def update_texture():
+        def _update_texture():
             if self.pending_frame:
                 self.current_texture = self.pending_frame
-                self.image.set_paintable(self.current_texture)
+                new_image.set_paintable(self.current_texture)
+                self.image = new_image
+                self.frame.set_child(self.image)
                 self.pending_frame = None  # Clear the pending frame
 
             self.updating = False  # Allow new frames to be processed
-            return False  # Remove the callback
 
         # Schedule widget update on the GTK main thread.
         # Schedule an update (ensuring it's only called once per GTK frame cycle)
         if not self.updating:
             self.updating = True
-            GLib.idle_add(update_texture)
+            GLib.idle_add(_update_texture)
 
     def on_save_image(self, *args):
         # TODO implement saving behaviour

@@ -111,19 +111,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.logger_nav_view.add(LoggerPage())
         self.doctor_nav_view.add(DoctorPage())
 
-        # Actions
-        action = Gio.SimpleAction.new("preferences", None)
-        action.connect("activate", self.on_preferences_dialog)
-        self.app.add_action(action)
-
-        action = Gio.SimpleAction.new("shortcuts", None)
-        action.connect("activate", self.on_shortcuts_dialog)
-        self.app.add_action(action)
-
-        action = Gio.SimpleAction.new("about", None)
-        action.connect("activate", self.on_about_dialog)
-        self.app.add_action(action)
-
         action = Gio.SimpleAction.new("close", None)
         action.connect("activate", self.on_close)
         self.add_action(action)
@@ -140,16 +127,20 @@ class MainWindow(Adw.ApplicationWindow):
         action.connect("activate", self.on_detach)
         self.add_action(action)
 
-        # Shortcuts # TODO make them also work in the detached windows
+        action = Gio.SimpleAction.new("page-trigger", None)
+        action.connect("activate", self.on_page_trigger)
+        self.add_action(action)
+
+        # Shortcuts
         self.shortcut_controller = Gtk.ShortcutController()
-        self.shortcut_controller.set_scope(Gtk.ShortcutScope.LOCAL)  # Important!
+        self.shortcut_controller.set_scope(Gtk.ShortcutScope.LOCAL)
         self.shortcut_controller.add_shortcut(
             shortcut=Gtk.Shortcut.new(
                 trigger=Gtk.AlternativeTrigger.new(
                     Gtk.KeyvalTrigger.new(Gdk.KEY_r, Gdk.ModifierType.CONTROL_MASK),
                     Gtk.KeyvalTrigger.new(Gdk.KEY_F5, Gdk.ModifierType.NO_MODIFIER_MASK),
                 ),
-                action=Gtk.NamedAction.new("win.refresh"),  # Use window-scoped action
+                action=Gtk.NamedAction.new("win.refresh"),
             )
         )
         self.shortcut_controller.add_shortcut(
@@ -168,6 +159,12 @@ class MainWindow(Adw.ApplicationWindow):
             shortcut=Gtk.Shortcut.new(
                 trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_comma, Gdk.ModifierType.CONTROL_MASK),
                 action=Gtk.NamedAction.new("app.preferences"),
+            )
+        )
+        self.shortcut_controller.add_shortcut(
+            shortcut=Gtk.Shortcut.new(
+                trigger=Gtk.KeyvalTrigger.new(Gdk.KEY_Return, Gdk.ModifierType.CONTROL_MASK),
+                action=Gtk.NamedAction.new("win.page-trigger"),
             )
         )
         self.shortcut_controller.add_shortcut(
@@ -194,19 +191,6 @@ class MainWindow(Adw.ApplicationWindow):
     @property
     def current_page(self) -> Adw.NavigationPage:
         return self.content_stack.get_visible_child().get_visible_page()
-
-    # @Gtk.Template.Callback()
-    # def on_menu_btn_clicked(self, *args):
-    #     self.preferences_dialog.present(self)
-
-    # @Gtk.Template.Callback()
-    # def on_refresh_btn_clicked(self, *args):
-    #     for stack_page in self.content_stack.get_pages():
-    #         nav_view = stack_page.get_child()
-    #         nav_page = nav_view.get_navigation_stack()[0]
-    #         refresh_func = getattr(nav_page, "refresh", None)
-    #         if callable(refresh_func):
-    #             refresh_func()
 
     def on_preferences_dialog(self, *args):
         self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)
@@ -241,6 +225,10 @@ class MainWindow(Adw.ApplicationWindow):
     def on_toggle_search(self, *args):
         if self.current_page and self.current_page.searchable:
             self.current_page.toggle_search()
+
+    def on_page_trigger(self, *args):
+        if self.current_page:
+            self.current_page.trigger()
 
     def on_close(self, *args):
         self.close()

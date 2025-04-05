@@ -88,6 +88,18 @@ class Ros2GuiApp(Adw.Application):
         if not self.window:
             self.window = MainWindow(application=self, title="Insight", icon_name="insight-logo")
 
+        action = Gio.SimpleAction.new("preferences", None)
+        action.connect("activate", self.window.on_preferences_dialog)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("shortcuts", None)
+        action.connect("activate", self.window.on_shortcuts_dialog)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("about", None)
+        action.connect("activate", self.window.on_about_dialog)
+        self.add_action(action)
+
         self.window.connect("close-request", self.shutdown)
         self.window.present()
 

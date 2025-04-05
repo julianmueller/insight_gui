@@ -30,6 +30,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
+from insight_gui.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
@@ -47,6 +48,13 @@ class ServiceInfoPage(ContentPage):
         self.service_name = service_name
         self.service_types = service_types
         self.detach_kwargs = {"service_name": service_name, "service_types": service_types}
+
+        super().add_bottom_left_btn(
+            label="Open Caller",
+            icon_name="call-start-symbolic",
+            func=self.on_goto_caller_page,
+            tooltip_text="Go to the service caller",
+        )
 
         # Service Type
         self.service_type_group = self.pref_page.add_group(title="Service Type")
@@ -124,3 +132,9 @@ class ServiceInfoPage(ContentPage):
         self.service_type_group.clear()
         self.service_servers_group.clear()
         self.service_clients_group.clear()
+
+    def trigger(self):
+        self.on_goto_caller_page()
+
+    def on_goto_caller_page(self):
+        self.nav_view.push(ServiceCallPage(preselect_service=self.service_name))

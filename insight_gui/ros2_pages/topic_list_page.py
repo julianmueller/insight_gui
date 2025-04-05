@@ -44,8 +44,9 @@ class TopicListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Topic List")
-        super().set_empty_page_text("Refresh to show topics")
+        super().set_empty_page_text("No topics to show")
         super().set_search_entry_placeholder_text("Search for topics")
+        super().set_refresh_fail_text("No topics found. Refresh to try again.")
 
         self.topic_ns_groups: Dict[PrefGroup] = {}
 
@@ -53,10 +54,7 @@ class TopicListPage(ContentPage):
         self.available_topics = sorted(
             get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True), key=itemgetter(0)
         )
-        if len(self.available_topics) == 0:
-            self.pref_page.set_empty_page_text("No topics found. Refresh to try again.")
-            return False
-        return True
+        return len(self.available_topics) > 0
 
     def refresh_ui(self):
         # TODO this is ugly

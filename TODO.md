@@ -14,6 +14,13 @@
     - add Gtk/Gio Notifications
     - add gtk settings
     - add gtk action for all major actions
+    - add a save btn to the interface dialog and topic echo and service call page
+    - add an argument to all pages (where applicable) to show specific content (like topic listener etc)
+    - add "spacebar" shortcut and action for "main page trigger", like "call page" or "start echo"
+    - CTRL+Click on subpage to open in detatched window instead of pushing it to the open nav_view
+    - add btn to "close all detatched windows", maybe in menu?
+    - add "experimental" flag/info to not really working pages like img stream
+    - add option to preferences to hide everything related to insight, like node, parameters etc
 
 - additional pages
     - add a `rqt_graph` equivalent page
@@ -34,13 +41,12 @@
     - add option to add new env variables in the pref dialog (and add a refresh btn)
     - ~~add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open~~
     - add when a new window is opened as a detach, make it have the same content as the detached content_page
-    - add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length
-    - add a save btn to the interface dialog and topic echo and service call page
 
 - ros2 stuff
     - (optional) add every page of the gui as a ros2 executable, so a window with only this page starts
 
 - stuff no working yet
+    - add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length
     - make "set parameter" work
     - make btns of img viewer work
     - check continuous img stream

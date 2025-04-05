@@ -36,7 +36,7 @@ class DummyImagePublisher(Node):
     def __init__(self):
         super().__init__("dummy_image_publisher")
         self.publisher_ = self.create_publisher(Image, "/dummy_image", 10)
-        self.timer = self.create_timer(0.1, self.timer_callback)  # ~10 Hz
+        self.timer = self.create_timer(0.05, self.timer_callback)  # ~10 Hz
         self.bridge = CvBridge()
         self.frame_count = 0
 

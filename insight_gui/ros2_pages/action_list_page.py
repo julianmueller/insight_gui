@@ -44,18 +44,15 @@ class ActionListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Actions")
-        super().set_empty_page_text("Refresh to show actions")
+        super().set_empty_page_text("No actions to show")
         super().set_search_entry_placeholder_text("Search for actions")
+        super().set_refresh_fail_text("No actions found. Refresh to try again.")
 
         self.action_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
         self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
-
-        if len(self.available_actions) == 0:
-            # self.show_banner_w_btn("No actions found. Refresh to try again.", "Refresh", self.on_refresh)
-            return False
-        return True
+        return len(self.available_actions) > 0
 
     def refresh_ui(self):
         for action_name, action_types in self.available_actions:

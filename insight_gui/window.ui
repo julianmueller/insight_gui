@@ -223,7 +223,7 @@
                                 <child>
                                     <object class="GtkStackPage">
                                         <property name="name">topic_echo</property>
-                                        <property name="title">Topic Listener</property>
+                                        <property name="title">Topic Echoer</property>
                                         <property name="child">
                                             <object class="AdwNavigationView" id="topic_echo_nav_view" />
                                         </property>
