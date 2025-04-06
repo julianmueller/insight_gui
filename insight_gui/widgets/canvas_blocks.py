@@ -4,7 +4,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GLib
+from gi.repository import Gtk, Adw, GLib, GObject
 
 
 from insight_gui.utils.adw_colors import AdwAccentColor
@@ -15,6 +15,7 @@ from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
 
 class BaseBlock(Adw.Bin):
     __gtype_name__ = "BaseBlock"
+    __gsignals__ = {"revealer-toggled": (GObject.SignalFlags.RUN_FIRST, None, (bool,))}
 
     def __init__(self, label: str, accent_color: AdwAccentColor = None, **kwargs):
         super().__init__()
@@ -32,6 +33,8 @@ class BaseBlock(Adw.Bin):
         self.subpage_btn.connect("clicked", self.on_subpage_btn_clicked)
 
         self.revealer: Gtk.Revealer = builder.get_object("revealer")
+        self.revealer.connect("notify::reveal-child", self._on_revealer_toggled)
+
         self.content_box: Gtk.Box = builder.get_object("content_box")
         self.left_box: Gtk.Box = builder.get_object("left_box")
         self.right_box: Gtk.Box = builder.get_object("right_box")
@@ -43,6 +46,26 @@ class BaseBlock(Adw.Bin):
         if accent_color is not None and isinstance(accent_color, AdwAccentColor):
             self.main_box.add_css_class(accent_color.as_css_name())
 
+    def _deferred_init(self, *args):
+        self.nav_view = super().get_ancestor(Adw.NavigationView)
+        self.ros2_connector = super().get_root().ros2_connector
+
+    @property
+    def north_attachment_point(self):
+        return (self.width / 2, 0)
+
+    @property
+    def east_attachment_point(self):
+        return (self.width, self.height / 2)
+
+    @property
+    def south_attachment_point(self):
+        return (self.width / 2, self.height)
+
+    @property
+    def west_attachment_point(self):
+        return (0, self.height / 2)
+
     @property
     def width(self):
         return super().get_width()
@@ -51,11 +74,11 @@ class BaseBlock(Adw.Bin):
     def height(self):
         return super().get_height()
 
-    def _deferred_init(self, *args):
-        self.nav_view = super().get_ancestor(Adw.NavigationView)
-        self.ros2_connector = super().get_root().ros2_connector
+    def _on_revealer_toggled(self, revealer, _param):
+        self.emit("revealer-toggled", not revealer.get_child_revealed())
 
     def on_subpage_btn_clicked(self, button, *args):
+        """Child class should override this with blocking, long-running computation."""
         pass
 
 

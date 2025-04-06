@@ -15,15 +15,15 @@
     - add gtk settings
     - add gtk action for all major actions
     - add a save btn to the interface dialog and topic echo and service call page
-    - add an argument to all pages (where applicable) to show specific content (like topic listener etc)
-    - add "spacebar" shortcut and action for "main page trigger", like "call page" or "start echo"
+    - ~~add an argument to all pages (where applicable) to show specific content (like topic listener etc)~~
+    - ~~add "spacebar" shortcut and action for "main page trigger", like "call page" or "start echo"~~
     - CTRL+Click on subpage to open in detatched window instead of pushing it to the open nav_view
     - add btn to "close all detatched windows", maybe in menu?
     - add "experimental" flag/info to not really working pages like img stream
     - add option to preferences to hide everything related to insight, like node, parameters etc
 
 - additional pages
-    - add a `rqt_graph` equivalent page
+    - ~~add a `rqt_graph` equivalent page~~
     - add a teleop page
     - add tf inspection subpage (show the stuff that rviz shows)
     - add a controller "/joy" page (also look into Workbench - Gamepad Demo)
@@ -49,7 +49,7 @@
     - add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length
     - make "set parameter" work
     - make btns of img viewer work
-    - check continuous img stream
+    - ~~check continuous img stream~~
     - make btns in interface list filtering work
     - ~~resizing of the window also resizes the preference pages, or maybe even hides the sidebar (but it shall show no warnings!)~~
     - some rows shall vexpand (like the logs) which is currently not working
@@ -74,3 +74,22 @@
 - icons, that were added as gresource are not available in white when dark style is activated (see https://developer.gnome.org/documentation/tutorials/themed-icons.html#symbolic-icons)
 - gui freezes when calling a non available service
 - ellippsize throws sometimes an error if the label text is too short
+
+## Snippets
+
+- add CTRL+Click extra to a btn
+
+```python
+def on_button_pressed(self, gesture, n_press, x, y):
+    state = gesture.get_current_event().get_state()
+    if state & Gdk.ModifierType.CONTROL_MASK:
+        print("Ctrl was held during click!")
+        self.do_ctrl_click()
+    else:
+        print("Regular click")
+        self.do_normal_click()
+
+gesture = Gtk.GestureClick.new()
+gesture.connect("pressed", self.on_button_pressed)
+button.add_controller(gesture)
+```

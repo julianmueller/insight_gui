@@ -114,6 +114,7 @@ setup(
             "dummy_img_pub = insight_gui.dummy_img_pub:main",
             "dummy_logger = insight_gui.dummy_log_pub:main",
             "dummy_tf_broadcaster = insight_gui.dummy_tf_broadcaster:main",
+            "dummy_graph = insight_gui.dummy_graph:main",
         ]
     },
     cmdclass={

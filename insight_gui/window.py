@@ -168,8 +168,7 @@ class BaseWindow(Adw.ApplicationWindow):
         )
 
     def get_dark(self):
-        style_manager = Adw.StyleManager.get_default()
-        return style_manager.get_dark()
+        return Adw.StyleManager.get_default().get_dark()
 
 
 class MainWindow(BaseWindow):
