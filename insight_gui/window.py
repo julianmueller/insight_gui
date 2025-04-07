@@ -42,6 +42,7 @@ from insight_gui.ros2_pages.param_page import ParameterListPage
 from insight_gui.ros2_pages.tf_page import TransformsPage
 from insight_gui.ros2_pages.log_page import LoggerPage
 from insight_gui.ros2_pages.doctor_page import DoctorPage
+from insight_gui.ros2_pages.test_page import TestPage
 from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
 from insight_gui.ros2_pages.joint_states_page import JointStatesPage
 from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
@@ -238,6 +239,9 @@ class MainWindow(BaseWindow):
 
         self.doctor_nav_view: Adw.NavigationView = builder.get_object("doctor_nav_view")
         self.doctor_nav_view.add(DoctorPage())
+
+        self.test_nav_view: Adw.NavigationView = builder.get_object("test_nav_view")
+        self.test_nav_view.add(TestPage())
 
         # ros time
         self.time_box: Gtk.Box = builder.get_object("time_box")

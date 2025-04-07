@@ -21,19 +21,18 @@
 # =============================================================================
 
 import math
-import random
 import networkx as nx
 import matplotlib.pyplot as plt  # DEBUG
 from operator import itemgetter
 
-from ros2node.api import _is_hidden_name, get_node_names
+from ros2node.api import get_node_names
 from ros2topic.api import get_topic_names_and_types
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gdk
+from gi.repository import Gtk, Adw
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.canvas_blocks import BaseBlock, NodeBlock, TopicBlock, InterfaceBlock

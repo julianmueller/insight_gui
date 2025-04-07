@@ -337,6 +337,16 @@
                             </object>
                         </child>
 
+                        <!-- Test Page -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">test</property>
+                                <property name="title">Test</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="test_nav_view" />
+                                </property>
+                            </object>
+                        </child>
 
                     </object>
                 </property>
