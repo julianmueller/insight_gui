@@ -31,20 +31,22 @@ from gi.repository import Gtk, Adw, Gdk, Gio, GLib, GObject
 
 from insight_gui.ros2_pages.pkg_list_page import PackageListPage
 from insight_gui.ros2_pages.node_list_page import NodeListPage
-from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
 from insight_gui.ros2_pages.topic_list_page import TopicListPage
 from insight_gui.ros2_pages.topic_echo_page import TopicEchoPage
 from insight_gui.ros2_pages.service_list_page import ServiceListPage
 from insight_gui.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.ros2_pages.action_list_page import ActionListPage
+from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
 from insight_gui.ros2_pages.graph_page import GraphPage
 from insight_gui.ros2_pages.param_page import ParameterListPage
 from insight_gui.ros2_pages.tf_page import TransformsPage
+from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
+from insight_gui.ros2_pages.joint_states_page import JointStatesPage
+from insight_gui.ros2_pages.teleop_page import TeleoperatorPage
 from insight_gui.ros2_pages.log_page import LoggerPage
 from insight_gui.ros2_pages.doctor_page import DoctorPage
 from insight_gui.ros2_pages.test_page import TestPage
-from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
-from insight_gui.ros2_pages.joint_states_page import JointStatesPage
+
 from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
 
 from insight_gui.utils.adw_colors import AdwAccentColor
@@ -233,6 +235,9 @@ class MainWindow(BaseWindow):
 
         self.joint_states_nav_view: Adw.NavigationView = builder.get_object("joint_states_nav_view")
         self.joint_states_nav_view.add(JointStatesPage())
+
+        self.teleop_nav_view: Adw.NavigationView = builder.get_object("teleop_nav_view")
+        self.teleop_nav_view.add(TeleoperatorPage())
 
         self.logger_nav_view: Adw.NavigationView = builder.get_object("logger_nav_view")
         self.logger_nav_view.add(LoggerPage())

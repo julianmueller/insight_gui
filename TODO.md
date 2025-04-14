@@ -21,13 +21,19 @@
     - add btn to "close all detatched windows", maybe in menu?
     - add "experimental" flag/info to not really working pages like img stream
     - add option to preferences to hide everything related to insight, like node, parameters etc
+    - add "monitor param changes"
 
 - additional pages
     - ~~add a `rqt_graph` equivalent page~~
     - add a teleop page
+    - add static/dynamic tf2 broadcaster
     - add tf inspection subpage (show the stuff that rviz shows)
     - add a controller "/joy" page (also look into Workbench - Gamepad Demo)
     - add a launch page to directly launch nodes with a set of arguments
+    - add action send_goal
+    - add topic publisher (+once)
+    - add service echo
+    - (optional) add qos info page
     - (optional) add a URDF/robot_description viewer
     - (optional) add a rosbag page
     - (optional) add a page to visualize/load/save octomaps
@@ -41,6 +47,8 @@
     - add option to add new env variables in the pref dialog (and add a refresh btn)
     - ~~add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open~~
     - add when a new window is opened as a detach, make it have the same content as the detached content_page
+    - topic info: add hz & bw
+    - add ros2 param dump + load
 
 - ros2 stuff
     - (optional) add every page of the gui as a ros2 executable, so a window with only this page starts

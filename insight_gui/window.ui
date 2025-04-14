@@ -315,6 +315,17 @@
                             </object>
                         </child>
 
+                        <!-- Teleoperator -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">teleop</property>
+                                <property name="title">Teleoperator</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="teleop_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
                         <!-- Logger -->
                         <child>
                             <object class="GtkStackPage">

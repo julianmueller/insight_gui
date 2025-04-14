@@ -35,6 +35,7 @@ from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.widgets.zoomable_widget import ZoomableWidget
+from insight_gui.widgets.zoomable import Zoomable
 
 
 class TestPage(ContentPage):
@@ -44,7 +45,7 @@ class TestPage(ContentPage):
         super().__init__(searchable=False, refreshable=False, **kwargs)
         super().set_title("Test")
 
-        z = ZoomableWidget()
+        z = TestWidget()
         self.content_stack.add_named(z, "test")
         self.content_stack.set_visible_child_name("test")
 
@@ -56,3 +57,19 @@ class TestPage(ContentPage):
 
     def reset_ui(self):
         pass
+
+
+class TestWidget(Zoomable, Gtk.Fixed):
+    __gtype_name__ = "TestWidget"
+
+    def __init__(self, **kwargs):
+        Gtk.Fixed.__init__(self)
+        Zoomable.__init__(self)
+        print(self)
+
+        self.set_overflow(Gtk.Overflow.HIDDEN)
+        self.attach_zoom_controller()
+
+        btn = Gtk.Button(label="Zoom Me")
+        self.put(btn, 100, 100)
+        self.add_zoom_child(btn)

@@ -300,6 +300,7 @@ class AdditionalContentRow(PrefRow):
             self.footer_box.prepend(widget)
         else:
             self.footer_box.append(widget)
+        self.footer_box.set_visible(True)
         return widget
 
     def add_footer_btn(
