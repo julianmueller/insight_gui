@@ -20,9 +20,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import webbrowser  # TODO replace with gnome tools
-
-from ament_index_python.packages import get_packages_with_prefixes
 
 import gi
 
@@ -30,11 +27,9 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GLib
 
-from insight_gui.ros2_pages.pkg_new_dialog import PackageNewDialog
-from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.widgets.zoomable_widget import ZoomableWidget
+from insight_gui.widgets.canvas import Canvas
 
 
 class TestPage(ContentPage):
@@ -44,9 +39,9 @@ class TestPage(ContentPage):
         super().__init__(searchable=False, refreshable=False, **kwargs)
         super().set_title("Test")
 
-        z = ZoomableWidget()
-        self.content_stack.add_named(z, "test")
-        self.content_stack.set_visible_child_name("test")
+        # c = Canvas()
+        # self.content_stack.add_named(c, "test")
+        # self.content_stack.set_visible_child_name("test")
 
     def refresh_bg(self) -> bool:
         return True

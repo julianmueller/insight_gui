@@ -1,3 +1,25 @@
+# =============================================================================
+# canvas_blocks.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
+
 from pathlib import Path
 
 import gi
@@ -33,14 +55,15 @@ class BaseBlock(Adw.Bin):
         self.subpage_btn.connect("clicked", self.on_subpage_btn_clicked)
 
         self.revealer: Gtk.Revealer = builder.get_object("revealer")
-        self.revealer.connect("notify::reveal-child", self._on_revealer_toggled)
+        self.revealer.set_visible(False)
+        # self.revealer.connect("notify::reveal-child", self._on_revealer_toggled)
 
         self.content_box: Gtk.Box = builder.get_object("content_box")
         self.left_box: Gtk.Box = builder.get_object("left_box")
         self.right_box: Gtk.Box = builder.get_object("right_box")
 
         self.reveal_btn: RevealButton = RevealButton(self.revealer)
-        self.header_box.prepend(self.reveal_btn)
+        # self.header_box.prepend(self.reveal_btn)
         # self.label.set_cursor(Gdk.Cursor.new_from_name("grab"))
 
         if accent_color is not None and isinstance(accent_color, AdwAccentColor):
