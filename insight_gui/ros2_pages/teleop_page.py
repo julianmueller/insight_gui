@@ -1,133 +1,275 @@
-# Copyright (C) 2025  Julian Müller
-
+# =============================================================================
+# teleop_page.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
-from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Vector3, Twist
+from sensor_msgs.msg import Joy
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Gio, GObject, Gdk, GLib
 
 from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_rows import AdditionalContentRow
+
+
+class TeleopDirection(GObject.GObject):
+    __gtype_name__ = "TeleopDirection"
+    # Forward: x = 1
+    # Left: y = 1
+    # (row, col):
+    # (0,0) ↖    (0,1) ↑    (0,2) ↗
+    # (1,0) ←    (1,1) •    (1,2) →
+    # (2,0) ↙    (2,1) ↓    (2,2) ↘
+
+    x = GObject.Property(type=float)
+    y = GObject.Property(type=float)
+
+    def __init__(self, x: float = 0.0, y: float = 0.0):
+        super().__init__()
+        self.x = x
+        self.y = y
 
 
 class TeleoperatorPage(ContentPage):
     __gtype_name__ = "TeleoperatorPage"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, preselect_teleop_topic: str = "", **kwargs):
+        super().__init__(searchable=False, **kwargs)
         super().set_title("Teleoperator")
-        super().set_search_entry_placeholder_text("Search for topics")
-        super().set_refresh_fail_text("No actions found. Refresh to try again.")
+        super().set_refresh_fail_text("No teleop topics found. Refresh to try again.")
 
-        # TODO
+        self.preselect_teleop_topic = preselect_teleop_topic
         # ros2 run teleop_twist_keyboard teleop_twist_keyboard
         # ros2 run teleop_twist_joy teleop_twist_joy
 
-        # self.search_group = self.pref_page.add_group(filterable=False)
-        # self.js_topic_row = self.search_group.add_row(
-        #     Adw.ComboRow(
-        #         title="Joint Topic",
-        #         enable_search=True,
-        #         expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
-        #     )
-        # )
-        # self.js_topic_row.connect("notify::selected-item", self.on_joint_states_changed)
-        # self.js_topic_list_store = Gio.ListStore.new(Gtk.StringObject)
-        # self.js_topic_row.set_model(self.js_topic_list_store)
+        # TODO add
+        # - scaling for linear and angular
+        # - switch btw dpad and joystick controls
+        self.pub = None
 
-        # self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
+        self.topic_group = self.pref_page.add_group(title="Teleop Topic", filterable=False)
+        self.topic_name_row: Adw.EntryRow = self.topic_group.add_row(
+            Adw.EntryRow(title="Topic name", show_apply_button=True)
+        )
+        self.topic_name_row.connect("apply", self.on_topic_name_applied)
+        self.topic_name = ""
 
-    def refresh_bg(self) -> bool:
-        # self.joint_states_topic_list = []
+        self.teleop_type_row = self.topic_group.add_row(
+            Adw.ComboRow(
+                title="Teleop Type",
+                enable_search=False,
+                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+            )
+        )
+        self.teleop_type_row.connect("notify::selected-item", self.on_teleop_type_changed)
 
-        # available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+        # Create a Gio.ListStore to fill the ComboBox with
+        self.TELEOP_TYPE_TWIST = "geometry_msgs/msg/Twist"
+        self.TELEOP_TYPE_JOY = "sensor_msgs/msg/Joy"
+        self.teleop_type_list_store = Gio.ListStore.new(Gtk.StringObject)
+        self.teleop_type_list_store.append(Gtk.StringObject.new(self.TELEOP_TYPE_TWIST))
+        self.teleop_type_list_store.append(Gtk.StringObject.new(self.TELEOP_TYPE_JOY))
+        self.teleop_type_row.set_model(self.teleop_type_list_store)
+        self.teleop_type = self.TELEOP_TYPE_TWIST
 
-        # for i, (topic_name, topic_types) in enumerate(available_topics):
-        #     # topic_types is a list, as multiple servers can advertise different types to the same topic
-        #     # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-        #     if len(topic_types) == 1:
-        #         topic_types = topic_types[0]
-        #     else:
-        #         topic_types = ", ".join(topic_types)
+        self.teleop_group = self.pref_page.add_group(title="Teleoperation", filterable=False)
+        self.teleop_row = self.teleop_group.add_row(TeleopRow())
+        self.teleop_row.connect("teleop-dir-changed", self.on_teleop_btns)
 
-        #     if topic_types == "sensor_msgs/msg/JointState":
-        #         self.joint_states_topic_list.append(topic_name)
-        # return len(self.joint_states_topic_list) > 0
+        # TODO
+        self.linear_scaling = 1.0
+        self.angular_scaling = 1.0
+
+    def remove_pub(self):
+        # TODO remove the pub
         pass
 
-    def refresh_ui(self):
-        # for js_topic in self.joint_states_topic_list:
-        #     self.js_topic_list_store.append(Gtk.StringObject.new(js_topic))
+    def on_topic_name_applied(self, *args):
+        self.topic_name = self.topic_name_row.get_text()
+        print(f"publishing to: {self.topic_name}")
 
-        # if self.js_topic_list_store.get_n_items() > 0:
-        #     self.js_topic_row.set_model(self.js_topic_list_store)
-        #     self.js_topic_row.set_selected(0)
+        if self.topic_name:
+            # TODO check if topic with this name already exists
+
+            if self.teleop_type == self.TELEOP_TYPE_TWIST:
+                self.pub = self.ros2_connector.add_publisher(Twist, self.topic_name)
+            elif self.teleop_type == self.TELEOP_TYPE_JOY:
+                self.pub = self.ros2_connector.add_publisher(Joy, self.topic_name)
+
+    def on_teleop_type_changed(self, *args):
+        if self.pub:
+            self.remove_pub()
+        self.teleop_type = self.teleop_type_row.get_selected_item().get_string()
+
+        if self.topic_name:
+            # TODO check if topic with this name already exists
+
+            if self.teleop_type == self.TELEOP_TYPE_TWIST:
+                self.pub = self.ros2_connector.add_publisher(Twist, self.topic_name)
+            elif self.teleop_type == self.TELEOP_TYPE_JOY:
+                self.pub = self.ros2_connector.add_publisher(Joy, self.topic_name)
         # else:
-        #     super().show_toast("No topic with joint_states found")
-        pass
+        #     self.teleop_row.disable()
 
-    def reset_ui(self):
-        # self.js_topic_list_store.remove_all()
-        # self.joints_group.clear()
-        pass
+    def on_teleop_btns(self, btn: Gtk.Button, teleop_dir: TeleopDirection):
+        if not self.topic_name:
+            self.show_toast("No topic to publish to")
+            return
 
-    def on_joint_states_changed(self, *args):
-        # if self.js_topic_list_store.get_n_items() <= 0:
-        #     return
+        linear = Vector3(x=self.linear_scaling * teleop_dir.x)
+        angular = Vector3(z=self.angular_scaling * teleop_dir.y)
+        self.publish_twist(linear=linear, angular=angular)
 
-        # topic_name = self.js_topic_row.get_selected_item().get_string()
-        # if topic_name:
-        #     self.sub = self.ros2_connector.add_subsciption(JointState, topic_name, self.on_ros_js_callback)
-        pass
+    def publish_twist(self, linear: Vector3, angular: Vector3):
+        if not self.pub:
+            self.show_toast("no pub")
 
-    # TODO implement some rate limeting
-    # TODO also pause, when the "tab" aka nav page is switched
-    def on_ros_js_callback(self, msg: JointState, *args):
-        pass
+        twist = Twist()
+        twist.linear = linear
+        twist.angular = angular
+        self.pub.publish(twist)
 
-        # TODO implement
-        # self.joints_group.clear()
-        # rows = []
-        # for name, pos in zip(msg.name, msg.position):
-        #     row: PrefRow = self.joints_group.add_row(PrefRow(title=name))
-        #     adj = Gtk.Adjustment(value=pos, lower=-6.133, upper=6.133, step_increment=0.05)
-        #     scale = Gtk.Scale(
-        #         orientation=Gtk.Orientation.HORIZONTAL,
-        #         adjustment=adj,
-        #         # TODO lower and upper boundaries should be based on the joint limits
-        #         draw_value=True,
-        #         digits=3,
-        #         hexpand=True,
-        #         value_pos=Gtk.PositionType.RIGHT,
-        #     )
-        #     scale.connect("notify::value-changed", lambda *args: print(scale.get_value()))
-        #     plus_button = Gtk.Button(icon_name="plus-symbolic", valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
-        #     minus_button = Gtk.Button(icon_name="minus-symbolic", valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
 
-        #     val = scale.get_value()
-        #     step_inc = adj.get_step_increment()
+class TeleopRow(AdditionalContentRow):
+    __gtype_name__ = "TeleopRow"
+    __gsignals__ = {"teleop-dir-changed": (GObject.SignalFlags.RUN_FIRST, None, (TeleopDirection.__gtype__,))}
 
-        #     plus_button.connect("clicked", lambda *args: scale.set_value(val + step_inc))
-        #     minus_button.connect("clicked", lambda *args: scale.set_value(val - step_inc))
+    def __init__(self, title="Teleoperator", **kwargs):
+        super().__init__(title=title, **kwargs)
+        super().grab_focus()
 
-        #     row.add_suffix(minus_button)
-        #     row.add_suffix(scale)
-        #     row.add_suffix(plus_button)
+        self.grid: Gtk.Grid = Gtk.Grid(
+            column_spacing=12,
+            row_spacing=12,
+            margin_top=12,
+            margin_bottom=12,
+            margin_start=12,
+            margin_end=12,
+            hexpand=True,
+            vexpand=True,
+            halign=Gtk.Align.CENTER,
+            valign=Gtk.Align.CENTER,
+        )
+        self.content_box.append(self.grid)
 
-        #     rows.append(row)
+        # Buttons
+        self.btns = []
+        self.btn_nw = self._add_btn(icon_name="arrow2-top-left-symbolic", x_dir=1.0, y_dir=1.0)  # label="↖"
+        self.btn_n = self._add_btn(icon_name="arrow2-up-symbolic", x_dir=1.0, y_dir=0.0)  # label="↑"
+        self.btn_ne = self._add_btn(icon_name="arrow2-top-right-symbolic", x_dir=1.0, y_dir=-1.0)  # label="↗"
+        self.btn_e = self._add_btn(icon_name="arrow2-right-symbolic", x_dir=0.0, y_dir=-1.0)  # label="→"
+        self.btn_se = self._add_btn(icon_name="arrow2-bottom-right-symbolic", x_dir=-1.0, y_dir=-1.0)  # label="↘"
+        self.btn_s = self._add_btn(icon_name="arrow2-down-symbolic", x_dir=-1.0, y_dir=0.0)  # label="↓"
+        self.btn_sw = self._add_btn(icon_name="arrow2-bottom-left-symbolic", x_dir=-1.0, y_dir=1.0)  # label="↙"
+        self.btn_w = self._add_btn(icon_name="arrow2-left-symbolic", x_dir=0.0, y_dir=1.0)  # label="←"
 
-        # self.joints_group.add_rows_idle(rows)
+        self.btn_stop = self._add_btn(
+            icon_name="cross-small-circle-outline-symbolic", x_dir=0.0, y_dir=0.0
+        )  # label="•"
+
+        # add key controller
+        key_controller = Gtk.EventControllerKey()
+        key_controller.connect("key-pressed", self.on_key_pressed)
+        key_controller.connect("key-released", self.on_key_released)
+        self.add_controller(key_controller)
+        self._allowed_keys = (Gdk.KEY_uparrow, Gdk.KEY_downarrow, Gdk.KEY_leftarrow, Gdk.KEY_rightarrow)
+        self._held_keys = set()
+
+        # make it focus when clicked on it
+        click_controller = Gtk.GestureClick()
+        click_controller.connect("pressed", lambda c, n, x, y: self.grab_focus())
+        self.add_controller(click_controller)
+
+        focus_controller = Gtk.EventControllerFocus()
+        focus_controller.connect("leave", self.on_focus_out)
+        self.add_controller(focus_controller)
+
+        # self.disable()
+
+    def _add_btn(self, icon_name: str, x_dir: float, y_dir: float) -> Gtk.Button:
+        btn = Gtk.Button(icon_name=icon_name, width_request=80, height_request=80, can_focus=False)
+        btn.connect("clicked", self._btn_callback, TeleopDirection(x_dir, y_dir))
+
+        # Dynamically calculate position in grid
+        row = int(1 - x_dir)
+        col = int(1 - y_dir)
+
+        self.grid.attach(btn, col, row, 1, 1)
+        self.btns.append(btn)
+        return btn
+
+    def _btn_callback(self, btn, teleop_dir: TeleopDirection):
+        self.emit("teleop-dir-changed", teleop_dir)
+
+    def on_focus_out(self, *args):
+        GLib.idle_add(self.grab_focus)  # Avoid recursion crash by delaying
+        return False
+
+    def on_key_pressed(self, controller, keyval, keycode, state):
+        # if keyval not in self._allowed_keys:
+        #     return False
+
+        if keycode not in self._held_keys:
+            self._held_keys.add(keycode)
+        self._emit_from_keys()
+        return True
+
+    def on_key_released(self, controller, keyval, keycode, state):
+        # if keyval not in self._allowed_keys:
+        #     return False
+        print(keycode)  # TODO rework
+
+        if keycode in self._held_keys:
+            self._held_keys.remove(keycode)
+        self._emit_from_keys()
+        return True
+
+    def _emit_from_keys(self):
+        x = 0.0
+        y = 0.0
+        print(self._held_keys)
+
+        print(Gdk.KEY_uparrow)
+
+        if Gdk.KEY_uparrow in self._held_keys:
+            x += 1.0
+        if Gdk.KEY_downarrow in self._held_keys:
+            x -= 1.0
+        if Gdk.KEY_leftarrow in self._held_keys:
+            y += 1.0
+        if Gdk.KEY_rightarrow in self._held_keys:
+            y -= 1.0
+
+        print(x, y)
+        # /turtle1/cmd_vel
+
+        self.emit("teleop-dir-changed", TeleopDirection(x=x, y=y))
+
+    def enable(self):
+        for btn in self.btns:
+            btn.set_sensitive(True)
+
+    def disable(self):
+        for btn in self.btns:
+            btn.set_sensitive(False)

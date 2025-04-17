@@ -24,7 +24,11 @@ from typing import Callable, Type
 
 import rclpy
 from rclpy.node import Node
-from rclpy.service import SrvType, SrvTypeRequest, SrvTypeResponse
+from rclpy.publisher import Publisher
+from rclpy.subscription import Subscription
+from rclpy.service import Service, SrvType, SrvTypeRequest, SrvTypeResponse
+from rclpy.timer import Timer
+
 
 import gi
 
@@ -42,7 +46,8 @@ class ROS2Connector:
         self.is_running = False
         self.start_time = None
 
-        # list of subscribers
+        # list of publishers/subscribers
+        self.pubs = []
         self.subs = []
 
         rclpy.init(args=None)
@@ -89,7 +94,15 @@ class ROS2Connector:
     def on_node_state_changed(self, action: Gio.Action, value: GLib.Variant):
         action.set_state(GLib.Variant.new_boolean(self.is_running))
 
-    def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable):
+    def add_publisher(self, msg_type: Type, topic_name: str, queue_size: int = 10) -> Publisher:
+        pub = self.node.create_publisher(msg_type, topic_name, queue_size)
+        self.pubs.append(pub)
+        return pub
+
+    def add_timer_callback(self, period: float, callback: Callable) -> Timer:
+        return self.node.create_timer(period, callback)
+
+    def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable) -> Subscription:
         sub = self.node.create_subscription(msg_type, topic_name, callback, 10)
         self.subs.append(sub)
         return sub

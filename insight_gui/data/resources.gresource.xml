@@ -34,5 +34,14 @@
         <file preprocess="xml-stripblanks">icons/plus-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/minus-symbolic.svg</file>
 
+        <file preprocess="xml-stripblanks">icons/arrow2-bottom-left-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow2-bottom-right-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow2-down-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow2-left-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow2-right-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow2-top-left-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow2-top-right-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow2-up-symbolic.svg</file>
+
     </gresource>
 </gresources>
