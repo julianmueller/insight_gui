@@ -28,6 +28,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, GLib
 
 from insight_gui.widgets.pref_page import PrefPage
+from insight_gui.widgets.breadcrumbs import BreadcrumbsBar
 
 
 class ContentPage(Adw.NavigationPage):
@@ -52,6 +53,7 @@ class ContentPage(Adw.NavigationPage):
 
         self.toolbar_view: Adw.ToolbarView = builder.get_object("toolbar_view")
         self.header_bar: Adw.HeaderBar = builder.get_object("header_bar")
+
         self.search_btn: Gtk.ToggleButton = builder.get_object("search_btn")
         self.search_btn.set_action_name("win.toggle-search")
         self.search_btn.set_sensitive(True)  # this is somehow needed
@@ -65,12 +67,16 @@ class ContentPage(Adw.NavigationPage):
         self.detach_btn: Gtk.Button = builder.get_object("detach_btn")
         # self.detach_btn.connect("clicked", self.on_detach)
         self.detach_btn.set_action_name("win.detach")
+
         self.search_bar: Gtk.SearchBar = builder.get_object("search_bar")
         self.search_btn.bind_property(
             "active", self.search_bar, "search-mode-enabled", GObject.BindingFlags.BIDIRECTIONAL
         )
         self.search_entry: Gtk.SearchEntry = builder.get_object("search_entry")
         self.search_entry.connect("search-changed", self.on_search_changed)
+
+        self.breadcrumbs_bar = BreadcrumbsBar()
+        self.toolbar_view.add_top_bar(self.breadcrumbs_bar)
 
         self.toast_overlay: Adw.ToastOverlay = builder.get_object("toast_overlay")
         self.banner: Adw.Banner = builder.get_object("banner")
@@ -102,6 +108,11 @@ class ContentPage(Adw.NavigationPage):
         # get these properties, after the widget has been realized in the window
         self.nav_view = super().get_ancestor(Adw.NavigationView)
         self.ros2_connector = super().get_root().ros2_connector
+
+        self.breadcrumbs_bar.set_nav_view(self.nav_view)
+        self.breadcrumbs_bar.update()
+        self.nav_view.connect("pushed", self.update_breadcrumbs)
+        self.nav_view.connect("popped", self.update_breadcrumbs)
 
         self.search_btn.set_visible(self.searchable)
         self.refresh_btn.set_visible(self.refreshable)
@@ -228,6 +239,10 @@ class ContentPage(Adw.NavigationPage):
 
     def hide_banner(self):
         self.banner.set_revealed(False)
+
+    def update_breadcrumbs(self, *args):
+        if self.nav_view.get_visible_page() == self:
+            self.breadcrumbs_bar.update()
 
     def add_header_btn(self, icon_name: str, tooltip_text: str, func: Callable, **func_kwargs) -> Gtk.Button:
         btn = Gtk.Button.new_from_icon_name(icon_name)
