@@ -194,7 +194,7 @@
                             </object>
                         </child>
 
-                        <!-- Topics -->
+                        <!-- Topic List -->
                         <child>
                             <object class="GtkStackPage">
                                 <property name="name">topic_list</property>
@@ -205,18 +205,29 @@
                             </object>
                         </child>
 
-                        <!-- Echo Topic -->
+                        <!-- Topic Publisher -->
                         <child>
                             <object class="GtkStackPage">
-                                <property name="name">topic_echo</property>
-                                <property name="title">Echo Topic</property>
+                                <property name="name">topic_pub</property>
+                                <property name="title">Publish Topic</property>
                                 <property name="child">
-                                    <object class="AdwNavigationView" id="topic_echo_nav_view" />
+                                    <object class="AdwNavigationView" id="topic_pub_nav_view" />
                                 </property>
                             </object>
                         </child>
 
-                        <!-- Services -->
+                        <!-- Topic Subscriber -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">topic_sub</property>
+                                <property name="title">Subscribe Topic</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="topic_sub_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Service List -->
                         <child>
                             <object class="GtkStackPage">
                                 <property name="name">service_list</property>

@@ -30,7 +30,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.topic_echo_page import TopicEchoPage
+from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
 from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
@@ -139,4 +139,4 @@ class TopicInfoPage(ContentPage):
         self.on_goto_echoer_page()
 
     def on_goto_echoer_page(self, *args):
-        self.nav_view.push(TopicEchoPage(preselect_topic=self.topic_name))
+        self.nav_view.push(TopicSubscriberPage(preselect_topic=self.topic_name))

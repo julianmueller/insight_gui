@@ -1,5 +1,5 @@
 # =============================================================================
-# topic_echo_page.py
+# topic_sub_page.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
@@ -40,19 +40,19 @@ from insight_gui.widgets.buttons import PlayPauseButton
 from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
-class TopicEchoPage(ContentPage):
-    __gtype_name__ = "TopicEchoPage"
+class TopicSubscriberPage(ContentPage):
+    __gtype_name__ = "TopicSubscriberPage"
 
     def __init__(self, preselect_topic: str = "", **kwargs):
         super().__init__(searchable=False, **kwargs)
-        super().set_title("Topic Echo")
+        super().set_title("Subscribe to Topic")
         super().set_refresh_fail_text("No topics found. Refresh to try again.")
 
         self.preselect_topic = preselect_topic
         self.is_echoing = False
         self.single_echo_done = True
         self.msg_instance = None
-        self.sub = None
+        self.ros2_sub = None
 
         self.last_update_time = 0
         self.max_update_rate = 10  # in Hz
@@ -171,9 +171,9 @@ class TopicEchoPage(ContentPage):
         self.remove_sub()
 
     def remove_sub(self):
-        if self.sub:
-            self.ros2_connector.destroy_subscription(self.sub)
-            self.sub = None
+        if self.ros2_sub:
+            self.ros2_connector.destroy_subscription(self.ros2_sub)
+            self.ros2_sub = None
 
     def trigger(self):
         if self.stream_type_toggle_row.get_active():
@@ -226,7 +226,7 @@ class TopicEchoPage(ContentPage):
             )
 
             # TODO maybe add special treatment for some "known topics?"
-            self.sub = self.ros2_connector.add_subsciption(msg_class, topic_name, self.topic_callback)
+            self.ros2_sub = self.ros2_connector.add_subsciption(msg_class, topic_name, self.topic_callback)
             self.single_echo_done = True
             self.on_clear_text()
 

@@ -25,7 +25,7 @@
 
 - additional pages
     - ~~add a `rqt_graph` equivalent page~~
-    - add a teleop page
+    - ~~add a teleop page~~
     - add static/dynamic tf2 broadcaster
     - add tf inspection subpage (show the stuff that rviz shows)
     - add a controller "/joy" page (also look into Workbench - Gamepad Demo)

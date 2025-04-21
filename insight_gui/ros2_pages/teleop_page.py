@@ -69,10 +69,8 @@ class TeleoperatorPage(ContentPage):
         self.pub = None
 
         self.topic_group = self.pref_page.add_group(title="Teleop Topic", filterable=False)
-        self.topic_name_row: Adw.EntryRow = self.topic_group.add_row(
-            Adw.EntryRow(title="Topic name", show_apply_button=True)
-        )
-        self.topic_name_row.connect("apply", self.on_topic_name_applied)
+        self.topic_row: Adw.EntryRow = self.topic_group.add_row(Adw.EntryRow(title="Topic", show_apply_button=True))
+        self.topic_row.connect("apply", self.on_topic_name_applied)
         self.topic_name = ""
 
         self.teleop_type_row = self.topic_group.add_row(
@@ -106,7 +104,7 @@ class TeleoperatorPage(ContentPage):
         pass
 
     def on_topic_name_applied(self, *args):
-        self.topic_name = self.topic_name_row.get_text()
+        self.topic_name = self.topic_row.get_text()
         print(f"publishing to: {self.topic_name}")
 
         if self.topic_name:

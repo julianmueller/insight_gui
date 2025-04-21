@@ -32,7 +32,8 @@ from gi.repository import Gtk, Adw, Gdk, Gio, GLib, GObject
 from insight_gui.ros2_pages.pkg_list_page import PackageListPage
 from insight_gui.ros2_pages.node_list_page import NodeListPage
 from insight_gui.ros2_pages.topic_list_page import TopicListPage
-from insight_gui.ros2_pages.topic_echo_page import TopicEchoPage
+from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
+from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
 from insight_gui.ros2_pages.service_list_page import ServiceListPage
 from insight_gui.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.ros2_pages.action_list_page import ActionListPage
@@ -206,8 +207,11 @@ class MainWindow(BaseWindow):
         self.topic_list_nav_view: Adw.NavigationView = builder.get_object("topic_list_nav_view")
         self.topic_list_nav_view.add(TopicListPage())
 
-        self.topic_echo_nav_view: Adw.NavigationView = builder.get_object("topic_echo_nav_view")
-        self.topic_echo_nav_view.add(TopicEchoPage())
+        self.topic_pub_nav_view: Adw.NavigationView = builder.get_object("topic_pub_nav_view")
+        self.topic_pub_nav_view.add(TopicPublisherPage())
+
+        self.topic_sub_nav_view: Adw.NavigationView = builder.get_object("topic_sub_nav_view")
+        self.topic_sub_nav_view.add(TopicSubscriberPage())
 
         self.service_list_nav_view: Adw.NavigationView = builder.get_object("service_list_nav_view")
         self.service_list_nav_view.add(ServiceListPage())
