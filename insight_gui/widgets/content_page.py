@@ -27,6 +27,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, GLib
 
+from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.breadcrumbs import BreadcrumbsBar
 
@@ -106,8 +107,8 @@ class ContentPage(Adw.NavigationPage):
 
     def _deferred_init(self):
         # get these properties, after the widget has been realized in the window
-        self.nav_view = super().get_ancestor(Adw.NavigationView)
-        self.ros2_connector = super().get_root().ros2_connector
+        self.nav_view: Adw.NavigationView = super().get_ancestor(Adw.NavigationView)
+        self.ros2_connector: ROS2Connector = super().get_root().ros2_connector
 
         self.breadcrumbs_bar.set_nav_view(self.nav_view)
         self.breadcrumbs_bar.update()

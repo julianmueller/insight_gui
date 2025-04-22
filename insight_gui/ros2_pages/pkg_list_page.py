@@ -56,7 +56,7 @@ class PackageListPage(ContentPage):
 
         super().add_bottom_right_btn(
             label="ROS Index",
-            icon_name="webpage-symbolic",
+            icon_name="web-browser-symbolic",
             tooltip_text="Open ROS Index",
             func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
         )

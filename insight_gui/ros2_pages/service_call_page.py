@@ -275,8 +275,8 @@ class ServiceCallPage(ContentPage):
 
         def _idle():
             self.response_instance = self.ros2_connector.call_service(
-                srv_name=self.selected_service_name,
                 srv_type=self.service_class,
+                srv_name=self.selected_service_name,
                 request=self.request_instance,
             )
 

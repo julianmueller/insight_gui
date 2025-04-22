@@ -67,8 +67,8 @@ class TopicSubscriberPage(ContentPage):
             ),
             position="start",
         )
-        self.single_echo_btn = super().add_bottom_left_btn(
-            label="Single Echo", icon_name="camera-photo-symbolic", func=self.on_single_echo
+        self.single_sub_btn = super().add_bottom_left_btn(
+            label="Single Subscription", icon_name="mail-send-symbolic", func=self.on_single_sub
         )
         super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
 
@@ -192,15 +192,15 @@ class TopicSubscriberPage(ContentPage):
     def on_toggle_stream_type(self, *args):
         # active = continuous stream, inactive = single shot
         if self.stream_type_toggle_row.get_active():
-            self.single_echo_btn.set_visible(False)
+            self.single_sub_btn.set_visible(False)
             self.play_pause_stream_btn.set_visible(True)
         else:
-            self.single_echo_btn.set_visible(True)
+            self.single_sub_btn.set_visible(True)
             self.play_pause_stream_btn.set_visible(False)
 
         self.play_pause_stream_btn.playing = False
 
-    def on_single_echo(self, *args):
+    def on_single_sub(self, *args):
         self.single_echo_done = False
 
     def on_play_pause_stream(self, *args):
@@ -226,7 +226,9 @@ class TopicSubscriberPage(ContentPage):
             )
 
             # TODO maybe add special treatment for some "known topics?"
-            self.ros2_sub = self.ros2_connector.add_subsciption(msg_class, topic_name, self.topic_callback)
+            self.ros2_sub = self.ros2_connector.add_subsciption(
+                msg_type=msg_class, topic_name=topic_name, callback=self.topic_callback
+            )
             self.single_echo_done = True
             self.on_clear_text()
 

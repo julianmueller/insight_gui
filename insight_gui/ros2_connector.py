@@ -20,11 +20,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from typing import Callable, Type
+from typing import Callable
 
 import rclpy
 from rclpy.node import Node
-from rclpy.publisher import Publisher
+from rclpy.publisher import Publisher, MsgType
 from rclpy.subscription import Subscription
 from rclpy.service import Service, SrvType, SrvTypeRequest, SrvTypeResponse
 from rclpy.timer import Timer
@@ -45,10 +45,6 @@ class ROS2Connector:
         self.thread: GLib.Thread = None
         self.is_running = False
         self.start_time = None
-
-        # list of publishers/subscribers
-        self.pubs = []
-        self.subs = []
 
         rclpy.init(args=None)
 
@@ -94,31 +90,38 @@ class ROS2Connector:
     def on_node_state_changed(self, action: Gio.Action, value: GLib.Variant):
         action.set_state(GLib.Variant.new_boolean(self.is_running))
 
-    def add_publisher(self, msg_type: Type, topic_name: str, queue_size: int = 10) -> Publisher:
-        pub = self.node.create_publisher(msg_type, topic_name, queue_size)
-        self.pubs.append(pub)
-        return pub
+    def add_publisher(self, msg_type: MsgType, topic_name: str, queue_size: int = 10) -> Publisher:
+        return self.node.create_publisher(msg_type, topic_name, queue_size)
+
+    def destroy_publisher(self, pub: Publisher) -> bool:
+        if not self.node:
+            return
+
+        if pub in list(self.node.publishers):
+            return self.node.destroy_publisher(pub)
+        else:
+            raise RuntimeError("Publisher cannot be destroyed")
+            return False
 
     def add_timer_callback(self, period: float, callback: Callable) -> Timer:
         return self.node.create_timer(period, callback)
 
-    def add_subsciption(self, msg_type: Type, topic_name: str, callback: Callable) -> Subscription:
-        sub = self.node.create_subscription(msg_type, topic_name, callback, 10)
-        self.subs.append(sub)
-        return sub
+    def add_subsciption(self, msg_type: MsgType, topic_name: str, callback: Callable) -> Subscription:
+        return self.node.create_subscription(msg_type, topic_name, callback, 10)
 
-    def destroy_subscription(self, sub):
+    def destroy_subscription(self, sub: Subscription) -> bool:
         if not self.node:
             return
 
-        if sub in self.subs:
-            self.node.destroy_subscription(sub)
+        if sub in list(self.node.subscriptions):
+            return self.node.destroy_subscription(sub)
         else:
             raise RuntimeError("Subscription cannot be destroyed")
+            return False
 
     # TODO this needs some refactoring and threading
     # from ros2service.verb.call import requester  # could also be used for that
-    def call_service(self, srv_name: str, srv_type: SrvType, request: SrvTypeRequest) -> SrvTypeResponse:
+    def call_service(self, srv_type: SrvType, srv_name: str, request: SrvTypeRequest) -> SrvTypeResponse:
         if not self.is_running:
             return
 
@@ -136,7 +139,7 @@ class ROS2Connector:
             raise RuntimeError("Exception while calling service: %r" % future.exception())
 
     def shutdown(self):
-        for sub in self.subs:
+        for sub in list(self.node.subscriptions):
             self.node.destroy_subscription(sub)
 
         # self.is_running = False

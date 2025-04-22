@@ -57,7 +57,7 @@ class PackageInfoPage(ContentPage):
 
         # add index link
         self.link_group.add_row(PrefRow(title="Open on index.ros.org")).add_suffix_btn(
-            icon_name="webpage-symbolic",
+            icon_name="web-browser-symbolic",
             func=lambda: webbrowser.open(f"https://index.ros.org/p/{self.pkg_name}/"),
         )
 

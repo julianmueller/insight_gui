@@ -66,7 +66,7 @@ class MessageTypeInfoPage(ContentPage):
 
         # Btn for opening the online link to msg definition
         super().add_header_btn(
-            icon_name="webpage-symbolic",
+            icon_name="web-browser-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
             msg_type_full_name=self.msg_type_full_name,
@@ -111,7 +111,7 @@ class ServiceTypeInfoPage(ContentPage):
 
         # Btn for opening the online link to msg definition
         super().add_header_btn(
-            icon_name="webpage-symbolic",
+            icon_name="web-browser-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
             msg_type_full_name=self.srv_type_full_name,
@@ -187,7 +187,7 @@ class ActionTypeInfoPage(ContentPage):
 
         # Btn for opening the online link to msg definition
         super().add_header_btn(
-            icon_name="webpage-symbolic",
+            icon_name="web-browser-symbolic",
             tooltip_text="Online Definition",
             func=_on_open_msg_webpage,
             msg_type_full_name=self.act_type_full_name,
