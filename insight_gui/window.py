@@ -332,7 +332,7 @@ class DetachedWindow(BaseWindow):
         super().__init__(**kwargs)
 
         super().set_destroy_with_parent(True)
-        super().set_size_request(480, 600)
+        super().set_size_request(480, 300)
         super().set_default_size(480, 600)
 
         self.nav_view: Adw.NavigationView = Adw.NavigationView()

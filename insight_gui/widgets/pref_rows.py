@@ -32,10 +32,10 @@ from insight_gui.widgets.buttons import ToggleButton, CopyButton
 from insight_gui.utils.constants import ON_ICON, OFF_ICON
 
 
-class GenericRow(GObject.GObject):
+class PrefRowInterface(GObject.GObject):
     """Abstract Base Class for common row properties."""
 
-    __gtype_name__ = "GenericRow"
+    __gtype_name__ = "PrefRowInterface"
 
     def __init__(self):
         super().__init__()
@@ -78,7 +78,7 @@ class GenericRow(GObject.GObject):
             self._is_filtered = False
 
 
-class PrefRow(Adw.ActionRow, GenericRow):
+class PrefRow(Adw.ActionRow, PrefRowInterface):
     __gtype_name__ = "PrefRow"
 
     def __init__(
@@ -90,7 +90,7 @@ class PrefRow(Adw.ActionRow, GenericRow):
         **kwargs,
     ):
         Adw.ActionRow.__init__(self, **kwargs)
-        GenericRow.__init__(self)
+        PrefRowInterface.__init__(self)
         super().set_use_markup(False)
 
         self.header_box: Gtk.Box = self.get_first_child()
@@ -680,12 +680,12 @@ class ColumnViewRow(AdditionalContentRow):
         # Filtering
         self.filter_conditions = {}
         self.filter = Gtk.CustomFilter.new(self._filter_func)
-        self.filter_model = Gtk.FilterListModel(model=self.data_model, filter=self.filter)
+        self._filter_model = Gtk.FilterListModel(model=self.data_model, filter=self.filter)
 
         # Sorting model
-        self.sorter_model = Gtk.SortListModel.new(model=self.filter_model, sorter=None)
-        self.selection_model = Gtk.SingleSelection.new(model=self.sorter_model)
-        self.column_view.set_model(self.selection_model)
+        self.sorter_model = Gtk.SortListModel.new(model=self._filter_model, sorter=None)
+        self._selection_model = Gtk.SingleSelection.new(model=self.sorter_model)
+        self.column_view.set_model(self._selection_model)
 
         # Store column references
         self.columns = []
@@ -857,7 +857,7 @@ class MultiToggleButtonRow(AdditionalContentRow):
 
 # somewhat based on
 # https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.1/class.ButtonRow.html
-class ButtonRow(Adw.PreferencesRow, GenericRow):
+class ButtonRow(Adw.PreferencesRow, PrefRowInterface):
     __gtype_name__ = "ButtonRow"
 
     def __init__(
@@ -873,7 +873,7 @@ class ButtonRow(Adw.PreferencesRow, GenericRow):
         **kwargs,
     ):
         Adw.PreferencesRow.__init__(self, **kwargs)
-        GenericRow.__init__(self)
+        PrefRowInterface.__init__(self)
         super().set_activatable(False)
 
         self.btn = Gtk.Button(
@@ -906,7 +906,7 @@ class ButtonRow(Adw.PreferencesRow, GenericRow):
 
 
 # TODO this is not really tested yet
-class SearchRow(Adw.PreferencesRow, GenericRow):
+class SearchRow(Adw.PreferencesRow, PrefRowInterface):
     __gtype_name__ = "SearchRow"
 
     # box: Gtk.Box = Gtk.Template.Child()
@@ -928,7 +928,7 @@ class SearchRow(Adw.PreferencesRow, GenericRow):
         **kwargs,
     ):
         Adw.PreferencesRow.__init__(self, **kwargs)
-        GenericRow.__init__(self)
+        PrefRowInterface.__init__(self)
         super().set_activatable(False)
         # super().get_first_child().get_first_child().get_next_sibling().get_next_sibling().set_visible(False)
         # PrefRow -> header -> prefixes -> image -> title_box
@@ -995,4 +995,100 @@ class SearchRow(Adw.PreferencesRow, GenericRow):
         self.search_func(self.search_entry.get_text())
 
 
-# TODO add an entry row?
+class SuggestionEntryRow(Adw.EntryRow, PrefRowInterface):
+    __gtype_name__ = "SuggestionEntryRow"
+    __gsignals__ = {"suggestion-apply": (GObject.SignalFlags.RUN_FIRST, None, (str,))}
+
+    def __init__(self, *, title: str = "Select or create…", **kwargs):
+        Adw.EntryRow.__init__(self, **kwargs)
+        PrefRowInterface.__init__(self)
+        super().set_title(title)
+        super().set_show_apply_button(True)
+        self.connect("apply", self.on_apply)
+
+        # Suffix button to open popover
+        self.popover = Gtk.Popover(position=Gtk.PositionType.BOTTOM)
+        self.popover_btn = Gtk.MenuButton(
+            always_show_arrow=True,
+            tooltip_text="Show suggestions",
+            direction=Gtk.ArrowType.DOWN,
+            popover=self.popover,
+            halign=Gtk.Align.CENTER,
+            valign=Gtk.Align.CENTER,
+        )
+        self.add_suffix(self.popover_btn)
+
+        # Container inside popover
+        popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+
+        # SearchEntry to filter items
+        self.search_entry = Gtk.SearchEntry()
+        self.search_entry.set_placeholder_text("Filter…")
+        self.search_entry.connect("search-changed", self.on_search_changed)
+        popover_box.append(self.search_entry)
+
+        # wrap in FilterListModel with CustomFilter to always include 'new'
+        self.list_store = Gio.ListStore.new(Gtk.StringObject)
+        self._filter_model = Gtk.CustomFilter.new(self.filter_func)
+        self._selection_model = Gtk.SingleSelection(
+            model=Gtk.FilterListModel(model=self.list_store, filter=self._filter_model),
+            autoselect=False,
+            # can_unselect=True,
+        )
+        self._selection_model.connect("notify::selected-item", self.on_selected_item_changed)
+
+        def _on_factory_setup(factory, list_item):
+            lbl = Gtk.Label(
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.MIDDLE,
+                max_width_chars=50,
+                margin_top=8,
+                margin_start=8,
+                margin_bottom=8,
+                margin_end=8,
+            )
+            list_item.set_child(lbl)
+
+        def _on_factory_bind(factory, list_item):
+            lbl = list_item.get_child()
+            itm = list_item.get_item()
+            item_text = itm.get_string()
+            lbl.set_text(item_text)
+            lbl.set_tooltip_text(item_text)
+
+        # ListItemFactory for rendering
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", _on_factory_setup)
+        factory.connect("bind", _on_factory_bind)
+
+        self._list_view = Gtk.ListView(model=self._selection_model, factory=factory)
+        scrolled_window = Gtk.ScrolledWindow(max_content_height=300, propagate_natural_height=True)
+        scrolled_window.set_child(self._list_view)
+        popover_box.append(scrolled_window)
+        self.popover.set_child(popover_box)
+
+    def filter_func(self, item) -> bool:
+        # Case-insensitive substring search
+        query = self.search_entry.get_text().lower()
+        return query in item.get_string().lower()
+
+    def on_search_changed(self, *args):
+        # Notify filter to reevaluate
+        self._filter_model.changed(Gtk.FilterChange.DIFFERENT)
+
+    def on_selected_item_changed(self, selection, pspec):
+        if not self.popover_btn.get_active():
+            return
+
+        # Called when user picks an item
+        selected = selection.get_selected_item()
+        if selected:
+            item_text = selected.get_string()
+            self.set_text(item_text)
+            self.popover.popdown()
+            self._selection_model.set_selected(Gtk.INVALID_LIST_POSITION)
+            self.emit("suggestion-apply", item_text)
+
+    def on_apply(self, *args):
+        # When user edits text, clear any existing selection in the list
+        self._selection_model.set_selected(Gtk.INVALID_LIST_POSITION)

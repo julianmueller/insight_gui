@@ -27,7 +27,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GObject, Gdk, GLib
+from gi.repository import Gtk, Adw, Gio, GObject, Gdk, GLib, Pango
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import AdditionalContentRow
@@ -85,11 +85,26 @@ class TeleoperatorPage(ContentPage):
         # Create a Gio.ListStore to fill the ComboBox with
         self.TELEOP_TYPE_TWIST = "geometry_msgs/msg/Twist"
         self.TELEOP_TYPE_JOY = "sensor_msgs/msg/Joy"
+        self.teleop_type = self.TELEOP_TYPE_TWIST
+
         self.teleop_type_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.teleop_type_list_store.append(Gtk.StringObject.new(self.TELEOP_TYPE_TWIST))
         self.teleop_type_list_store.append(Gtk.StringObject.new(self.TELEOP_TYPE_JOY))
         self.teleop_type_row.set_model(self.teleop_type_list_store)
-        self.teleop_type = self.TELEOP_TYPE_TWIST
+
+        def _on_factory_setup(factory, list_item):
+            lbl = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.MIDDLE, max_width_chars=50)
+            list_item.set_child(lbl)
+
+        def _on_factory_bind(factory, list_item):
+            lbl = list_item.get_child()
+            itm = list_item.get_item()
+            lbl.set_text(itm.get_string())
+
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", _on_factory_setup)
+        factory.connect("bind", _on_factory_bind)
+        self.teleop_type_row.set_factory(factory)
 
         self.teleop_group = self.pref_page.add_group(title="Teleoperation", filterable=False)
         self.teleop_row = self.teleop_group.add_row(TeleopRow())

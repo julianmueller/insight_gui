@@ -28,7 +28,8 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GLib
 
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.pref_page import PrefPage
+from insight_gui.widgets.pref_rows import PrefRow, SuggestionEntryRow
 from insight_gui.widgets.canvas import Canvas
 
 
@@ -42,6 +43,15 @@ class TestPage(ContentPage):
         # c = Canvas()
         # self.content_stack.add_named(c, "test")
         # self.content_stack.set_visible_child_name("test")
+        combo = SuggestionEntryRow(title="Choose fruit…")
+        for i in ["Apple", "Banana", "Cherry"]:
+            combo.list_store.append(Gtk.StringObject.new(i))
+        p = PrefPage()
+        g = p.add_group(title="Fruits")
+        g.add_row(combo)
+        g.add_row(Adw.ComboRow(enable_search=True))
+        self.content_stack.add_named(p, "test")
+        self.content_stack.set_visible_child_name("test")
 
     def refresh_bg(self) -> bool:
         return True

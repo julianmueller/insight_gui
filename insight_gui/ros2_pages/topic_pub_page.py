@@ -24,6 +24,7 @@ import json
 import yaml
 import time
 
+from ros2topic.api import get_topic_names_and_types, get_msg_class
 from rosidl_runtime_py import (
     message_to_yaml,
     message_to_csv,
@@ -43,7 +44,7 @@ from gi.repository import Gtk, Adw, Gio, GLib, Pango
 from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
-from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
+from insight_gui.widgets.pref_rows import PrefRow, TextViewRow, SuggestionEntryRow
 from insight_gui.widgets.buttons import PlayPauseButton
 from insight_gui.utils.gtk_utils import find_str_in_list_store
 
@@ -81,8 +82,10 @@ class TopicPublisherPage(ContentPage):
 
         # select group
         self.select_group: PrefGroup = self.pref_page.add_group(title="Select Topic", filterable=False)
-        self.topic_row = self.select_group.add_row(Adw.EntryRow(title="Topic", show_apply_button=True))
+        self.topic_row = self.select_group.add_row(SuggestionEntryRow(title="Topic"))
         self.topic_row.connect("apply", self.on_topic_name_applied)
+        self.topic_row.connect("suggestion-apply", self.on_topic_suggestion_applied)
+        self.topic_list_store: Gio.ListStore = self.topic_row.list_store
 
         self.topic_type_row = self.select_group.add_row(
             Adw.ComboRow(
@@ -142,7 +145,21 @@ class TopicPublisherPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()
-        return len(self.available_msgs) > 0
+        self.topic_list = []
+
+        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+
+        for i, (topic_name, topic_types) in enumerate(available_topics):
+            # topic_types is a list, as multiple servers can advertise different types to the same topic
+            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
+            if len(topic_types) == 1:
+                topic_types = topic_types[0]
+            else:
+                topic_types = ", ".join(topic_types)
+
+            self.topic_list.append(topic_name)
+
+        return len(self.available_msgs) + len(self.topic_list) > 0
 
     def refresh_ui(self):
         # fill the ComboBox/ListStore with available topics
@@ -150,6 +167,9 @@ class TopicPublisherPage(ContentPage):
             for msg in sorted(msgs_list):
                 msg_type_full_name = f"{pkg_name}/{msg}"
                 self.topic_type_list_store.append(Gtk.StringObject.new(msg_type_full_name))
+
+        for topic in self.topic_list:
+            self.topic_list_store.append(Gtk.StringObject.new(topic))
 
         def on_setup(factory, list_item):
             label = Gtk.Label(
@@ -171,6 +191,7 @@ class TopicPublisherPage(ContentPage):
         self.topic_type_row.set_factory(factory)
 
     def reset_ui(self):
+        self.topic_list_store.remove_all()
         self.topic_type_list_store.remove_all()
         self.single_pub_done = True
         self.pub_text_view_row.clear()
@@ -226,6 +247,23 @@ class TopicPublisherPage(ContentPage):
         self.topic_name = self.topic_row.get_text()
         try:
             self.create_pub()
+        except InvalidTopicNameException as e:
+            self.topic_row.set_text("")
+            self.topic_name = None
+            super().show_toast(e)
+
+    def on_topic_suggestion_applied(self, *args):
+        self.topic_name = self.topic_row.get_text()
+        try:
+            msg_class = get_msg_class(self.ros2_connector.node, self.topic_name)
+            selected_topic_type = get_msg_full_name(msg_class)
+            found_index = find_str_in_list_store(self.topic_type_list_store, selected_topic_type)
+            if found_index:
+                self.topic_type_row.set_selected(found_index)
+            else:
+                self.topic_type_row.set_selected(0)
+            self.create_pub()
+            # TODO check the
         except InvalidTopicNameException as e:
             self.topic_row.set_text("")
             self.topic_name = None
@@ -317,3 +355,11 @@ class TopicPublisherPage(ContentPage):
         except Exception as e:
             super().show_toast(f"Error parsing the message data: {e}")
             return False
+
+
+def get_msg_full_name(msg_class):
+    module_name = msg_class.__module__
+    package_name = module_name.split(".")[0]
+    message_type = module_name.split(".")[1]
+    message_name = msg_class.__name__
+    return f"{package_name}/{message_type}/{message_name}"

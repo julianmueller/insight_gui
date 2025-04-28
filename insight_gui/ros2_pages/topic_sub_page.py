@@ -88,6 +88,27 @@ class TopicSubscriberPage(ContentPage):
         self.topic_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.topic_row.set_model(self.topic_list_store)
 
+        # TODO this also for the other pages with factories
+        def _on_factory_setup(factory, list_item):
+            label = Gtk.Label(
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.MIDDLE,
+                max_width_chars=50,
+            )
+            list_item.set_child(label)
+
+        def _on_factory_bind(factory, list_item):
+            item = list_item.get_item()
+            label = list_item.get_child()
+            if item and label:
+                label.set_text(item.get_string())
+
+        # TODO maybe also group the topics by namespaces?
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", _on_factory_setup)
+        factory.connect("bind", _on_factory_bind)
+        self.topic_row.set_factory(factory)
+
         self.msg_format_row = self.select_group.add_row(
             Adw.ComboRow(
                 title="Message Format",
@@ -137,26 +158,6 @@ class TopicSubscriberPage(ContentPage):
         # fill the ComboBox/ListStore with available topics
         for topic in self.topic_list:
             self.topic_list_store.append(Gtk.StringObject.new(topic))
-
-        def on_setup(factory, list_item):
-            label = Gtk.Label(
-                xalign=0,
-                ellipsize=Pango.EllipsizeMode.MIDDLE,
-                max_width_chars=50,
-            )
-            list_item.set_child(label)
-
-        def on_bind(factory, list_item):
-            item = list_item.get_item()
-            label = list_item.get_child()
-            if item and label:
-                label.set_text(item.get_string())
-
-        # TODO maybe also group the topics by namespaces?
-        factory = Gtk.SignalListItemFactory()
-        factory.connect("setup", on_setup)
-        factory.connect("bind", on_bind)
-        self.topic_row.set_factory(factory)
 
         found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
         if found_index:

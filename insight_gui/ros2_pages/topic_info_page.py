@@ -55,6 +55,7 @@ class TopicInfoPage(ContentPage):
             func=self.on_goto_echoer_page,
             tooltip_text="Go to the topic echoer",
         )
+        # TODO also add the publisher/subscriber links here
 
         # Message Type
         self.message_type_group = self.pref_page.add_group(title="Message Type")

@@ -146,3 +146,5 @@ class ROS2Connector:
         self.stop_node()
         # rclpy.shutdown()
         print("Shutting down ROS2 Node.")
+
+    # TODO implement all the "get_available_xyz" from ros here and then call this from the pages, to make it consistent
