@@ -699,18 +699,18 @@ class ColumnViewRow(AdditionalContentRow):
         is_numeric: bool = False,
         expand: bool = False,
     ):
-        def on_setup(_factory, list_item):
+        def _on_factory_setup(_factory, list_item):
             label = Gtk.Label(halign=Gtk.Align.START, margin_top=2, margin_bottom=2, selectable=True)
             list_item.set_child(label)
 
-        def on_bind(_factory, list_item, property_name):
+        def _on_factory_bind(_factory, list_item, property_name):
             label_widget = list_item.get_child()
             log_message = list_item.get_item()
             label_widget.set_label(str(getattr(log_message, property_name)))
 
         factory = Gtk.SignalListItemFactory()
-        factory.connect("setup", on_setup)
-        factory.connect("bind", on_bind, property_name)
+        factory.connect("setup", _on_factory_setup)
+        factory.connect("bind", _on_factory_bind, property_name)
 
         column = Gtk.ColumnViewColumn(title=title, factory=factory, expand=expand)
         self.columns.append(column)

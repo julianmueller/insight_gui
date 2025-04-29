@@ -100,6 +100,25 @@ class TopicPublisherPage(ContentPage):
         self.topic_type_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.topic_type_row.set_model(self.topic_type_list_store)
 
+        def _on_factory_setup(factory, list_item):
+            label = Gtk.Label(
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.MIDDLE,
+                max_width_chars=50,
+            )
+            list_item.set_child(label)
+
+        def _on_factory_bind(factory, list_item):
+            item = list_item.get_item()
+            label = list_item.get_child()
+            if item and label:
+                label.set_text(item.get_string())
+
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", _on_factory_setup)
+        factory.connect("bind", _on_factory_bind)
+        self.topic_type_row.set_factory(factory)
+
         self.msg_format_row = self.select_group.add_row(
             Adw.ComboRow(
                 title="Message Format",
@@ -170,25 +189,6 @@ class TopicPublisherPage(ContentPage):
 
         for topic in self.topic_list:
             self.topic_list_store.append(Gtk.StringObject.new(topic))
-
-        def on_setup(factory, list_item):
-            label = Gtk.Label(
-                xalign=0,
-                ellipsize=Pango.EllipsizeMode.MIDDLE,
-                max_width_chars=50,
-            )
-            list_item.set_child(label)
-
-        def on_bind(factory, list_item):
-            item = list_item.get_item()
-            label = list_item.get_child()
-            if item and label:
-                label.set_text(item.get_string())
-
-        factory = Gtk.SignalListItemFactory()
-        factory.connect("setup", on_setup)
-        factory.connect("bind", on_bind)
-        self.topic_type_row.set_factory(factory)
 
     def reset_ui(self):
         self.topic_list_store.remove_all()

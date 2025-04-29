@@ -89,6 +89,25 @@ class ImageViewerPage(ContentPage):
         self.img_topic_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.img_topic_row.set_model(self.img_topic_list_store)
 
+        def _on_factory_setup(factory, list_item):
+            label = Gtk.Label(
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.MIDDLE,
+                max_width_chars=50,
+            )
+            list_item.set_child(label)
+
+        def _on_factory_bind(factory, list_item):
+            item = list_item.get_item()
+            label = list_item.get_child()
+            if item and label:
+                label.set_text(item.get_string())
+
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", _on_factory_setup)
+        factory.connect("bind", _on_factory_bind)
+        self.img_topic_row.set_factory(factory)
+
         # rows to display infos about the image
         self.info_group = self.pref_page.add_group(title="Infos", filterable=False)
         self.width_row: PrefRow = self.info_group.add_row(PrefRow(title="Image Width"))
@@ -119,25 +138,6 @@ class ImageViewerPage(ContentPage):
     def refresh_ui(self):
         for img_topic in self.img_topic_list:
             self.img_topic_list_store.append(Gtk.StringObject.new(img_topic))
-
-        def on_setup(factory, list_item):
-            label = Gtk.Label(
-                xalign=0,
-                ellipsize=Pango.EllipsizeMode.MIDDLE,
-                max_width_chars=50,
-            )
-            list_item.set_child(label)
-
-        def on_bind(factory, list_item):
-            item = list_item.get_item()
-            label = list_item.get_child()
-            if item and label:
-                label.set_text(item.get_string())
-
-        factory = Gtk.SignalListItemFactory()
-        factory.connect("setup", on_setup)
-        factory.connect("bind", on_bind)
-        self.img_topic_row.set_factory(factory)
 
         found_index = find_str_in_list_store(self.img_topic_list_store, self.preselect_img_topic)
         if found_index:

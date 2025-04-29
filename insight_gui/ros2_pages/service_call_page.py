@@ -81,6 +81,25 @@ class ServiceCallPage(ContentPage):
         self.service_list_store: Gio.ListStore = Gio.ListStore.new(Gtk.StringObject)
         self.service_row.set_model(self.service_list_store)
 
+        def _on_factory_setup(factory, list_item):
+            label = Gtk.Label(
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.MIDDLE,
+                max_width_chars=50,
+            )
+            list_item.set_child(label)
+
+        def _on_factory_bind(factory, list_item):
+            item = list_item.get_item()
+            label = list_item.get_child()
+            if item and label:
+                label.set_text(item.get_string())
+
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", _on_factory_setup)
+        factory.connect("bind", _on_factory_bind)
+        self.service_row.set_factory(factory)
+
         # TODO maybe merge the two rows, to match the visuals of the service info page
         # TODO make that:
         # - the request and response groups have a btn in the header, that opens the type dialog for request/response
@@ -144,26 +163,6 @@ class ServiceCallPage(ContentPage):
         # fill the ComboBox/ListStore with available services
         for service_name, service_types in self.available_services:
             self.service_list_store.append(Gtk.StringObject.new(service_name))
-
-        def on_setup(factory, list_item):
-            label = Gtk.Label(
-                xalign=0,
-                ellipsize=Pango.EllipsizeMode.MIDDLE,
-                max_width_chars=50,
-            )
-            list_item.set_child(label)
-
-        def on_bind(factory, list_item):
-            item = list_item.get_item()
-            label = list_item.get_child()
-            if item and label:
-                label.set_text(item.get_string())
-
-        # TODO maybe also group the services by namespaces
-        factory = Gtk.SignalListItemFactory()
-        factory.connect("setup", on_setup)
-        factory.connect("bind", on_bind)
-        self.service_row.set_factory(factory)
 
         found_index = find_str_in_list_store(self.service_list_store, self.preselect_service)
         if found_index:

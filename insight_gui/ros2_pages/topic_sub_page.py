@@ -88,7 +88,6 @@ class TopicSubscriberPage(ContentPage):
         self.topic_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.topic_row.set_model(self.topic_list_store)
 
-        # TODO this also for the other pages with factories
         def _on_factory_setup(factory, list_item):
             label = Gtk.Label(
                 xalign=0,
