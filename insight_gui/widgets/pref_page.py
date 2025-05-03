@@ -107,29 +107,22 @@ class PrefPage(Adw.PreferencesPage):
         self.empty_group.set_visible(True)
         self.groups = []
 
-    def apply_filter(self, text: str):
+    def apply_filters(self, search_str: str, search_tags: set[str] = None):
         """Filters groups and rows based on a search query."""
-
-        def reset_filtering():
-            """Resets all groups and rows to their original visibility."""
-            for group in self.groups:
-                if not group.filterable:
-                    continue
-                group.set_unfiltered()
-                for row in group.rows:
-                    if getattr(row, "filterable", False):
-                        row.set_unfiltered()
+        # TODO make this also handle tags of rows
 
         # If the search text is empty, restore original visibility
-        if not text.strip():
-            reset_filtering()
+        if not search_str.strip() and not search_tags:
+            self.reset_filtering()
             return
 
+        # Compile the regex pattern beforehand to avoid repeated compilation
         try:
-            regex = re.compile(text, re.IGNORECASE)
+            regex = re.compile(search_str, re.IGNORECASE)
+            print("regex: ", regex, bool(regex))
         except re.error as e:
             print(f"Regex error: {e}")
-            reset_filtering()
+            self.reset_filtering()
             return
 
         # Filtering process
@@ -137,14 +130,20 @@ class PrefPage(Adw.PreferencesPage):
             if not group.filterable:
                 continue
 
-            group_matches = bool(group.filter_text and regex.search(group.filter_text))
+            group_matches = bool(search_str and group.filter_text and regex.search(group.filter_text))
             any_row_matches = False
 
             for row in group.rows:
                 if not getattr(row, "filterable", False):
                     continue
 
+                # Check if the row matches the search text
                 row_matches = bool(row.filter_text and regex.search(row.filter_text))
+
+                # Check if the row matches any of the tags to keep
+                if search_tags:
+                    row_matches &= any(row.has_tag(tag) for tag in search_tags)
+
                 if row_matches:
                     row.set_filtered(True)  # Show matching row
                     any_row_matches = True
@@ -153,6 +152,16 @@ class PrefPage(Adw.PreferencesPage):
 
             # Show group if it matches or any row inside it matches
             group.set_filtered(group_matches or any_row_matches)
+
+    def reset_filtering(self):
+        """Resets all groups and rows to their original visibility."""
+        for group in self.groups:
+            if not group.filterable:
+                continue
+            group.set_unfiltered()
+            for row in group.rows:
+                if getattr(row, "filterable", False):
+                    row.set_unfiltered()
 
     def set_empty_page_text(self, text: str):
         self.empty_group.set_empty_group_text(text)

@@ -33,13 +33,14 @@ from insight_gui.utils.constants import ON_ICON, OFF_ICON
 
 
 class PrefRowInterface(GObject.GObject):
-    """Abstract Base Class for common row properties."""
+    """Interface Class for common row properties."""
 
     __gtype_name__ = "PrefRowInterface"
 
     def __init__(self):
         super().__init__()
         self._filter_text = ""
+        self._tags: set[str] = set()
 
         # Store initial visibility
         self._is_filtered = False
@@ -60,6 +61,15 @@ class PrefRowInterface(GObject.GObject):
     @GObject.Property(type=bool, default=False)
     def is_filtered(self) -> bool:
         return self._is_filtered
+
+    def has_tag(self, tag) -> bool:
+        return tag in self._tags
+
+    def add_tag(self, tag):
+        self._tags.add(tag)
+
+    def remove_tag(self, tag):
+        self._tags.discard(tag)
 
     # filters (hides) the row but remembers its original visibility
     def set_filtered(self, visible: bool) -> bool:
@@ -87,6 +97,7 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
         title: str = "",
         subtitle: str = "",
         css_classes: list[str] = [],
+        tags: list[str] = [],
         **kwargs,
     ):
         Adw.ActionRow.__init__(self, **kwargs)
@@ -124,6 +135,9 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
 
         for css_class in css_classes:
             super().add_css_class(css_class)
+
+        for tag in tags:
+            self.add_tag(tag)
 
         self.next_page_icon: Gtk.Image = Gtk.Image(icon_name="go-next-symbolic", visible=False)
         self.add_suffix(self.next_page_icon)

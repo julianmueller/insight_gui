@@ -53,12 +53,43 @@ class InterfaceBrowserPage(ContentPage):
         super().set_empty_page_text("Refresh to show interfaces")
         super().set_search_entry_placeholder_text("Search for interfaces")
 
-        # TODO make these buttons work
+        # filter buttons for interface types
         btm_widgets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, css_classes=["linked"])
         super().add_bottom_widget(btm_widgets, position="center")
-        btm_widgets.append(Gtk.ToggleButton(label="msgs", active=True, width_request=100))
-        btm_widgets.append(Gtk.ToggleButton(label="srvs", active=True, width_request=100))
-        btm_widgets.append(Gtk.ToggleButton(label="acts", active=True, width_request=100))
+
+        # btn to show all interfaces
+        self.filter_all_btn = Gtk.ToggleButton(
+            label="all", active=True, width_request=100, tooltip_text="Show all interfaces"
+        )
+        self.filter_all_btn.connect("toggled", self.on_interface_filters_changed)
+        btm_widgets.append(self.filter_all_btn)
+
+        # btn to show only message interfaces
+        self.filter_msgs_btn = Gtk.ToggleButton(
+            label="msgs", active=False, width_request=100, tooltip_text="Show only message interfaces"
+        )
+        self.filter_msgs_btn.set_group(self.filter_all_btn)
+        self.filter_msgs_btn.connect("toggled", self.on_interface_filters_changed)
+        btm_widgets.append(self.filter_msgs_btn)
+
+        # btn to show only service interfaces
+        self.filter_srvs_btn = Gtk.ToggleButton(
+            label="srvs", active=False, width_request=100, tooltip_text="Show only service interfaces"
+        )
+        self.filter_srvs_btn.set_group(self.filter_all_btn)
+        self.filter_srvs_btn.connect("toggled", self.on_interface_filters_changed)
+        btm_widgets.append(self.filter_srvs_btn)
+
+        # btn to show only action interfaces
+        self.filter_actions_btn = Gtk.ToggleButton(
+            label="actions", active=False, width_request=100, tooltip_text="Show only action interfaces"
+        )
+        self.filter_actions_btn.set_group(self.filter_all_btn)
+        self.filter_actions_btn.connect("toggled", self.on_interface_filters_changed)
+        btm_widgets.append(self.filter_actions_btn)
+
+        # add filter tags for all interface types
+        # self.on_interface_filters_changed()
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()
@@ -78,7 +109,7 @@ class InterfaceBrowserPage(ContentPage):
                 msg_type = msg.removeprefix("msg/")  # remove namespace
 
                 # TODO add some kind of a label that a row is a message interface
-                row = PrefRow(title=msg_type, subtitle=msg_type_full_name)
+                row = PrefRow(title=msg_type, subtitle=msg_type_full_name, tags=["msg"])
                 # row.add_suffix_btn(
                 #     icon_name="info-symbolic",
                 #     tooltip_text="Message Info",
@@ -109,7 +140,7 @@ class InterfaceBrowserPage(ContentPage):
                 srv_type = srv.removeprefix("srv/")  # remove namespace
 
                 # TODO add some kind of a label that a row is a service interface
-                row = PrefRow(title=srv_type, subtitle=srv_type_full_name)
+                row = PrefRow(title=srv_type, subtitle=srv_type_full_name, tags=["srv"])
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ServiceTypeInfoPage,
@@ -128,7 +159,7 @@ class InterfaceBrowserPage(ContentPage):
                 act_type = act.removeprefix("msg/")  # remove namespace
 
                 # TODO add some kind of a label that a row is an action interface
-                row = PrefRow(title=act_type, subtitle=act_type_full_name)
+                row = PrefRow(title=act_type, subtitle=act_type_full_name, tags=["action"])
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ActionTypeInfoPage,
@@ -143,8 +174,12 @@ class InterfaceBrowserPage(ContentPage):
     def reset_ui(self):
         self.pref_page.clear()
 
-    def on_interface_filters_changed(self, *args):
-        print("not implemented yet")
+    def on_interface_filters_changed(self, btn: Gtk.ToggleButton, *args):
+        self.add_conditional_filter_tag("msg", self.filter_msgs_btn.get_active())
+        self.add_conditional_filter_tag("srv", self.filter_srvs_btn.get_active())
+        self.add_conditional_filter_tag("action", self.filter_actions_btn.get_active())
+
+        self.reapply_filters()
 
 
 # def _on_open_msg_file(btn: Gtk.Button = None, *, msg_type_full_name: str):

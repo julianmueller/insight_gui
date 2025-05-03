@@ -93,6 +93,10 @@ class ContentPage(Adw.NavigationPage):
         self.refreshable = refreshable
         self.detachable = detachable
 
+        # tags and search_text for filtering
+        self.filter_tags: set[str] = set()
+        self.search_text: str = ""
+
         self.detach_kwargs = {}
         self.refreshing = False
         self.refresh_thread: threading.Thread = None
@@ -197,10 +201,21 @@ class ContentPage(Adw.NavigationPage):
         """Child class should override this to trigger some primary action of the page."""
         pass
 
+    def add_conditional_filter_tag(self, filter_tag: str, condition: bool):
+        """Add or remove a filter_tag from the filter_tags list based on the condition."""
+        if condition:
+            self.filter_tags.add(filter_tag)
+        else:
+            self.filter_tags.discard(filter_tag)
+
     def on_search_changed(self, *args):
         if not self.searchable:
             return
-        self.pref_page.apply_filter(self.search_entry.get_text())
+        self.search_text = self.search_entry.get_text()
+        self.reapply_filters()
+
+    def reapply_filters(self):
+        self.pref_page.apply_filters(search_str=self.search_text, search_tags=self.filter_tags)
 
     def detach(self, *args):
         from insight_gui.window import DetachedWindow
