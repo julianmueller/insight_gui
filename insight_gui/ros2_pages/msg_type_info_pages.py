@@ -20,6 +20,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+import re
+
 from rosidl_runtime_py.utilities import get_message, get_service, get_action
 from rosidl_parser.definition import (
     NamespacedType,
@@ -44,6 +46,8 @@ from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 
+# TODO merge all these pages into one InterfaceInfoPage
+
 
 class MessageTypeInfoPage(ContentPage):
     __gtype_name__ = "MessageTypeInfoPage"
@@ -56,6 +60,7 @@ class MessageTypeInfoPage(ContentPage):
         self.msg_type_full_name = msg_type_full_name
         self.detach_kwargs = {"msg_type_full_name": msg_type_full_name}
 
+    # TODO make this use the refresh methods (also all the other "static" pages)
     def _deferred_init(self):
         super()._deferred_init()
 
@@ -71,12 +76,15 @@ class MessageTypeInfoPage(ContentPage):
         )
 
         # Constants Group
-        constants_group = self.pref_page.add_group(title="Constants")
-        constants_group.add_row(PrefRow(title="TODO implement this"))
-        # TODO implement to show constants
+        constants = _get_constants(msg_class)
+        if len(constants) > 0:
+            constants_group = self.pref_page.add_group(title="Constants")
+            for const_name, const_value in constants.items():
+                row: PrefRow = constants_group.add_row(PrefRow(title=const_name))
+                row.add_suffix_lbl(label=const_value)
 
         # Message Type
-        msg_group = self.pref_page.add_group(title="Message")
+        msg_group = self.pref_page.add_group(title="Message", empty_group_text="Empty Message")
         _populate_group_w_msg_rows(msg_class=msg_class, pref_group=msg_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
@@ -106,6 +114,8 @@ class ServiceTypeInfoPage(ContentPage):
 
         # Load the service parent class
         srv_class = get_service(self.srv_type_full_name)
+        request_class = srv_class.Request
+        response_class = srv_class.Response
 
         # Btn for opening the online link to msg definition
         super().add_header_btn(
@@ -116,13 +126,15 @@ class ServiceTypeInfoPage(ContentPage):
         )
 
         # Constants Group
-        constants_group = self.pref_page.add_group(title="Constants")
-        constants_group.add_row(PrefRow(title="TODO implement this"))
-        # TODO implement to show constants
+        constants = _get_constants(request_class) | _get_constants(response_class)
+        if len(constants) > 0:
+            constants_group = self.pref_page.add_group(title="Constants")
+            for const_name, const_value in constants.items():
+                row: PrefRow = constants_group.add_row(PrefRow(title=const_name))
+                row.add_suffix_lbl(label=const_value)
 
         # Service Message Request
-        request_group = self.pref_page.add_group(title="Request", empty_group_text="No request data")
-        request_class = srv_class.Request
+        request_group = self.pref_page.add_group(title="Request", empty_group_text="Empty Eequest")
         _populate_group_w_msg_rows(msg_class=request_class, pref_group=request_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
@@ -137,8 +149,7 @@ class ServiceTypeInfoPage(ContentPage):
         )
 
         # Service Message Response
-        response_group = self.pref_page.add_group(title="Response", empty_group_text="No response data")
-        response_class = srv_class.Response
+        response_group = self.pref_page.add_group(title="Response", empty_group_text="Empty Response")
         _populate_group_w_msg_rows(msg_class=response_class, pref_group=response_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
@@ -180,8 +191,14 @@ class ActionTypeInfoPage(ContentPage):
         self.act_type_full_name = act_type_full_name
         self.detach_kwargs = {"act_type_full_name": act_type_full_name}
 
+    def _deferred_init(self):
+        super()._deferred_init()
+
         # Load the action parent class
         act_class = get_action(self.act_type_full_name)
+        goal_class = act_class.Goal
+        feedback_class = act_class.Feedback
+        result_class = act_class.Result
 
         # Btn for opening the online link to msg definition
         super().add_header_btn(
@@ -192,13 +209,15 @@ class ActionTypeInfoPage(ContentPage):
         )
 
         # Constants Group
-        constants_group = self.pref_page.add_group(title="Constants")
-        constants_group.add_row(PrefRow(title="TODO implement this"))
-        # TODO implement to show constants
+        constants = _get_constants(goal_class) | _get_constants(feedback_class) | _get_constants(result_class)
+        if len(constants) > 0:
+            constants_group = self.pref_page.add_group(title="Constants")
+            for const_name, const_value in constants.items():
+                row: PrefRow = constants_group.add_row(PrefRow(title=const_name))
+                row.add_suffix_lbl(label=const_value)
 
         # Action Message Goal
-        goal_group = self.pref_page.add_group(title="Goal", empty_group_text="No goal data")
-        goal_class = act_class.Goal
+        goal_group = self.pref_page.add_group(title="Goal", empty_group_text="Empty Goal")
         _populate_group_w_msg_rows(msg_class=goal_class, pref_group=goal_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
@@ -213,8 +232,7 @@ class ActionTypeInfoPage(ContentPage):
         )
 
         # Action Message Feedback
-        feedback_group = self.pref_page.add_group(title="Feedback", empty_group_text="No feedback data")
-        feedback_class = act_class.Feedback
+        feedback_group = self.pref_page.add_group(title="Feedback", empty_group_text="Empty Feedback")
         _populate_group_w_msg_rows(msg_class=feedback_class, pref_group=feedback_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
@@ -229,8 +247,7 @@ class ActionTypeInfoPage(ContentPage):
         )
 
         # Action Message Result
-        result_group = self.pref_page.add_group(title="Result", empty_group_text="No result data")
-        result_class = act_class.Result
+        result_group = self.pref_page.add_group(title="Result", empty_group_text="Empty Result")
         _populate_group_w_msg_rows(msg_class=result_class, pref_group=result_group, nav_view=self.nav_view)
 
         # Btn for opening the raw msg text dialog
@@ -267,12 +284,28 @@ def _on_open_msg_type_dialog(btn: Gtk.Button = None, *, parent: Gtk.Widget, msg_
 
 
 def _on_open_msg_webpage(btn: Gtk.Button = None, *, msg_type_full_name: str):
-    Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/ros2_packages/jazzy/api/{msg_type_full_name}", None)
+    # TODO this is wrong, the msg definition does not equal the package, where to look
+    Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/jazzy/p/{msg_type_full_name}", None)
+
+
+def _get_constants(msg_class) -> dict:
+    msg_instance = msg_class()
+    constants = {}
+
+    for field_name in dir(msg_instance):
+        if field_name == "SLOT_TYPES":
+            continue
+
+        if re.match(r"^([A-Z]+(?:_|[A-Z]|[0-9])*)+", field_name):
+            constants[field_name] = getattr(msg_instance, field_name)
+
+    return constants
 
 
 # TODO this can be improved, especially the nested messages
 def _populate_group_w_msg_rows(msg_class, pref_group: PrefGroup, nav_view: Adw.NavigationView):
     msg_instance = msg_class()
+
     # Iterate through the message fields
     for (field_name, field_type), slot_type in zip(
         msg_instance.get_fields_and_field_types().items(), msg_class.SLOT_TYPES

@@ -41,7 +41,7 @@
 - extend existing features
     - add an "echo" group for topics_info_page (and call for services etc), to listen to current data on the topic
         - maybe just add a row to a subpage to echo/call that topic/service
-    - add constants to be visible in msg definitions (like ur_msgs/msg/SetIO)
+    - ~~add constants to be visible in msg definitions (like ur_msgs/msg/SetIO)~~
     - add the ros wiki explainations for packages? like what are all possible subscribed/published topics? or just a btn?
     - extend preferences dialog
     - add option to add new env variables in the pref dialog (and add a refresh btn)
@@ -81,6 +81,8 @@
 - icons, that were added as gresource are not available in white when dark style is activated (see https://developer.gnome.org/documentation/tutorials/themed-icons.html#symbolic-icons)
 - gui freezes when calling a non available service
 - ellippsize throws sometimes an error if the label text is too short
+- change that the overwritten _deferred_init of the subclasses of contentpage use the refresh methods instead
+- fix, that the link to the online-lookup of msg definitions is currently completely wrong (must point to the pkg the msgs is defined in)
 
 ## Snippets
 
