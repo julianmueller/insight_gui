@@ -206,11 +206,13 @@ class ContentPage(Adw.NavigationPage):
         from insight_gui.window import DetachedWindow
 
         if self.detachable:
+            application: Adw.Application = self.get_ancestor(Adw.ApplicationWindow).app
             detached_window = DetachedWindow(
-                application=self.get_ancestor(Adw.ApplicationWindow).app,
+                application=application,
                 nav_page_class=self.__class__,
                 nav_page_kwargs=self.detach_kwargs,
             )
+            application.detached_windows.append(detached_window)
             detached_window.show()
 
     def show_toast(self, toast_text: str):

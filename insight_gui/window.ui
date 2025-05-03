@@ -389,6 +389,10 @@
                 <attribute name="action">app.shortcuts</attribute>
             </item>
             <item>
+                <attribute name="label">Close all detached windows</attribute>
+                <attribute name="action">app.close-all-detached-windows</attribute>
+            </item>
+            <item>
                 <attribute name="label">About Insight</attribute>
                 <attribute name="action">app.about</attribute>
             </item>

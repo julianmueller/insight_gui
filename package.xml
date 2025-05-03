@@ -27,6 +27,7 @@
     <description>Insight is a minimalist GUI alternative to rqt. It is a GTK4-based tool for exploring ROS2 topics, services, and messages, featuring the GNOME Adwaita style.</description>
     <maintainer email="julian.mueller@iwb.tum.de">Julian Müller</maintainer>
     <license>GPL-3.0-only</license>
+    <author email="julian.mueller@iwb.tum.de">Julian Müller</author>
 
     <exec_depend>rclpy</exec_depend>
     <!-- <exec_depend>python3-gi</exec_depend> -->

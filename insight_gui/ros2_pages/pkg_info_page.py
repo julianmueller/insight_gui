@@ -24,13 +24,15 @@ import os
 from pathlib import Path
 import webbrowser  # TODO replace with gnome tools
 
+from ament_index_python import get_package_share_directory
 from ros2pkg.api import get_executable_paths
+import xml.etree.ElementTree as ET
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Pango
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
@@ -101,6 +103,68 @@ class PackageInfoPage(ContentPage):
 
         # add the counts as descriptions
         executables_group.set_description_to_row_count()
+
+        # XML inspection
+        xml_group = self.pref_page.add_group(title="Content of package.xml")
+        package_share_dir = get_package_share_directory(self.pkg_name)
+        package_xml = os.path.join(package_share_dir, "package.xml")
+        xml_tree = ET.parse(package_xml)
+
+        # version
+        version = xml_tree.getroot().find("version").text
+        xml_group.add_row(PrefRow(title="Version", subtitle=str(version), css_classes=["property"]))
+
+        # description
+        description = " ".join([line.strip() for line in str(xml_tree.getroot().find("description").text).split()])
+        desc_row = xml_group.add_row(PrefRow(title="Description", subtitle=str(description), css_classes=["property"]))
+        desc_row.subtitle_lbl.set_single_line_mode(False)
+        desc_row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.NONE)
+
+        # maintainer
+        maintainers = xml_tree.getroot().findall("maintainer")
+        maintainers_exp = xml_group.add_row(Adw.ExpanderRow(title="Maintainers"))
+        for m in maintainers:
+            maintainers_exp.add_row(
+                PrefRow(title=m.text, subtitle=str(m.get("email", default="no email")), css_classes=["property"])
+            )
+
+        # license
+        license = xml_tree.getroot().find("license").text
+        xml_group.add_row(PrefRow(title="License", subtitle=str(license), css_classes=["property"]))
+
+        # authors
+        authors = xml_tree.getroot().findall("author")
+        authors_exp = xml_group.add_row(Adw.ExpanderRow(title="Authors"))
+        for a in authors:
+            authors_exp.add_row(
+                PrefRow(title=a.text, subtitle=str(a.get("email", default="no email")), css_classes=["property"])
+            )
+
+        # buildtool depends
+        bt_depends = xml_tree.getroot().findall("buildtool_depend")
+        buildt_exp = xml_group.add_row(Adw.ExpanderRow(title="buildtool_depend"))
+        for bt in bt_depends:
+            buildt_exp.add_row(PrefRow(title=bt.text))
+
+        # build depends
+        b_depends = xml_tree.getroot().findall("build_depend")
+        build_exp = xml_group.add_row(Adw.ExpanderRow(title="build_depend"))
+        for b in b_depends:
+            build_exp.add_row(PrefRow(title=b.text))
+
+        # exec depends
+        e_depends = xml_tree.getroot().findall("exec_depend")
+        exec_exp = xml_group.add_row(Adw.ExpanderRow(title="exec_depend"))
+        for e in e_depends:
+            exec_exp.add_row(PrefRow(title=e.text))
+
+        # test depends
+        t_depends = xml_tree.getroot().findall("test_depend")
+        test_exp = xml_group.add_row(Adw.ExpanderRow(title="test_depend"))
+        for t in t_depends:
+            test_exp.add_row(PrefRow(title=t.text))
+
+        # TODO also export ?
 
     def on_open_pkg_folder(self, *, pkg_path: str, pkg_name: str):
         path = (Path(pkg_path) / "share" / pkg_name).resolve()

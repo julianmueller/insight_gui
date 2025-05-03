@@ -56,7 +56,8 @@ class Ros2GuiApp(Adw.Application):
         theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
         theme.add_resource_path("/com/github/julianmueller/Insight/logo")
 
-        self.window = None
+        self.window: Adw.ApplicationWindow = None
+        self.detached_windows: list[Adw.ApplicationWindow] = []
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -92,6 +93,10 @@ class Ros2GuiApp(Adw.Application):
         action.connect("activate", self.window.on_preferences_dialog)
         self.add_action(action)
 
+        action = Gio.SimpleAction.new("close-all-detached-windows", None)
+        action.connect("activate", self.on_close_all_detached_windows)
+        self.add_action(action)
+
         action = Gio.SimpleAction.new("shortcuts", None)
         action.connect("activate", self.window.on_shortcuts_dialog)
         self.add_action(action)
@@ -108,3 +113,8 @@ class Ros2GuiApp(Adw.Application):
         self.ros2_connector.shutdown()
         Gtk.Application.quit(self)
         return GLib.SOURCE_REMOVE
+
+    def on_close_all_detached_windows(self, *args):
+        for win in reversed(self.detached_windows):
+            win.close()
+            self.detached_windows.remove(win)
