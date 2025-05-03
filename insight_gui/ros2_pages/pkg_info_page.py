@@ -22,9 +22,8 @@
 
 import os
 from pathlib import Path
-import webbrowser  # TODO replace with gnome tools
 
-from ament_index_python import get_package_share_directory
+from ament_index_python import get_package_share_directory, get_package_prefix, PackageNotFoundError
 from ros2pkg.api import get_executable_paths
 import xml.etree.ElementTree as ET
 
@@ -32,7 +31,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Pango
+from gi.repository import Gtk, Adw, Pango, Gio
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
@@ -42,57 +41,48 @@ from insight_gui.widgets.buttons import CopyButton
 class PackageInfoPage(ContentPage):
     __gtype_name__ = "PackageInfoPage"
 
-    def __init__(self, pkg_name: str, pkg_path: str, **kwargs):
+    def __init__(self, pkg_name: str, **kwargs):
         super().__init__(searchable=True, refreshable=False, **kwargs)
         super().set_title(f"Package {pkg_name}")
 
         self.pkg_name = pkg_name
-        self.pkg_path = pkg_path
-        self.detach_kwargs = {"pkg_name": pkg_name, "pkg_path": pkg_path}
+        self.detach_kwargs = {"pkg_name": pkg_name}
 
         self.link_group = self.pref_page.add_group(title="Links")
         self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
             icon_name="folder-symbolic",
             func=self.on_open_pkg_folder,
-            func_kwargs={"pkg_path": self.pkg_path, "pkg_name": self.pkg_name},
+            func_kwargs={"pkg_name": self.pkg_name},
         )
 
         # add index link
         self.link_group.add_row(PrefRow(title="Open on index.ros.org")).add_suffix_btn(
             icon_name="web-browser-symbolic",
-            func=lambda: webbrowser.open(f"https://index.ros.org/p/{self.pkg_name}/"),
+            func=lambda: Gio.AppInfo.launch_default_for_uri(f"https://index.ros.org/p/{self.pkg_name}/", None),
         )
 
         # add api link
         self.link_group.add_row(PrefRow(title="View API documentation on docs.ros.org")).add_suffix_btn(
             icon_name="folder-documents-symbolic",
-            func=lambda: webbrowser.open(f"https://docs.ros.org/en/jazzy/p/{self.pkg_name}/"),
+            func=lambda: Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/jazzy/p/{self.pkg_name}/", None),
         )
 
+        # TODO there is currently no way (that i found) to get this
         # add source code link
-        self.link_group.add_row(PrefRow(title="View source code on repository")).add_suffix_btn(
-            icon_name="git-symbolic",
-            func=lambda: print("TODO"),  # webbrowser.open(f""),
-        )
-
-        # TODO add the xml infos
-        # from here: https://github.com/ros2/ros2cli/blob/jazzy/ros2pkg/ros2pkg/verb/xml.py
-        # - package version number
-        # - description
-        # - authors & maintainers
-        # - license
-        # - urls
-        # - dependencies?
-
-        # TODO add all the interfaces (msgs etc) that a package defines
+        # self.link_group.add_row(PrefRow(title="View source code on repository")).add_suffix_btn(
+        #     icon_name="git-symbolic",
+        #     func=lambda: print("TODO"),
+        # )
 
         # Executables
-        executables_group = self.pref_page.add_group(title="Executables", empty_group_text="Package has no executables")
+        self.executables_group = self.pref_page.add_group(
+            title="Executables", empty_group_text="Package has no executables"
+        )
         executable_paths = get_executable_paths(package_name=self.pkg_name)
 
         for path in sorted(executable_paths):
             executable_name = Path(path).name
-            row = executables_group.add_row(PrefRow(title=executable_name))
+            row = self.executables_group.add_row(PrefRow(title=executable_name))
             row.add_suffix(
                 CopyButton(
                     copy_text=f"ros2 run {self.pkg_name} {executable_name}",
@@ -102,73 +92,113 @@ class PackageInfoPage(ContentPage):
             )
 
         # add the counts as descriptions
-        executables_group.set_description_to_row_count()
+        self.executables_group.set_description_to_row_count()
 
         # XML inspection
-        xml_group = self.pref_page.add_group(title="Content of package.xml")
+        self.xml_group = self.pref_page.add_group(title="Content of package.xml")
+
+    def _deferred_init(self):
+        super()._deferred_init()
+
         package_share_dir = get_package_share_directory(self.pkg_name)
         package_xml = os.path.join(package_share_dir, "package.xml")
         xml_tree = ET.parse(package_xml)
 
         # version
         version = xml_tree.getroot().find("version").text
-        xml_group.add_row(PrefRow(title="Version", subtitle=str(version), css_classes=["property"]))
+        self.xml_group.add_row(PrefRow(title="Version", subtitle=str(version), css_classes=["property"]))
 
         # description
         description = " ".join([line.strip() for line in str(xml_tree.getroot().find("description").text).split()])
-        desc_row = xml_group.add_row(PrefRow(title="Description", subtitle=str(description), css_classes=["property"]))
+        desc_row = self.xml_group.add_row(
+            PrefRow(title="Description", subtitle=str(description), css_classes=["property"])
+        )
         desc_row.subtitle_lbl.set_single_line_mode(False)
         desc_row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.NONE)
 
         # maintainer
         maintainers = xml_tree.getroot().findall("maintainer")
-        maintainers_exp = xml_group.add_row(Adw.ExpanderRow(title="Maintainers"))
+        maintainers_exp = self.xml_group.add_row(Adw.ExpanderRow(title="Maintainers"))
         for m in maintainers:
-            maintainers_exp.add_row(
-                PrefRow(title=m.text, subtitle=str(m.get("email", default="no email")), css_classes=["property"])
-            )
+            email = m.get("email")
+            if email:
+                row = PrefRow(title=m.text, subtitle=str(email), css_classes=["property"])
+                row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.toast_overlay))
+            else:
+                row = PrefRow(title=m.text)
+            maintainers_exp.add_row(row)
 
         # license
         license = xml_tree.getroot().find("license").text
-        xml_group.add_row(PrefRow(title="License", subtitle=str(license), css_classes=["property"]))
+        self.xml_group.add_row(PrefRow(title="License", subtitle=str(license), css_classes=["property"]))
 
         # authors
         authors = xml_tree.getroot().findall("author")
-        authors_exp = xml_group.add_row(Adw.ExpanderRow(title="Authors"))
-        for a in authors:
-            authors_exp.add_row(
-                PrefRow(title=a.text, subtitle=str(a.get("email", default="no email")), css_classes=["property"])
-            )
+        if len(authors) == 0:
+            self.xml_group.add_row(PrefRow(title="<i>No authors</i>"))
+        else:
+            authors_exp = self.xml_group.add_row(Adw.ExpanderRow(title="Authors"))
+            for a in authors:
+                email = a.get("email")
+                if email:
+                    row = PrefRow(title=a.text, subtitle=str(email), css_classes=["property"])
+                    row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.toast_overlay))
+                else:
+                    row = PrefRow(title=a.text)
+                authors_exp.add_row(row)
+
+        def _add_depend_expander(depend: str):
+            xml_dep_list = xml_tree.getroot().findall(depend)
+            if len(xml_dep_list) == 0:
+                row = self.xml_group.add_row(PrefRow(title=f"<i>No '{depend}' packages</i>"))
+                row.set_use_markup(True)
+                row.set_sensitive(False)
+                return
+
+            expander = self.xml_group.add_row(Adw.ExpanderRow(title=f"{depend} packages"))
+            for xml_dep in xml_dep_list:
+                dep_pkg_name = xml_dep.text
+                row = PrefRow(title=dep_pkg_name)
+
+                # check if package exists
+                try:
+                    pkg_prefix = get_package_prefix(dep_pkg_name)
+                    row.set_subpage_link(
+                        nav_view=self.nav_view,
+                        subpage_class=PackageInfoPage,
+                        subpage_kwargs={"pkg_name": dep_pkg_name},
+                    )
+                    row.set_subtitle(str(pkg_prefix))
+                except PackageNotFoundError:
+                    pass
+                expander.add_row(row)
 
         # buildtool depends
-        bt_depends = xml_tree.getroot().findall("buildtool_depend")
-        buildt_exp = xml_group.add_row(Adw.ExpanderRow(title="buildtool_depend"))
-        for bt in bt_depends:
-            buildt_exp.add_row(PrefRow(title=bt.text))
+        _add_depend_expander("buildtool_depend")
 
         # build depends
-        b_depends = xml_tree.getroot().findall("build_depend")
-        build_exp = xml_group.add_row(Adw.ExpanderRow(title="build_depend"))
-        for b in b_depends:
-            build_exp.add_row(PrefRow(title=b.text))
+        _add_depend_expander("build_depend")
 
         # exec depends
-        e_depends = xml_tree.getroot().findall("exec_depend")
-        exec_exp = xml_group.add_row(Adw.ExpanderRow(title="exec_depend"))
-        for e in e_depends:
-            exec_exp.add_row(PrefRow(title=e.text))
+        _add_depend_expander("exec_depend")
 
         # test depends
-        t_depends = xml_tree.getroot().findall("test_depend")
-        test_exp = xml_group.add_row(Adw.ExpanderRow(title="test_depend"))
-        for t in t_depends:
-            test_exp.add_row(PrefRow(title=t.text))
+        _add_depend_expander("test_depend")
 
         # TODO also export ?
 
-    def on_open_pkg_folder(self, *, pkg_path: str, pkg_name: str):
-        path = (Path(pkg_path) / "share" / pkg_name).resolve()
+        # TODO add all the interfaces (msgs etc) that a package defines
+
+    def on_open_pkg_folder(self, *, pkg_name: str):
+        try:
+            pkg_prefix = get_package_prefix(pkg_name)
+        except PackageNotFoundError as e:
+            self.show_toast(f"Package not found: {e}")
+            return
+
+        path = str((Path(pkg_prefix) / "share" / pkg_name).resolve())
         if os.path.isdir(path):
-            os.system(rf"xdg-open {path}")
+            folder_uri = Gio.File.new_for_path(path).get_uri()
+            Gio.AppInfo.launch_default_for_uri(folder_uri, None)
         else:
             super().show_toast(f"Path '{path}' does not exist!")

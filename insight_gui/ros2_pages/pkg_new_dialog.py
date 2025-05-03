@@ -22,7 +22,6 @@
 
 import os
 from pathlib import Path
-import webbrowser
 
 import ament_copyright
 from ros2pkg.api.create import (
@@ -70,8 +69,9 @@ class PackageNewDialog(Adw.PreferencesDialog):
         build_type_group.add_suffix_btn(
             icon_name="info-symbolic",
             tooltip_text="ROS Documentation",
-            func=lambda: webbrowser.open(
-                "https://docs.ros.org/en/jazzy/Tutorials/Beginner-Client-Libraries/Creating-Your-First-ROS2-Package.html"
+            func=lambda: Gio.AppInfo.launch_default_for_uri(
+                "https://docs.ros.org/en/jazzy/Tutorials/Beginner-Client-Libraries/Creating-Your-First-ROS2-Package.html",
+                None,
             ),
         )
 

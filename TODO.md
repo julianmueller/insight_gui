@@ -14,11 +14,10 @@
     - add Gtk/Gio Notifications
     - add gtk settings
     - add gtk action for all major actions
-    - add a save btn to the interface dialog and topic echo and service call page
     - ~~add an argument to all pages (where applicable) to show specific content (like topic listener etc)~~
     - ~~add "spacebar" shortcut and action for "main page trigger", like "call page" or "start echo"~~
     - CTRL+Click on subpage to open in detatched window instead of pushing it to the open nav_view
-    - add btn to "close all detatched windows", maybe in menu?
+    - ~~add btn to "close all detatched windows", maybe in menu?~~
     - add "experimental" flag/info to not really working pages like img stream
     - add option to preferences to hide everything related to insight, like node, parameters etc
     - add "monitor param changes"
@@ -26,6 +25,7 @@
 - additional pages
     - ~~add a `rqt_graph` equivalent page~~
     - ~~add a teleop page~~
+    - add a save btn to the interface dialog and topic echo and service call page
     - add static/dynamic tf2 broadcaster
     - add tf inspection subpage (show the stuff that rviz shows)
     - add a controller "/joy" page (also look into Workbench - Gamepad Demo)
@@ -68,9 +68,8 @@
 - rename all function, to fit GTK style "on_xxx" and "do_xxx"
 - merge all "msg_type_info_page" etc into one class when differs in what it displays depending on the interface type
 - clean up the mess of XXX.connect_(..., func(**func_kwargs)) and connect_data(...) and rather use connect(..., data)
-- replace "webbrowser" stuff with gtk File/Web Launcher
+- ~~replace "webbrowser" stuff with gtk File/Web Launcher~~
 - look into `from rclpy.expand_topic_name import expand_topic_name`
-- maybe separate the header with the buttons etc from the content page, so that the canvas can also use the header etc?
 
 ## Bug Fixes
 

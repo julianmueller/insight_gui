@@ -21,7 +21,6 @@
 # =============================================================================
 
 import os
-import webbrowser
 
 import gi
 
@@ -56,8 +55,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
         env_group.add_suffix_btn(
             icon_name="info-symbolic",
             tooltip_text="ROS Documentation",
-            func=lambda: webbrowser.open(
-                "https://docs.ros.org/en/jazzy/Tutorials/Advanced/Improved-Dynamic-Discovery.html#improveddynamicdiscovery"
+            func=lambda: Gio.AppInfo.launch_default_for_uri(
+                "https://docs.ros.org/en/jazzy/Tutorials/Advanced/Improved-Dynamic-Discovery.html#improveddynamicdiscovery",
+                None,
             ),
         )
 

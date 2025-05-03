@@ -20,8 +20,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import webbrowser
-
 from rosidl_runtime_py.utilities import get_message, get_service, get_action
 from rosidl_parser.definition import (
     NamespacedType,
@@ -39,7 +37,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Gio
 
 from insight_gui.ros2_pages.interface_type_dialog import InterfaceTypeDialog
 from insight_gui.widgets.content_page import ContentPage
@@ -269,8 +267,7 @@ def _on_open_msg_type_dialog(btn: Gtk.Button = None, *, parent: Gtk.Widget, msg_
 
 
 def _on_open_msg_webpage(btn: Gtk.Button = None, *, msg_type_full_name: str):
-    # TODO jazzy uses this: https://docs.ros.org/en/ros2_packages/jazzy/api/example_interfaces/
-    webbrowser.open(f"https://docs.ros2.org/foxy/api/{msg_type_full_name}.html")
+    Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/ros2_packages/jazzy/api/{msg_type_full_name}", None)
 
 
 # TODO this can be improved, especially the nested messages

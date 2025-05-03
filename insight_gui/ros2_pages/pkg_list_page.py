@@ -20,15 +20,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import webbrowser  # TODO replace with gnome tools
-
 from ament_index_python.packages import get_packages_with_prefixes
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GLib
+from gi.repository import Gtk, Adw, GLib, Gio
 
 from insight_gui.ros2_pages.pkg_new_dialog import PackageNewDialog
 from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
@@ -58,7 +56,7 @@ class PackageListPage(ContentPage):
             label="ROS Index",
             icon_name="web-browser-symbolic",
             tooltip_text="Open ROS Index",
-            func=lambda: webbrowser.open("https://index.ros.org/packages/#jazzy"),
+            func=lambda: Gio.AppInfo.launch_default_for_uri("https://index.ros.org/packages/#jazzy", None),
         )
 
     def refresh_bg(self) -> bool:
@@ -76,7 +74,7 @@ class PackageListPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=PackageInfoPage,
-                subpage_kwargs={"pkg_name": pkg_name, "pkg_path": pkg_path},
+                subpage_kwargs={"pkg_name": pkg_name},
             )
             rows.append(row)
 
