@@ -119,7 +119,6 @@ class PrefPage(Adw.PreferencesPage):
         # Compile the regex pattern beforehand to avoid repeated compilation
         try:
             regex = re.compile(search_str, re.IGNORECASE)
-            print("regex: ", regex, bool(regex))
         except re.error as e:
             print(f"Regex error: {e}")
             self.reset_filtering()
