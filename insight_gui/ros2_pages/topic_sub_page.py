@@ -58,11 +58,11 @@ class TopicSubscriberPage(ContentPage):
         self.max_update_rate = 10  # in Hz
 
         # main btns in bottom bar
-        self.play_pause_stream_btn = super().add_bottom_widget(
+        self.toggle_stream_btn = super().add_bottom_widget(
             PlayPauseButton(
                 default_active=self.is_echoing,
-                func=self.on_play_pause_stream,
-                labels=("Stop Echo", "Start Echo"),
+                func=self.on_toggle_stream,
+                labels=("Stop Subscription", "Start Subscription"),
                 visible=False,
             ),
             position="start",
@@ -177,7 +177,7 @@ class TopicSubscriberPage(ContentPage):
 
     def trigger(self):
         if self.stream_type_toggle_row.get_active():
-            self.play_pause_stream_btn.playing = True
+            self.toggle_stream_btn.playing = True
         # self.is_echoing = not self.is_echoing
         # self.play_pause_btn.set_active(self.is_echoing)
 
@@ -193,18 +193,22 @@ class TopicSubscriberPage(ContentPage):
         # active = continuous stream, inactive = single shot
         if self.stream_type_toggle_row.get_active():
             self.single_sub_btn.set_visible(False)
-            self.play_pause_stream_btn.set_visible(True)
+            self.toggle_stream_btn.set_visible(True)
         else:
             self.single_sub_btn.set_visible(True)
-            self.play_pause_stream_btn.set_visible(False)
+            self.toggle_stream_btn.set_visible(False)
 
-        self.play_pause_stream_btn.playing = False
+        self.toggle_stream_btn.playing = False
 
     def on_single_sub(self, *args):
         self.single_echo_done = False
 
-    def on_play_pause_stream(self, *args):
-        self.is_echoing = self.play_pause_stream_btn.playing
+    def on_toggle_stream(self, *args):
+        self.is_echoing = self.toggle_stream_btn.playing
+        if self.is_echoing:
+            self.topic_row.set_sensitive(False)
+        else:
+            self.topic_row.set_sensitive(True)
 
     def on_topic_changed(self, *args):
         if self.topic_list_store.get_n_items() <= 0:

@@ -56,26 +56,27 @@ class TopicPublisherPage(ContentPage):
         super().set_title("Publish to Topic")
         super().set_refresh_fail_text("No topics found. Refresh to try again.")
 
-        self.is_pubing = False
+        self.is_publishing = False
         self.single_pub_done = True
         self.ros2_pub = None
         self.topic_name = None
         self.msg_class = None
         self.msg_instance = None
         self.publishing_rate = 10.0
+        self.pub_timer = None
 
         # main btns in bottom bar
-        self.play_pause_stream_btn = super().add_bottom_widget(
+        self.toggle_stream_btn = super().add_bottom_widget(
             PlayPauseButton(
-                default_active=self.is_pubing,
-                func=self.on_play_pause_stream,
+                default_active=self.is_publishing,
+                func=self.on_toggle_stream,
                 labels=("Stop Publishing", "Start Publishing"),
                 visible=False,
             ),
             position="start",
         )
         self.single_pub_btn = super().add_bottom_left_btn(
-            label="Single Publish", icon_name="mail-send-symbolic", func=self.on_single_pub
+            label="Single Publish", icon_name="mail-send-symbolic", func=self.publish_msg
         )
         super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
 
@@ -127,7 +128,7 @@ class TopicPublisherPage(ContentPage):
         self.msg_format_row.connect("notify::selected-item", self.on_msg_format_changed)
         self.msg_format_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.msg_format_list_store.append(Gtk.StringObject.new("YAML"))
-        # self.msg_format_list_store.append(Gtk.StringObject.new("CSV"))
+        # self.msg_format_list_store.append(Gtk.StringObject.new("CSV")) # unnecessary
         self.msg_format_list_store.append(Gtk.StringObject.new("JSON"))
         self.msg_format_row.set_model(self.msg_format_list_store)
         self.msg_format = "YAML"
@@ -204,9 +205,9 @@ class TopicPublisherPage(ContentPage):
 
     def trigger(self):
         if self.stream_type_toggle_row.get_active():
-            self.play_pause_stream_btn.playing = True
-        # self.is_pubing = not self.is_pubing
-        # self.play_pause_btn.set_active(self.is_pubing)
+            self.toggle_stream_btn.playing = True
+        # self.is_publishing = not self.is_publishing
+        # self.play_pause_btn.set_active(self.is_publishing)
 
     def on_unrealize(self, *args):
         super().on_unrealize(*args)
@@ -219,28 +220,58 @@ class TopicPublisherPage(ContentPage):
         # active = continuous stream, inactive = single shot
         if self.stream_type_toggle_row.get_active():
             self.single_pub_btn.set_visible(False)
-            self.play_pause_stream_btn.set_visible(True)
+            self.toggle_stream_btn.set_visible(True)
             self.publishing_rate_row.set_visible(True)
         else:
             self.single_pub_btn.set_visible(True)
-            self.play_pause_stream_btn.set_visible(False)
+            self.toggle_stream_btn.set_visible(False)
             self.publishing_rate_row.set_visible(False)
 
-        self.play_pause_stream_btn.playing = False
+        self.toggle_stream_btn.playing = False
 
-    def on_single_pub(self, *args):
+    def is_publish_ready(self, *args) -> bool:
         if not self.topic_name:
-            return
+            # TODO check if topic name is a valid name (use rosidl functions?)
+            super().show_toast("No valid topic name")
+            return False
 
-        if not self.text_to_msg():
+        if self.is_publishing and not float(self.publishing_rate_row.get_text()):
+            # TODO check rate a bit more sophisticated
+            super().show_toast("No valid rate")
+
+        return True
+
+    def publish_msg(self, *args):
+        if not self.textfield_to_msg():
             return
 
         self.single_pub_done = False
         self.ros2_pub.publish(self.msg_instance)
 
-    def on_play_pause_stream(self, *args):
-        self.is_pubing = self.play_pause_stream_btn.playing
-        # TODO make continuous pub work
+    def on_toggle_stream(self, *args):
+        self.is_publishing = self.toggle_stream_btn.playing
+        if not self.is_publish_ready():
+            return
+
+        if self.is_publishing:
+            self.start_stream()
+        else:
+            self.stop_stream()
+
+    def start_stream(self, *args):
+        rate = float(self.publishing_rate_row.get_text())
+        self.pub_timer = self.ros2_connector.add_timer_callback(period=1.0 / rate, callback=self.publish_msg)
+        self.topic_row.set_sensitive(False)
+        self.topic_type_row.set_sensitive(False)
+        self.publishing_rate_row.set_sensitive(False)
+        self.pub_text_view_row.set_sensitive(False)
+
+    def stop_stream(self, *args):
+        self.topic_row.set_sensitive(True)
+        self.topic_type_row.set_sensitive(True)
+        self.publishing_rate_row.set_sensitive(True)
+        self.pub_text_view_row.set_sensitive(True)
+        self.pub_timer.destroy()
 
     def on_topic_name_applied(self, *args):
         self.topic_name = self.topic_row.get_text()
@@ -329,7 +360,7 @@ class TopicPublisherPage(ContentPage):
         clip.set(str(text))
         self.show_toast("Text copied!")
 
-    def text_to_msg(self) -> bool:
+    def textfield_to_msg(self) -> bool:
         msg_text = self.pub_text_view_row.get_text()
         if self.msg_format == "YAML":
             try:
