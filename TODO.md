@@ -66,7 +66,7 @@
 
 - remove "status_page" in window.ui
 - rename all function, to fit GTK style "on_xxx" and "do_xxx"
-- merge all "msg_type_info_page" etc into one class when differs in what it displays depending on the interface type
+- ~~merge all "msg_type_info_page" etc into one class when differs in what it displays depending on the interface type~~
 - clean up the mess of XXX.connect_(..., func(**func_kwargs)) and connect_data(...) and rather use connect(..., data)
 - ~~replace "webbrowser" stuff with gtk File/Web Launcher~~
 - look into `from rclpy.expand_topic_name import expand_topic_name`

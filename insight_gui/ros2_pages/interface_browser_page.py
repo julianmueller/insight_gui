@@ -26,7 +26,6 @@ from rosidl_runtime_py import (
     get_message_interfaces,
     get_service_interfaces,
     get_action_interfaces,
-    get_interface_path,
 )
 
 import gi
@@ -35,11 +34,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.msg_type_info_pages import (
-    MessageTypeInfoPage,
-    ServiceTypeInfoPage,
-    ActionTypeInfoPage,
-)
+from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 
@@ -110,22 +105,10 @@ class InterfaceBrowserPage(ContentPage):
 
                 # TODO add some kind of a label that a row is a message interface
                 row = PrefRow(title=msg_type, subtitle=msg_type_full_name, tags=["msg"])
-                # row.add_suffix_btn(
-                #     icon_name="info-symbolic",
-                #     tooltip_text="Message Info",
-                #     func=self.on_get_msg_info,
-                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
-                # )
-                # row.add_suffix_btn(
-                #     icon_name="folder-symbolic",
-                #     tooltip_text="Open Message File",
-                #     func=_on_open_msg_file,
-                #     func_kwargs={"msg_type_full_name": msg_type_full_name},
-                # )
                 row.set_subpage_link(
                     nav_view=self.nav_view,
-                    subpage_class=MessageTypeInfoPage,
-                    subpage_kwargs={"msg_type_full_name": msg_type_full_name},
+                    subpage_class=InterfaceInfoPage,
+                    subpage_kwargs={"interface_full_name": msg_type_full_name},
                 )
                 msg_rows.append(row)
             msg_group.add_rows_idle(msg_rows)
@@ -143,8 +126,8 @@ class InterfaceBrowserPage(ContentPage):
                 row = PrefRow(title=srv_type, subtitle=srv_type_full_name, tags=["srv"])
                 row.set_subpage_link(
                     nav_view=self.nav_view,
-                    subpage_class=ServiceTypeInfoPage,
-                    subpage_kwargs={"srv_type_full_name": srv_type_full_name},
+                    subpage_class=InterfaceInfoPage,
+                    subpage_kwargs={"interface_full_name": srv_type_full_name},
                 )
                 srv_rows.append(row)
             srv_group.add_rows_idle(srv_rows)
@@ -162,8 +145,8 @@ class InterfaceBrowserPage(ContentPage):
                 row = PrefRow(title=act_type, subtitle=act_type_full_name, tags=["action"])
                 row.set_subpage_link(
                     nav_view=self.nav_view,
-                    subpage_class=ActionTypeInfoPage,
-                    subpage_kwargs={"act_type_full_name": act_type_full_name},
+                    subpage_class=InterfaceInfoPage,
+                    subpage_kwargs={"interface_full_name": act_type_full_name},
                 )
                 act_rows.append(row)
             actions_group.add_rows_idle(act_rows)
@@ -180,10 +163,3 @@ class InterfaceBrowserPage(ContentPage):
         self.add_conditional_filter_tag("action", self.filter_actions_btn.get_active())
 
         self.reapply_filters()
-
-
-# def _on_open_msg_file(btn: Gtk.Button = None, *, msg_type_full_name: str):
-#     msg_file_path = get_interface_path(msg_type_full_name)
-#     # i: ignore session
-#     subprocess.Popen(["gnome-text-editor", msg_file_path, "--ignore-session"])
-#     # os.system(f"gnome-text-editor {msg_file_path} -ins")

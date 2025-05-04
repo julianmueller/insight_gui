@@ -111,8 +111,9 @@ class ContentPage(Adw.NavigationPage):
 
     def _deferred_init(self):
         # get these properties, after the widget has been realized in the window
+        self.window = super().get_root()
         self.nav_view: Adw.NavigationView = super().get_ancestor(Adw.NavigationView)
-        self.ros2_connector: ROS2Connector = super().get_root().ros2_connector
+        self.ros2_connector: ROS2Connector = self.window.ros2_connector
 
         self.breadcrumbs_bar.set_nav_view(self.nav_view)
         self.breadcrumbs_bar.update()
@@ -125,8 +126,8 @@ class ContentPage(Adw.NavigationPage):
 
     def on_realize(self, *args):
         # refresh the gui
-        if self.refreshable:
-            GLib.idle_add(self.refresh)
+        # if self.refreshable: # TODO check if this is okay, to always refresh
+        GLib.idle_add(self.refresh)
 
     def on_unrealize(self, *args):
         pass
@@ -138,7 +139,7 @@ class ContentPage(Adw.NavigationPage):
         self.page_is_mapped = False
 
     def refresh(self):
-        if not self.refreshable or self.refreshing:
+        if self.refreshing:
             return
 
         # refresh started

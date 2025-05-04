@@ -21,6 +21,7 @@
 # =============================================================================
 
 import json
+from typing import Type
 
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
 
@@ -39,18 +40,18 @@ from insight_gui.widgets.pref_rows import TextViewRow
 class InterfaceTypeDialog(Adw.PreferencesDialog):
     __gtype_name__ = "InterfaceTypeDialog"
 
-    def __init__(self, msg_type_full_name: str, msg_class, **kwargs):
+    def __init__(self, interface_full_name: str, interface_class: Type, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(str(msg_type_full_name))
+        super().set_title(str(interface_full_name))  # TODO this needs to resemble whether its a Request/Response etc
         super().set_size_request(width=300, height=800)
 
         pref_page = PrefPage()
         super().add(pref_page)
 
-        msg_instance = msg_class()
+        interface_instance = interface_class()
 
         # YAML Message Text
-        yaml_text = message_to_yaml(msg_instance).rstrip()
+        yaml_text = message_to_yaml(interface_instance).rstrip()
 
         # TODO make it, that the scroll window shriks, when content is smaller than "max size"
         # TODO test it with "action_tutorials_interfaces/action/Fibonacci" that a min hight is show, even with no content
@@ -66,7 +67,7 @@ class InterfaceTypeDialog(Adw.PreferencesDialog):
         yaml_text_view.set_text(yaml_text)
 
         # JSON Message Text
-        json_text = str(json.dumps(message_to_ordereddict(msg_instance), indent=4)).replace('"', "'")
+        json_text = str(json.dumps(message_to_ordereddict(interface_instance), indent=4)).replace('"', "'")
         json_group = pref_page.add_group(title="JSON")
         json_group.add_suffix_btn(
             icon_name="edit-copy-symbolic",
@@ -79,7 +80,7 @@ class InterfaceTypeDialog(Adw.PreferencesDialog):
         json_text_view.set_text(json_text)
 
         # CSV Message Text
-        csv_text = message_to_csv(msg_instance)
+        csv_text = message_to_csv(interface_instance)
         csv_group = pref_page.add_group(title="CSV")
         csv_group.add_suffix_btn(
             icon_name="edit-copy-symbolic",

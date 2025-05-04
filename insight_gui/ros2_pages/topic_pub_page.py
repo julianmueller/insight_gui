@@ -41,7 +41,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
-from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow, SuggestionEntryRow

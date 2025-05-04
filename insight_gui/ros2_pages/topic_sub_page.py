@@ -32,7 +32,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
-from insight_gui.ros2_pages.msg_type_info_pages import MessageTypeInfoPage
+from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
@@ -221,8 +221,8 @@ class TopicSubscriberPage(ContentPage):
             self.topic_type_row.set_subtitle(self.selected_topic_type)
             self.topic_type_row.set_subpage_link(
                 nav_view=self.nav_view,
-                subpage_class=MessageTypeInfoPage,
-                subpage_kwargs={"msg_type_full_name": self.selected_topic_type},
+                subpage_class=InterfaceInfoPage,
+                subpage_kwargs={"interface_full_name": self.selected_topic_type},
             )
 
             # TODO maybe add special treatment for some "known topics?"

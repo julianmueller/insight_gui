@@ -69,7 +69,7 @@ class PackageListPage(ContentPage):
 
     def refresh_ui(self):
         rows = []
-        for pkg_name, pkg_path in self.available_pkgs.items():
+        for pkg_name, pkg_path in sorted(self.available_pkgs.items()):
             row = PrefRow(title=pkg_name, subtitle=pkg_path)
             row.set_subpage_link(
                 nav_view=self.nav_view,

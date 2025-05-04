@@ -40,7 +40,7 @@ from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 # from insight_gui.widgets.entry_row import EntryRow
 
-from insight_gui.ros2_pages.msg_type_info_pages import ServiceTypeInfoPage
+from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 
 
 class ServiceCallPage(ContentPage):
@@ -198,8 +198,8 @@ class ServiceCallPage(ContentPage):
         self.service_type_row.set_subtitle(self.selected_service_type)
         self.service_type_row.set_subpage_link(
             nav_view=self.nav_view,
-            subpage_class=ServiceTypeInfoPage,
-            subpage_kwargs={"srv_type_full_name": self.selected_service_type},
+            subpage_class=InterfaceInfoPage,
+            subpage_kwargs={"interface_full_name": self.selected_service_type},
         )
 
         self.request_class = self.service_class.Request

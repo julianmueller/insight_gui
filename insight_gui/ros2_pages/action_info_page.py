@@ -31,7 +31,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.msg_type_info_pages import ActionTypeInfoPage
+from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
@@ -76,8 +76,8 @@ class ActionInfoPage(ContentPage):
             msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
             msg_row.set_subpage_link(
                 nav_view=self.nav_view,
-                subpage_class=ActionTypeInfoPage,
-                subpage_kwargs={"act_type_full_name": msg_type_full_name},
+                subpage_class=InterfaceInfoPage,
+                subpage_kwargs={"interface_full_name": msg_type_full_name},
             )
             self.action_type_group.add_row(msg_row)
 
