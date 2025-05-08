@@ -21,6 +21,7 @@
 # =============================================================================
 
 from typing import Callable
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -121,22 +122,29 @@ class ROS2Connector:
 
     # TODO this needs some refactoring and threading
     # from ros2service.verb.call import requester  # could also be used for that
-    def call_service(self, srv_type: SrvType, srv_name: str, request: SrvTypeRequest) -> SrvTypeResponse:
+    def call_service(
+        self, srv_type: SrvType, srv_name: str, request: SrvTypeRequest, timeout_sec: int = -1
+    ) -> SrvTypeResponse:
         if not self.is_running:
             return
 
         client = self.node.create_client(srv_type, srv_name)
 
         if not client.service_is_ready():
-            print("waiting for service to become available...")  # TODO this freezes the gui
             client.wait_for_service(timeout_sec=2)
 
         future = client.call_async(request)
-        rclpy.spin_until_future_complete(self.node, future)
-        if future.result() is not None:
+        # rclpy.spin_until_future_complete(self.node, future, timeout_sec=timeout_sec)
+        start = time.monotonic()
+        while not future.done():
+            rclpy.spin_once(self.node, timeout_sec=0.01)
+            if timeout_sec > 0 and (time.monotonic() - start) > timeout_sec:
+                raise TimeoutError(f"Timeout while waiting for response from '{srv_name}'.")
+
+        if future.result():
             return future.result()
         else:
-            raise RuntimeError("Exception while calling service: %r" % future.exception())
+            raise RuntimeError(f"Service call failed: {future.exception()}")
 
     def shutdown(self):
         for sub in list(self.node.subscriptions):

@@ -22,6 +22,7 @@
 
 import yaml
 import json
+import threading
 
 from ros2service.api import get_service_names_and_types, get_service_class
 from rosidl_runtime_py import set_message_fields
@@ -222,6 +223,7 @@ class ServiceCallPage(ContentPage):
         def _idle():
             self.request_text_view_row.set_text(request_text)
 
+        self.request_instance = self.request_class()  # rese instance
         if self.msg_format == "YAML":
             request_text = message_to_yaml(self.request_instance).rstrip()
         elif self.msg_format == "JSON":
@@ -272,21 +274,32 @@ class ServiceCallPage(ContentPage):
             super().show_toast(f"Error parsing the request data: {e}")
             return
 
-        def _idle():
-            self.response_instance = self.ros2_connector.call_service(
-                srv_type=self.service_class,
-                srv_name=self.selected_service_name,
-                request=self.request_instance,
-            )
+        def _thread_worker():
+            self.call_btn.set_sensitive(False)
+            try:
+                self.response_instance = self.ros2_connector.call_service(
+                    srv_type=self.service_class,
+                    srv_name=self.selected_service_name,
+                    request=self.request_instance,
+                    timeout_sec=2,
+                )
+            except Exception as e:
+                self.show_toast(f"Service Error: {e}")
+                self.call_btn.set_sensitive(True)
+                return
 
-            if self.msg_format == "YAML":
-                response_text = message_to_yaml(self.response_instance)
-            elif self.msg_format == "JSON":
-                response_text = str(json.dumps(message_to_ordereddict(self.response_instance), indent=4))
+            def _update_text_field():
+                if self.msg_format == "YAML":
+                    response_text = message_to_yaml(self.response_instance)
+                elif self.msg_format == "JSON":
+                    response_text = str(json.dumps(message_to_ordereddict(self.response_instance), indent=4))
 
-            self.response_text_view_row.set_text(response_text)
+                self.response_text_view_row.set_text(response_text)
+                self.call_btn.set_sensitive(True)
 
-        GLib.idle_add(_idle)
+            GLib.idle_add(_update_text_field)
+
+        threading.Thread(target=_thread_worker, daemon=True).start()
 
     def on_copy_request_to_clipboard(self, *args):
         clip = self.get_clipboard()

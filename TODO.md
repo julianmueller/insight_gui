@@ -31,12 +31,13 @@
     - add a controller "/joy" page (also look into Workbench - Gamepad Demo)
     - add a launch page to directly launch nodes with a set of arguments
     - add action send_goal
-    - add topic publisher (+once)
+    - ~~add topic publisher (+once)~~
     - add service echo
     - (optional) add qos info page
     - (optional) add a URDF/robot_description viewer
     - (optional) add a rosbag page
     - (optional) add a page to visualize/load/save octomaps
+    - maybe add an option, that all parameter-related services are hidden (/describe_parameters etc)
 
 - extend existing features
     - add an "echo" group for topics_info_page (and call for services etc), to listen to current data on the topic
@@ -79,7 +80,7 @@
 - ~~fix ros2 clock (broken since actions update)~~
 - ~~when the sidebar is collapsed and a different stack page is chosen, the "realize" function gets called again for the content pages and they dupe their rows etc~~
 - icons, that were added as gresource are not available in white when dark style is activated (see https://developer.gnome.org/documentation/tutorials/themed-icons.html#symbolic-icons)
-- gui freezes when calling a non available service
+- ~~gui freezes when calling a not available (anymore) service~~
 - ellippsize throws sometimes an error if the label text is too short
 - change that the overwritten _deferred_init of the subclasses of contentpage use the refresh methods instead
 - fix, that the link to the online-lookup of msg definitions is currently completely wrong (must point to the pkg the msgs is defined in)

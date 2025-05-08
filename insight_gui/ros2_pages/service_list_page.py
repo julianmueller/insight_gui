@@ -30,7 +30,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Pango
 
 from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
 from insight_gui.widgets.content_page import ContentPage
@@ -81,7 +81,10 @@ class ServiceListPage(ContentPage):
 
             # TODO this somehow messes with the sorting :( again ...
 
-            row = PrefRow(title=name, subtitle=service_types)
+            row = PrefRow(title=service_name, subtitle=service_types)
+            row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.START)
+            row.subtitle_lbl.set_tooltip_text(service_name)
+
             if topic_or_service_is_hidden(service_name):
                 row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
 

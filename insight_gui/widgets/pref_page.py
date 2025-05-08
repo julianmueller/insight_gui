@@ -118,7 +118,9 @@ class PrefPage(Adw.PreferencesPage):
 
         # Compile the regex pattern beforehand to avoid repeated compilation
         try:
-            regex = re.compile(search_str, re.IGNORECASE)
+            str_parts = [re.escape(part) for part in search_str.strip().split()]
+            fuzzy_pattern = ".*?".join(str_parts)  # Match any characters between the letters
+            regex = re.compile(fuzzy_pattern, re.IGNORECASE)
         except re.error as e:
             print(f"Regex error: {e}")
             self.reset_filtering()

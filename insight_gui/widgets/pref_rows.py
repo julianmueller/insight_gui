@@ -20,7 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 from typing import Callable, Type
-import re  # regex
+import re
 
 import gi
 
@@ -747,6 +747,7 @@ class ColumnViewRow(AdditionalContentRow):
     def add_row(self, row_object: GObject.GObject) -> int:
         GLib.idle_add(self.data_model.append, row_object)
 
+    # TODO make this a fuzzy search
     def _match_filter(self, string: str, pattern: str) -> bool:
         if pattern == "":
             return True
@@ -764,6 +765,7 @@ class ColumnViewRow(AdditionalContentRow):
         except re.error:
             return True
 
+    # TODO make this a fuzzy search
     def _filter_func(self, row_object: GObject.GObject):
         if not row_object or not self.filter_conditions:
             return True  # No filters applied, show all rows
