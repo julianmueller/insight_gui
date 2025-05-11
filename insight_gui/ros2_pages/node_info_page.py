@@ -288,4 +288,4 @@ class NodeInfoPage(ContentPage):
             node_name=node_name,
             param_name=param_name,
             ros2_connector=self.ros2_connector,
-        ).present(self)
+        )  # .present(self)

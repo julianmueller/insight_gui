@@ -26,7 +26,7 @@ import re
 from typing import Type
 from enum import Enum, auto
 
-from rosidl_adapter.parser import PRIMITIVE_TYPES  # TODO use these
+from rosidl_adapter.parser import PRIMITIVE_TYPES  # TODO use these and all the other definitions from this import
 from rosidl_runtime_py import get_interface_path
 from rosidl_runtime_py.utilities import get_message, get_service, get_action
 from rosidl_parser.definition import (

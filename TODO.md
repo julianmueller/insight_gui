@@ -56,7 +56,7 @@
 
 - stuff no working yet
     - add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length
-    - make "set parameter" work
+    - ~~make "set parameter" work~~
     - make btns of img viewer work
     - ~~check continuous img stream~~
     - make btns in interface list filtering work
@@ -71,6 +71,7 @@
 - clean up the mess of XXX.connect_(..., func(**func_kwargs)) and connect_data(...) and rather use connect(..., data)
 - ~~replace "webbrowser" stuff with gtk File/Web Launcher~~
 - look into `from rclpy.expand_topic_name import expand_topic_name`
+- change the whole connect to signals of rows, so that the signals of specific widgets are re-emitted by the row (like with the ScaleRow)
 
 ## Bug Fixes
 

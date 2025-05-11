@@ -243,6 +243,70 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
         super().set_subtitle(subtitle)
 
 
+class ScaleRow(PrefRow):
+    __gtype__name__ = "ScaleRow"
+    __gsignals__ = {"value-changed": (GObject.SignalFlags.RUN_FIRST, None, (float,))}
+
+    def __init__(
+        self, value: float = 0, lower: float = 0, upper: float = 10, step: float = 1, num_digits: int = 0, **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.header_box.set_hexpand(False)
+        self.title_lbl.set_hexpand(False)
+        self.subtitle_lbl.set_hexpand(False)
+
+        self.scale = Gtk.Scale(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            adjustment=Gtk.Adjustment(value=value, lower=lower, upper=upper, step_increment=step),
+            draw_value=True,
+            digits=num_digits,
+            hexpand=True,
+            value_pos=Gtk.PositionType.RIGHT,
+        )
+        self.minus_button = Gtk.Button(icon_name="minus-symbolic", valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
+        self.plus_button = Gtk.Button(icon_name="plus-symbolic", valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
+
+        self.scale.connect("value-changed", self.on_scale_value_changed)
+        self.minus_button.connect("clicked", self.on_minus_btn_clicked)
+        self.plus_button.connect("clicked", self.on_plus_btn_clicked)
+
+        self.add_suffix(self.minus_button)
+        self.add_suffix(self.scale)
+        self.add_suffix(self.plus_button)
+
+    def set_range(self, value: float = None, lower: float = None, upper: float = None, step: float = None):
+        adj = self.scale.get_adjustment()
+        if value is None:
+            value = self.scale.get_value()
+        if lower is None:
+            lower = adj.get_lower()
+        if upper is None:
+            upper = adj.get_upper()
+        if step is None:
+            step = adj.get_step_increment()
+        self.scale.set_adjustment(Gtk.Adjustment(value=value, lower=lower, upper=upper, step_increment=step))
+
+    def set_digits(self, num_digits: int = 0):
+        self.scale.set_digits(num_digits)
+
+    def get_value(self) -> float:
+        return self.scale.get_value()
+
+    def on_scale_value_changed(self, *args):
+        val = self.scale.get_value()
+        self.emit("value-changed", val)  # re-emit the signal
+
+    def on_minus_btn_clicked(self, *args):
+        val = self.scale.get_value()
+        step_inc = self.scale.get_adjustment().get_step_increment()
+        self.scale.set_value(val - step_inc)
+
+    def on_plus_btn_clicked(self, *args):
+        val = self.scale.get_value()
+        step_inc = self.scale.get_adjustment().get_step_increment()
+        self.scale.set_value(val + step_inc)
+
+
 class AdditionalContentRow(PrefRow):
     __gtype_name__ = "AdditionalContentRow"
 

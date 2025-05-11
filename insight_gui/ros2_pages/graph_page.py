@@ -139,6 +139,8 @@ class GraphPage(ContentPage):
         # layout nodes
         self.canvas.layout_from_graph(self.nx_graph)
 
+        self.show_banner("The Graph page is still experimental")  # DEBUG
+
     def reset_ui(self):
         self.canvas.clear()
 
