@@ -29,7 +29,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GObject, Gdk, GLib, Pango
 
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_rows import AdditionalContentRow
 
 
@@ -51,7 +51,7 @@ class TeleopDirection(GObject.GObject):
         self.y = y
 
 
-class TeleoperatorPage(ContentPage):
+class TeleoperatorPage(ImprovedContentPage):
     __gtype_name__ = "TeleoperatorPage"
 
     def __init__(self, preselect_teleop_topic: str = "", **kwargs):

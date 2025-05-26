@@ -32,12 +32,12 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, Gdk, GLib, Pango, GObject
 
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
-class ImageViewerPage(ContentPage):
+class ImageViewerPage(ImprovedContentPage):
     __gtype_name__ = "ImageViewerPage"
 
     def __init__(self, preselect_img_topic: str = "", **kwargs):

@@ -40,12 +40,12 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_pages.param_edit_dialog import ParamEditDialog
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-class NodeInfoPage(ContentPage):
+class NodeInfoPage(ImprovedContentPage):
     __gtype_name__ = "NodeInfoPage"
 
     def __init__(self, node_full_name: str, **kwargs):

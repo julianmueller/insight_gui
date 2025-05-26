@@ -33,12 +33,12 @@ from gi.repository import Gtk, Adw
 from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
-class TopicInfoPage(ContentPage):
+class TopicInfoPage(ImprovedContentPage):
     __gtype_name__ = "TopicInfoPage"
 
     def __init__(self, topic_name: str, topic_types: str | list[str], **kwargs):

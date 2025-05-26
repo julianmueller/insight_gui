@@ -35,7 +35,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango, GObject
 
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 
 # from insight_gui.widgets.entry_row import EntryRow
@@ -43,7 +43,7 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 
 
-class ServiceCallPage(ContentPage):
+class ServiceCallPage(ImprovedContentPage):
     __gtype_name__ = "ServiceCallPage"
 
     def __init__(self, preselect_service: str = "", **kwargs):
@@ -213,30 +213,26 @@ class ServiceCallPage(ContentPage):
         if not self.request_instance:
             return
 
-        def _idle():
-            self.request_text_view_row.set_text(request_text)
-
-        self.request_instance = self.request_class()  # rese instance
+        self.request_instance = self.request_class()  # reset instance
         if self.msg_format == "YAML":
             request_text = message_to_yaml(self.request_instance).rstrip()
         elif self.msg_format == "JSON":
             request_text = str(json.dumps(message_to_ordereddict(self.request_instance), indent=4))
 
-        GLib.idle_add(_idle)
+        # Use batched UI update instead of direct GLib.idle_add
+        self.schedule_ui_update("request_text_update", self.request_text_view_row.set_text, request_text)
 
     def update_response_text(self):
         if not self.response_instance:
             return
-
-        def _idle():
-            self.response_text_view_row.set_text(response_text)
 
         if self.msg_format == "YAML":
             response_text = message_to_yaml(self.response_instance).rstrip()
         elif self.msg_format == "JSON":
             response_text = str(json.dumps(message_to_ordereddict(self.response_instance), indent=4))
 
-        GLib.idle_add(_idle)
+        # Use batched UI update instead of direct GLib.idle_add
+        self.schedule_ui_update("response_text_update", self.response_text_view_row.set_text, response_text)
 
     def on_call_service(self, *args):
         self.call_service()
@@ -248,14 +244,14 @@ class ServiceCallPage(ContentPage):
             try:
                 data_dict = yaml.safe_load(request_text)
             except Exception as e:
-                super().show_toast(f"Invalid YAML: {e}")
+                self.show_toast(f"Invalid YAML: {e}")
                 return
 
         elif self.msg_format == "JSON":
             try:
                 data_dict = json.loads(request_text)
             except Exception as e:
-                super().show_toast(f"Invalid JSON: {e}")
+                self.show_toast(f"Invalid JSON: {e}")
                 return
 
         try:
@@ -264,35 +260,44 @@ class ServiceCallPage(ContentPage):
                 values=data_dict,
             )
         except Exception as e:
-            super().show_toast(f"Error parsing the request data: {e}")
+            self.show_toast(f"Error parsing the request data: {e}")
             return
 
-        def _thread_worker():
-            self.call_btn.set_sensitive(False)
-            try:
-                self.response_instance = self.ros2_connector.call_service(
-                    srv_type=self.service_class,
-                    srv_name=self.selected_service_name,
-                    request=self.request_instance,
-                    timeout_sec=2,
-                )
-            except Exception as e:
-                self.show_toast(f"Service Error: {e}")
-                self.call_btn.set_sensitive(True)
-                return
+        # Disable button during service call
+        self.call_btn.set_sensitive(False)
 
-            def _update_text_field():
-                if self.msg_format == "YAML":
-                    response_text = message_to_yaml(self.response_instance)
-                elif self.msg_format == "JSON":
-                    response_text = str(json.dumps(message_to_ordereddict(self.response_instance), indent=4))
+        def call_service_bg():
+            """Background task to call the service."""
+            return self.ros2_connector.call_service(
+                srv_type=self.service_class,
+                srv_name=self.selected_service_name,
+                request=self.request_instance,
+                timeout_sec=2,
+            )
 
-                self.response_text_view_row.set_text(response_text)
-                self.call_btn.set_sensitive(True)
+        def on_service_success(response):
+            """Handle successful service call."""
+            self.response_instance = response
+            if self.msg_format == "YAML":
+                response_text = message_to_yaml(self.response_instance)
+            elif self.msg_format == "JSON":
+                response_text = str(json.dumps(message_to_ordereddict(self.response_instance), indent=4))
 
-            GLib.idle_add(_update_text_field)
+            self.response_text_view_row.set_text(response_text)
+            self.call_btn.set_sensitive(True)
 
-        threading.Thread(target=_thread_worker, daemon=True).start()
+        def on_service_error(error):
+            """Handle service call error."""
+            self.show_toast(f"Service Error: {error}")
+            self.call_btn.set_sensitive(True)
+
+        # Use async task manager instead of manual threading
+        self.run_background_task(
+            task_id="service_call",
+            background_func=call_service_bg,
+            success_callback=on_service_success,
+            error_callback=on_service_error,
+        )
 
     def on_copy_request_to_clipboard(self, *args):
         clip = self.get_clipboard()

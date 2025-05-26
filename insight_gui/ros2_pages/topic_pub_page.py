@@ -42,14 +42,14 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow, SuggestionEntryRow
 from insight_gui.widgets.buttons import PlayPauseButton
 from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
-class TopicPublisherPage(ContentPage):
+class TopicPublisherPage(ImprovedContentPage):
     __gtype_name__ = "TopicPublisherPage"
 
     def __init__(self, **kwargs):
@@ -391,9 +391,6 @@ class TopicPublisherPage(ContentPage):
 
         self.msg_instance = self.msg_class()
 
-        def _idle():
-            self.pub_text_view_row.set_text(msg_text)
-
         if self.msg_format == "YAML":
             msg_text = message_to_yaml(self.msg_instance)
         elif self.msg_format == "CSV":
@@ -401,7 +398,8 @@ class TopicPublisherPage(ContentPage):
         elif self.msg_format == "JSON":
             msg_text = str(json.dumps(message_to_ordereddict(self.msg_instance), indent=4))  # .replace('"', "'")
 
-        GLib.idle_add(_idle)
+        # Use batched UI update instead of direct GLib.idle_add
+        self.schedule_ui_update("pub_text_update", self.pub_text_view_row.set_text, msg_text)
 
     def on_copy_to_clipboard(self, *args):
         clip = self.get_clipboard()

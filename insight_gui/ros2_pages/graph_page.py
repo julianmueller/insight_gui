@@ -32,14 +32,14 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.canvas import Canvas
 from insight_gui.widgets.canvas_blocks import NodeBlock, TopicBlock, InterfaceBlock
 
 # look into: https://github.com/ros-visualization/rqt_graph/tree/jazzy
 
 
-class GraphPage(ContentPage):
+class GraphPage(ImprovedContentPage):
     __gtype_name__ = "GraphPage"
 
     def __init__(self):

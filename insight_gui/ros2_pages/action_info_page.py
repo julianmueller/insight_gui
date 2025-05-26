@@ -33,13 +33,13 @@ from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 # TODO test this class, because i havent had an action in the list to look at its info
-class ActionInfoPage(ContentPage):
+class ActionInfoPage(ImprovedContentPage):
     __gtype_name__ = "ActionInfoPage"
 
     def __init__(self, action_name: str, action_types: str | list[str], **kwargs):

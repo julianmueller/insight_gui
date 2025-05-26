@@ -30,11 +30,11 @@ from gi.repository import Gtk, Adw, GLib, Gio
 
 from insight_gui.ros2_pages.pkg_new_dialog import PackageNewDialog
 from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 
 
-class PackageListPage(ContentPage):
+class PackageListPage(ImprovedContentPage):
     __gtype_name__ = "PackageListPage"
 
     def __init__(self, **kwargs):

@@ -33,13 +33,13 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
-class TopicSubscriberPage(ContentPage):
+class TopicSubscriberPage(ImprovedContentPage):
     __gtype_name__ = "TopicSubscriberPage"
 
     def __init__(self, preselect_topic: str = "", **kwargs):
@@ -238,9 +238,6 @@ class TopicSubscriberPage(ContentPage):
         if not self.msg_instance:
             return
 
-        def _idle():
-            self.echo_text_view_row.set_text(msg_text)
-
         if self.msg_format == "YAML":
             msg_text = message_to_yaml(self.msg_instance)
         elif self.msg_format == "CSV":
@@ -248,7 +245,8 @@ class TopicSubscriberPage(ContentPage):
         elif self.msg_format == "JSON":
             msg_text = str(json.dumps(message_to_ordereddict(self.msg_instance), indent=4))  # .replace('"', "'")
 
-        GLib.idle_add(_idle)
+        # Use batched UI update instead of direct GLib.idle_add
+        self.schedule_ui_update("echo_text_update", self.echo_text_view_row.set_text, msg_text)
 
     def on_copy_to_clipboard(self, *args):
         clip = self.get_clipboard()
@@ -258,11 +256,6 @@ class TopicSubscriberPage(ContentPage):
 
     def topic_callback(self, msg):
         if not self.page_is_mapped:
-            return
-
-        # apply rate limiting
-        now = time.time()
-        if now - self.last_update_time < 1.0 / self.max_update_rate:
             return
 
         if self.is_echoing or not self.single_echo_done:
@@ -275,14 +268,17 @@ class TopicSubscriberPage(ContentPage):
                 msg_text = str(json.dumps(message_to_ordereddict(self.msg_instance), indent=4))  # .replace('"', "'")
 
             if len(msg_text) > 1000:
-                self.show_banner("Content of message very large, this may slow down the UI!")
+                self.schedule_ui_update(
+                    "banner_warning", self.show_banner, "Content of message very large, this may slow down the UI!"
+                )
 
-            def _idle():
+            # Use batched UI update with automatic rate limiting instead of manual rate limiting + GLib.idle_add
+            def update_echo_display():
                 self.echo_text_view_row.set_text(msg_text)
-                self.last_update_time = now
+                self.last_update_time = time.time()
                 self.single_echo_done = True
 
-            GLib.idle_add(_idle)
+            self.schedule_ui_update("topic_callback_update", update_echo_display)
 
 
 def get_msg_full_name(msg_class):

@@ -38,13 +38,13 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.ros2_pages.param_edit_dialog import ParamEditDialog
 
 
-class ParameterListPage(ContentPage):
+class ParameterListPage(ImprovedContentPage):
     __gtype_name__ = "ParameterListPage"
 
     def __init__(self, **kwargs):

@@ -35,11 +35,11 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 
 
-class InterfaceBrowserPage(ContentPage):
+class InterfaceBrowserPage(ImprovedContentPage):
     __gtype_name__ = "InterfaceBrowserPage"
 
     def __init__(self, **kwargs):

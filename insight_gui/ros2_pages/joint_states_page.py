@@ -29,10 +29,10 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio
 
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 
 
-class JointStatesPage(ContentPage):
+class JointStatesPage(ImprovedContentPage):
     __gtype_name__ = "JointStatesPage"
 
     def __init__(self, **kwargs):

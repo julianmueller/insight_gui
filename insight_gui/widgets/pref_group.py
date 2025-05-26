@@ -119,35 +119,58 @@ class PrefGroup(Adw.PreferencesGroup):
         if len(rows) == 0:
             return
 
-        index = 0
+        # Use async task manager for better performance
+        from insight_gui.utils.async_task_manager import task_manager
 
-        def add_batch():
-            nonlocal index
-            end = min(index + batch_size, len(rows))
+        def add_rows_bg():
+            """Background task to prepare rows."""
+            return rows
 
-            for i in range(index, end):
-                self.add_row(rows[i])
+        def add_rows_ui(rows_to_add):
+            """UI task to add rows in batches."""
+            index = 0
 
-            index += batch_size
-            return index < len(rows)  # Return True if more rows need to be added
+            def add_batch():
+                nonlocal index
+                end = min(index + batch_size, len(rows_to_add))
 
-        GLib.idle_add(add_batch)  # Start adding in batches
+                for i in range(index, end):
+                    self.add_row(rows_to_add[i])
+
+                index += batch_size
+                return index < len(rows_to_add)  # Return True if more rows need to be added
+
+            GLib.idle_add(add_batch)  # Start adding in batches
+
+        # Use task manager for better coordination
+        task_manager.run_task(task_id=f"add_rows_{id(self)}", background_func=add_rows_bg, success_callback=add_rows_ui)
 
     def remove_row(self, row: Gtk.Widget):
         super().remove(row)
         self.rows = [_row for _row in self.rows if _row != row]
 
     def clear(self):
-        rows_to_remove = reversed(self.rows)
+        if not self.rows:
+            return
 
-        def _idle():
+        # Use async task manager for better performance
+        from insight_gui.utils.async_task_manager import task_manager
+
+        def clear_rows_bg():
+            """Background task to prepare for clearing."""
+            return list(reversed(self.rows))
+
+        def clear_rows_ui(rows_to_remove):
+            """UI task to remove rows."""
             for row in rows_to_remove:
                 Adw.PreferencesGroup.remove(self, row)
-            return False
+            self.rows = []
+            self.empty_row.set_visible(True)
 
-        GLib.idle_add(_idle)
-        self.rows = []
-        self.empty_row.set_visible(True)
+        # Use task manager for better coordination
+        task_manager.run_task(
+            task_id=f"clear_rows_{id(self)}", background_func=clear_rows_bg, success_callback=clear_rows_ui
+        )
 
     def add_suffix_btn(self, *, icon_name: str, tooltip_text: str, visible: bool = True, func: Callable, **func_kwargs):
         btn = Gtk.Button(icon_name=icon_name, visible=visible, tooltip_text=tooltip_text)

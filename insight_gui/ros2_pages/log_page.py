@@ -31,7 +31,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, GLib
 
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import MultiToggleButtonRow, ColumnViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
@@ -72,7 +72,7 @@ class LogMessage(GObject.Object):
         return self._node_name
 
 
-class LoggerPage(ContentPage):
+class LoggerPage(ImprovedContentPage):
     __gtype_name__ = "LoggerPage"
 
     def __init__(self, **kwargs):
@@ -219,20 +219,16 @@ class LoggerPage(ContentPage):
         self.is_logging = playing
 
     def log_callback(self, msg: Log):
-        def _idle():
-            self.column_view_row.add_row(
-                LogMessage(
-                    unix_time=float(msg.stamp.sec + msg.stamp.nanosec / 1e9),
-                    severity=LoggingSeverity(msg.level),
-                    message=msg.msg,
-                    node_name=msg.name,
-                )
+        if self.is_logging:
+            log_message = LogMessage(
+                unix_time=float(msg.stamp.sec + msg.stamp.nanosec / 1e9),
+                severity=LoggingSeverity(msg.level),
+                message=msg.msg,
+                node_name=msg.name,
             )
 
-            return False  # make idle_add stop after one iteration
-
-        if self.is_logging:
-            GLib.idle_add(_idle)
+            # Use batched UI update for high-frequency log messages
+            self.schedule_ui_update("log_message_update", self.column_view_row.add_row, log_message)
 
     def on_clear_log(self, *args):
         self.column_view_row.clear_rows()

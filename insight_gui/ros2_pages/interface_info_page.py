@@ -49,7 +49,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio
 
 from insight_gui.ros2_pages.interface_type_dialog import InterfaceTypeDialog
-from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.improved_content_page import ImprovedContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 
@@ -69,7 +69,7 @@ class InterfaceType(Enum):
             return InterfaceType.ACT
 
 
-class InterfaceInfoPage(ContentPage):
+class InterfaceInfoPage(ImprovedContentPage):
     __gtype_name__ = "InterfaceInfoPage"
 
     def __init__(self, interface_full_name: str, interface_type: InterfaceType = None, **kwargs):

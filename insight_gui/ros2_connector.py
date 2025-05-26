@@ -29,12 +29,31 @@ from rclpy.publisher import Publisher, MsgType
 from rclpy.subscription import Subscription
 from rclpy.service import Service, SrvType, SrvTypeRequest, SrvTypeResponse
 from rclpy.timer import Timer
-
+from rclpy.action import ActionClient
+from action_msgs.msg import GoalStatus
 
 import gi
 
 gi.require_version("GLib", "2.0")
 from gi.repository import GLib, Gio
+
+
+class ActionGoalHandle:
+    """Wrapper for action goal handle with callbacks."""
+
+    def __init__(self, goal_handle, feedback_callback=None, result_callback=None):
+        self.goal_handle = goal_handle
+        self.feedback_callback = feedback_callback
+        self.result_callback = result_callback
+        self.is_active = True
+
+    def cancel(self):
+        """Cancel the action goal."""
+        if self.is_active and self.goal_handle:
+            cancel_future = self.goal_handle.cancel_goal_async()
+            self.is_active = False
+            return cancel_future
+        return None
 
 
 class ROS2Connector:
@@ -46,6 +65,8 @@ class ROS2Connector:
         self.thread: GLib.Thread = None
         self.is_running = False
         self.start_time = None
+        self.action_clients = {}  # Store action clients
+        self.active_goals = {}  # Store active goal handles
 
         rclpy.init(args=None)
 
@@ -66,6 +87,18 @@ class ROS2Connector:
 
         self.is_running = False
         print(f"Stopping ROS2 Node with name '{self.node.get_name()}'")
+
+        # Cancel all active goals
+        for goal_id, goal_handle in self.active_goals.items():
+            if goal_handle.is_active:
+                goal_handle.cancel()
+
+        # Destroy action clients
+        for client in self.action_clients.values():
+            client.destroy()
+        self.action_clients.clear()
+        self.active_goals.clear()
+
         if self.thread:
             self.thread.join()
             self.thread = None
@@ -145,6 +178,121 @@ class ROS2Connector:
             return future.result()
         else:
             raise RuntimeError(f"Service call failed: {future.exception()}")
+
+    def send_action_goal(
+        self,
+        action_type,
+        action_name: str,
+        goal,
+        feedback_callback: Callable = None,
+        result_callback: Callable = None,
+        timeout_sec: int = 10,
+    ) -> str:
+        """
+        Send an action goal and return a goal ID for tracking.
+
+        Args:
+            action_type: The action type class
+            action_name: Name of the action server
+            goal: The goal message
+            feedback_callback: Called when feedback is received
+            result_callback: Called when result is received
+            timeout_sec: Timeout for waiting for action server
+
+        Returns:
+            goal_id: Unique identifier for tracking this goal
+        """
+        if not self.is_running:
+            raise RuntimeError("ROS2 node is not running")
+
+        # Create or get action client
+        client_key = f"{action_name}_{action_type.__name__}"
+        if client_key not in self.action_clients:
+            self.action_clients[client_key] = ActionClient(self.node, action_type, action_name)
+
+        action_client = self.action_clients[client_key]
+
+        # Wait for action server
+        if not action_client.wait_for_server(timeout_sec=timeout_sec):
+            raise TimeoutError(f"Action server '{action_name}' not available after {timeout_sec} seconds")
+
+        # Create goal request
+        goal_msg = action_type.Goal()
+        goal_msg = goal  # Assume goal is already the correct type
+
+        # Send goal
+        send_goal_future = action_client.send_goal_async(goal_msg, feedback_callback=feedback_callback)
+
+        # Wait for goal acceptance
+        start = time.monotonic()
+        while not send_goal_future.done():
+            rclpy.spin_once(self.node, timeout_sec=0.01)
+            if timeout_sec > 0 and (time.monotonic() - start) > timeout_sec:
+                raise TimeoutError(f"Timeout while waiting for goal acceptance from '{action_name}'.")
+
+        goal_handle = send_goal_future.result()
+        if not goal_handle.accepted:
+            raise RuntimeError(f"Goal was rejected by action server '{action_name}'")
+
+        # Generate unique goal ID
+        goal_id = f"{action_name}_{int(time.time() * 1000)}"
+
+        # Store goal handle
+        action_goal_handle = ActionGoalHandle(goal_handle, feedback_callback, result_callback)
+        self.active_goals[goal_id] = action_goal_handle
+
+        # Get result asynchronously
+        get_result_future = goal_handle.get_result_async()
+
+        def handle_result():
+            """Handle the result when it's available."""
+            start = time.monotonic()
+            while not get_result_future.done():
+                rclpy.spin_once(self.node, timeout_sec=0.01)
+                if not self.is_running:
+                    return
+                # No timeout here - let the action run to completion
+
+            result = get_result_future.result()
+            action_goal_handle.is_active = False
+
+            if result_callback:
+                result_callback(result.result, result.status)
+
+            # Clean up
+            if goal_id in self.active_goals:
+                del self.active_goals[goal_id]
+
+        # Start result handling in a separate thread
+        import threading
+
+        result_thread = threading.Thread(target=handle_result, daemon=True)
+        result_thread.start()
+
+        return goal_id
+
+    def cancel_action_goal(self, goal_id: str) -> bool:
+        """Cancel an active action goal."""
+        if goal_id in self.active_goals:
+            goal_handle = self.active_goals[goal_id]
+            cancel_future = goal_handle.cancel()
+            if cancel_future:
+                # Wait for cancellation
+                start = time.monotonic()
+                while not cancel_future.done():
+                    rclpy.spin_once(self.node, timeout_sec=0.01)
+                    if (time.monotonic() - start) > 5.0:  # 5 second timeout
+                        break
+                return True
+        return False
+
+    def get_action_goal_status(self, goal_id: str) -> int:
+        """Get the status of an action goal."""
+        if goal_id in self.active_goals:
+            goal_handle = self.active_goals[goal_id]
+            if goal_handle.goal_handle:
+                return goal_handle.goal_handle.status
+        return GoalStatus.STATUS_UNKNOWN
 
     def shutdown(self):
         for sub in list(self.node.subscriptions):
