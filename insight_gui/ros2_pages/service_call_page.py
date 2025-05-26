@@ -33,11 +33,10 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GLib, Pango
+from gi.repository import Gtk, Adw, Gio, GLib, Pango, GObject
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
-from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 # from insight_gui.widgets.entry_row import EntryRow
 
@@ -49,7 +48,7 @@ class ServiceCallPage(ContentPage):
 
     def __init__(self, preselect_service: str = "", **kwargs):
         super().__init__(searchable=False, **kwargs)
-        super().set_title("Service Call")
+        super().set_title("Call a Service")
         super().set_refresh_fail_text("No services found. Refresh to try again.")
 
         self.preselect_service = preselect_service
@@ -72,6 +71,8 @@ class ServiceCallPage(ContentPage):
             Adw.ComboRow(
                 title="Service",
                 enable_search=True,
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
@@ -102,12 +103,12 @@ class ServiceCallPage(ContentPage):
         self.service_row.set_factory(factory)
 
         # TODO maybe merge the two rows, to match the visuals of the service info page
-        # TODO make that:
-        # - the request and response groups have a btn in the header, that opens the type dialog for request/response
 
         self.msg_format_row = self.select_group.add_row(
             Adw.ComboRow(
                 title="Message Format",
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
@@ -122,7 +123,7 @@ class ServiceCallPage(ContentPage):
         # request group
         self.request_group = self.pref_page.add_group(title="Request")
         self.request_group.add_suffix_btn(
-            icon_name="edit-undo-symbolic", tooltip_text="Reset Request Text", func=self.update_request_text
+            icon_name="edit-undo-symbolic", tooltip_text="Reset Request Content", func=self.update_request_text
         )
         self.request_group.add_suffix_btn(
             icon_name="edit-copy-symbolic",
@@ -130,15 +131,6 @@ class ServiceCallPage(ContentPage):
             func=self.on_copy_request_to_clipboard,
         )
         self.request_text_view_row = self.request_group.add_row(TextViewRow(editable=True, wrap_mode=Gtk.WrapMode.NONE))
-
-        # self.call_btn = self.request_group.add_row(
-        #     ButtonRow(
-        #         label="Call Service",
-        #         start_icon_name="call-start-symbolic",
-        #         func=self.on_call_service,
-        #         sensitive=False,
-        #     )
-        # )
 
         # response group
         self.response_group = self.pref_page.add_group(title="Response")
@@ -162,11 +154,12 @@ class ServiceCallPage(ContentPage):
 
     def refresh_ui(self):
         # fill the ComboBox/ListStore with available services
-        for service_name, service_types in self.available_services:
+        for service_name, _service_types in self.available_services:
             self.service_list_store.append(Gtk.StringObject.new(service_name))
 
-        found_index = find_str_in_list_store(self.service_list_store, self.preselect_service)
-        if found_index:
+        # set the selected service to the preselected one
+        found, found_index = self.service_list_store.find(Gtk.StringObject.new(self.preselect_service))
+        if found:
             self.service_row.set_selected(found_index)
         else:
             self.service_row.set_selected(0)

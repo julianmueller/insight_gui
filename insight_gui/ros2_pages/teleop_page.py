@@ -76,7 +76,8 @@ class TeleoperatorPage(ContentPage):
         self.teleop_type_row = self.topic_group.add_row(
             Adw.ComboRow(
                 title="Teleop Type",
-                enable_search=False,
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )

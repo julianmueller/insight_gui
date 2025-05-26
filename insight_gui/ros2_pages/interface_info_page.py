@@ -54,7 +54,6 @@ from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 
 
-# TODO merge all these pages into one InterfaceInfoPage
 class InterfaceType(Enum):
     MSG = auto()
     SRV = auto()
@@ -190,6 +189,7 @@ class InterfaceInfoPage(ContentPage):
         return constants
 
     # TODO this can be improved, especially the nested messages
+    # maybe use rosidl_runtime_py.convert.get_message_slot_types
     def populate_group_w_msg_rows(self, interface_class: Type, pref_group: PrefGroup):
         interface_instance = interface_class()
 

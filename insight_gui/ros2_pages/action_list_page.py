@@ -78,7 +78,7 @@ class ActionListPage(ContentPage):
 
             # TODO this somehow messes with the sorting :( again ...
 
-            row = PrefRow(title=name, subtitle=action_types)
+            row = PrefRow(title=action_name, subtitle=action_types)
             # , is_hidden=action_or_service_is_hidden(action_name)) # TODO is_hidden possible for actions?
             row.set_subpage_link(
                 nav_view=self.nav_view,

@@ -37,7 +37,6 @@ from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
-from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
 class TopicSubscriberPage(ContentPage):
@@ -78,6 +77,8 @@ class TopicSubscriberPage(ContentPage):
             Adw.ComboRow(
                 title="Topic",
                 enable_search=True,
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
@@ -111,6 +112,8 @@ class TopicSubscriberPage(ContentPage):
         self.msg_format_row = self.select_group.add_row(
             Adw.ComboRow(
                 title="Message Format",
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
@@ -138,28 +141,19 @@ class TopicSubscriberPage(ContentPage):
         # TODO add rows that display infos about the topic, like qos and rate etc
 
     def refresh_bg(self) -> bool:
-        self.topic_list = []
-
-        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
-
-        for i, (topic_name, topic_types) in enumerate(available_topics):
-            # topic_types is a list, as multiple servers can advertise different types to the same topic
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(topic_types) == 1:
-                topic_types = topic_types[0]
-            else:
-                topic_types = ", ".join(topic_types)
-
-            self.topic_list.append(topic_name)
-        return len(self.topic_list) > 0
+        self.available_topics = sorted(
+            get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True)
+        )
+        return len(self.available_topics) > 0
 
     def refresh_ui(self):
-        # fill the ComboBox/ListStore with available topics
-        for topic in self.topic_list:
-            self.topic_list_store.append(Gtk.StringObject.new(topic))
+        # fill the ComboBox/ListStore with available services
+        for topic_name, topic_types in self.available_topics:
+            self.topic_list_store.append(Gtk.StringObject.new(topic_name))
 
-        found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
-        if found_index:
+        # set the selected service to the preselected one
+        found, found_index = self.topic_list_store.find(Gtk.StringObject.new(self.preselect_topic))
+        if found:
             self.topic_row.set_selected(found_index)
         else:
             self.topic_row.set_selected(0)

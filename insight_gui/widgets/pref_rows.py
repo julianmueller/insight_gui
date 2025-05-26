@@ -1087,7 +1087,7 @@ class SuggestionEntryRow(Adw.EntryRow, PrefRowInterface):
         self.connect("apply", self.on_apply)
 
         # Suffix button to open popover
-        self.popover = Gtk.Popover(position=Gtk.PositionType.BOTTOM)
+        self.popover = Gtk.Popover(position=Gtk.PositionType.BOTTOM, autohide=True)
         self.popover_btn = Gtk.MenuButton(
             always_show_arrow=True,
             tooltip_text="Show suggestions",
@@ -1146,6 +1146,7 @@ class SuggestionEntryRow(Adw.EntryRow, PrefRowInterface):
         scrolled_window.set_child(self._list_view)
         popover_box.append(scrolled_window)
         self.popover.set_child(popover_box)
+        self.popover.set_default_widget(self.search_entry)
 
     def filter_func(self, item) -> bool:
         # Case-insensitive substring search
@@ -1166,7 +1167,7 @@ class SuggestionEntryRow(Adw.EntryRow, PrefRowInterface):
             item_text = selected.get_string()
             self.set_text(item_text)
             self.popover.popdown()
-            self._selection_model.set_selected(Gtk.INVALID_LIST_POSITION)
+            # self._selection_model.set_selected(Gtk.INVALID_LIST_POSITION)
             self.emit("suggestion-apply", item_text)
 
     def on_apply(self, *args):

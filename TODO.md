@@ -21,6 +21,7 @@
     - add "experimental" flag/info to not really working pages like img stream
     - add option to preferences to hide everything related to insight, like node, parameters etc
     - add "monitor param changes"
+    - Add a Link to the latest online tutorial, that explains eg how to subscribe etc
 
 - additional pages
     - ~~add a `rqt_graph` equivalent page~~
@@ -38,6 +39,8 @@
     - (optional) add a rosbag page
     - (optional) add a page to visualize/load/save octomaps
     - maybe add an option, that all parameter-related services are hidden (/describe_parameters etc)
+    - remap page, where topics and be remapped to another name?
+    - Documentation Page, with Links to the ros2 webpages? maybe even a webview renderer?
 
 - extend existing features
     - add an "echo" group for topics_info_page (and call for services etc), to listen to current data on the topic
@@ -50,6 +53,11 @@
     - add when a new window is opened as a detach, make it have the same content as the detached content_page
     - topic info: add hz & bw
     - add ros2 param dump + load
+    - for topic pub/sub, service call, action goal pages, add a btn that opens the interface definition dialog in the header of the textfields
+    - Topic List Page:
+        - "Open Echoer" is the wrong name for Subscribing
+        - "Add Publisher" and "Add Subscriber" btns to the groups maybe instead?
+
 
 - ros2 stuff
     - (optional) add every page of the gui as a ros2 executable, so a window with only this page starts
@@ -73,6 +81,7 @@
 - look into `from rclpy.expand_topic_name import expand_topic_name`
 - change the whole connect to signals of rows, so that the signals of specific widgets are re-emitted by the row (like with the ScaleRow)
 
+
 ## Bug Fixes
 
 - banner reload throws an error!
@@ -85,6 +94,11 @@
 - ellippsize throws sometimes an error if the label text is too short
 - change that the overwritten _deferred_init of the subclasses of contentpage use the refresh methods instead
 - fix, that the link to the online-lookup of msg definitions is currently completely wrong (must point to the pkg the msgs is defined in)
+- "Failed to realize renderer of type 'GskGLRenderer' for surface 'GdkX11Popup': GL-Kontext kann nicht erstellt werden"
+- "Failed to realize renderer of type 'GskNglRenderer' for surface 'GdkX11Toplevel': GL-Kontext kann nicht erstellt werden"
+- in pub:
+    - when an exisiting topic is selected, then the topic name changed, the type changed and the name back to the suggested, an exisiting topic name will get a different type, which results in an error (RCLError)
+
 
 ## Snippets
 

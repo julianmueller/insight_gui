@@ -260,6 +260,17 @@
                             </object>
                         </child>
 
+                        <!-- Actions -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">action_goal</property>
+                                <property name="title">Action Goal</property>
+                                <property name="child">
+                                    <object class="AdwNavigationView" id="action_goal_nav_view" />
+                                </property>
+                            </object>
+                        </child>
+
                         <!-- Interfaces -->
                         <child>
                             <object class="GtkStackPage">
@@ -271,7 +282,8 @@
                             </object>
                         </child>
 
-                        <!-- Package List -->
+
+                        <!-- Graph -->
                         <child>
                             <object class="GtkStackPage">
                                 <property name="name">graph_page</property>
@@ -355,17 +367,6 @@
                                 <property name="title">Doctor</property>
                                 <property name="child">
                                     <object class="AdwNavigationView" id="doctor_nav_view" />
-                                </property>
-                            </object>
-                        </child>
-
-                        <!-- Test Page -->
-                        <child>
-                            <object class="GtkStackPage">
-                                <property name="name">test</property>
-                                <property name="title">Test</property>
-                                <property name="child">
-                                    <object class="AdwNavigationView" id="test_nav_view" />
                                 </property>
                             </object>
                         </child>

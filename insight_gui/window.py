@@ -36,6 +36,7 @@ from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
 from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
 from insight_gui.ros2_pages.service_list_page import ServiceListPage
 from insight_gui.ros2_pages.service_call_page import ServiceCallPage
+from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
 from insight_gui.ros2_pages.action_list_page import ActionListPage
 from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
 from insight_gui.ros2_pages.graph_page import GraphPage
@@ -46,7 +47,6 @@ from insight_gui.ros2_pages.joint_states_page import JointStatesPage
 from insight_gui.ros2_pages.teleop_page import TeleoperatorPage
 from insight_gui.ros2_pages.log_page import LoggerPage
 from insight_gui.ros2_pages.doctor_page import DoctorPage
-from insight_gui.ros2_pages.test_page import TestPage
 
 from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
 
@@ -222,6 +222,9 @@ class MainWindow(BaseWindow):
         self.action_list_nav_view: Adw.NavigationView = builder.get_object("action_list_nav_view")
         self.action_list_nav_view.add(ActionListPage())
 
+        self.action_goal_nav_view: Adw.NavigationView = builder.get_object("action_goal_nav_view")
+        self.action_goal_nav_view.add(ActionGoalPage())
+
         self.interface_browser_nav_view: Adw.NavigationView = builder.get_object("interface_browser_nav_view")
         self.interface_browser_nav_view.add(InterfaceBrowserPage())
 
@@ -248,9 +251,6 @@ class MainWindow(BaseWindow):
 
         self.doctor_nav_view: Adw.NavigationView = builder.get_object("doctor_nav_view")
         self.doctor_nav_view.add(DoctorPage())
-
-        self.test_nav_view: Adw.NavigationView = builder.get_object("test_nav_view")
-        self.test_nav_view.add(TestPage())
 
         # ros time
         self.time_box: Gtk.Box = builder.get_object("time_box")

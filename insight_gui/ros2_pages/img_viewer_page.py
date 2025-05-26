@@ -35,7 +35,6 @@ from gi.repository import Gtk, Adw, Gio, Gdk, GLib, Pango, GObject
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
-from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
 class ImageViewerPage(ContentPage):
@@ -75,6 +74,8 @@ class ImageViewerPage(ContentPage):
             Adw.ComboRow(
                 title="Image Topic",
                 enable_search=True,
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
@@ -119,11 +120,10 @@ class ImageViewerPage(ContentPage):
         self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
 
     def refresh_bg(self) -> bool:
-        self.img_topic_list = []
-
         available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+        self.available_img_topics = []
 
-        for i, (topic_name, topic_types) in enumerate(available_topics):
+        for topic_name, topic_types in available_topics:
             # topic_types is a list, as multiple servers can advertise different types to the same topic
             # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
             if len(topic_types) == 1:
@@ -132,15 +132,18 @@ class ImageViewerPage(ContentPage):
                 topic_types = ", ".join(topic_types)
 
             if topic_types == "sensor_msgs/msg/Image":
-                self.img_topic_list.append(topic_name)
-        return len(self.img_topic_list) > 0
+                self.available_img_topics.append(topic_name)
+
+        return len(self.available_img_topics) > 0
 
     def refresh_ui(self):
-        for img_topic in self.img_topic_list:
-            self.img_topic_list_store.append(Gtk.StringObject.new(img_topic))
+        # fill the ComboBox/ListStore with available topics
+        for topic_name in self.available_img_topics:
+            self.img_topic_list_store.append(Gtk.StringObject.new(topic_name))
 
-        found_index = find_str_in_list_store(self.img_topic_list_store, self.preselect_img_topic)
-        if found_index:
+        # set the selected service to the preselected one
+        found, found_index = self.img_topic_list_store.find(Gtk.StringObject.new(self.preselect_service))
+        if found:
             self.img_topic_row.set_selected(found_index)
         else:
             self.img_topic_row.set_selected(0)

@@ -61,6 +61,8 @@ class TransformsPage(ContentPage):
             Adw.ComboRow(
                 title="Source Frame",
                 enable_search=True,
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
@@ -68,6 +70,8 @@ class TransformsPage(ContentPage):
             Adw.ComboRow(
                 title="Target Frame",
                 enable_search=True,
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )

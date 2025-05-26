@@ -33,6 +33,7 @@ from rosidl_runtime_py import (
     set_message_fields,
 )
 from rosidl_runtime_py.utilities import get_message
+from rclpy.validate_full_topic_name import validate_full_topic_name
 from rclpy.exceptions import InvalidTopicNameException
 
 import gi
@@ -72,11 +73,15 @@ class TopicPublisherPage(ContentPage):
                 func=self.on_toggle_stream,
                 labels=("Stop Publishing", "Start Publishing"),
                 visible=False,
+                sensitive=False,
             ),
             position="start",
         )
         self.single_pub_btn = super().add_bottom_left_btn(
-            label="Single Publish", icon_name="mail-send-symbolic", func=self.publish_msg
+            label="Single Publish",
+            icon_name="mail-send-symbolic",
+            func=self.publish_msg,
+            sensitive=False,
         )
         super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
 
@@ -91,6 +96,8 @@ class TopicPublisherPage(ContentPage):
             Adw.ComboRow(
                 title="Message Type",
                 enable_search=True,
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
@@ -122,6 +129,8 @@ class TopicPublisherPage(ContentPage):
         self.msg_format_row = self.select_group.add_row(
             Adw.ComboRow(
                 title="Message Format",
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
@@ -164,21 +173,10 @@ class TopicPublisherPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()
-        self.topic_list = []
-
-        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
-
-        for i, (topic_name, topic_types) in enumerate(available_topics):
-            # topic_types is a list, as multiple servers can advertise different types to the same topic
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(topic_types) == 1:
-                topic_types = topic_types[0]
-            else:
-                topic_types = ", ".join(topic_types)
-
-            self.topic_list.append(topic_name)
-
-        return len(self.available_msgs) + len(self.topic_list) > 0
+        self.available_topics = sorted(
+            [n for n, t in get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True)]
+        )
+        return len(self.available_msgs) + len(self.available_topics) > 0
 
     def refresh_ui(self):
         # fill the ComboBox/ListStore with available topics
@@ -187,10 +185,12 @@ class TopicPublisherPage(ContentPage):
                 msg_type_full_name = f"{pkg_name}/{msg}"
                 self.topic_type_list_store.append(Gtk.StringObject.new(msg_type_full_name))
 
-        for topic in self.topic_list:
+        for topic in self.available_topics:
             self.topic_list_store.append(Gtk.StringObject.new(topic))
 
     def reset_ui(self):
+        if self.is_publishing:
+            self.stop_stream()
         self.topic_list_store.remove_all()
         self.topic_type_list_store.remove_all()
         self.single_pub_done = True
@@ -216,9 +216,12 @@ class TopicPublisherPage(ContentPage):
     def on_clear_text(self, *args):
         self.pub_text_view_row.clear()
 
-    def on_toggle_stream_type(self, *args):
-        # active = continuous stream, inactive = single shot
-        if self.stream_type_toggle_row.get_active():
+    def on_toggle_stream_type(self, continuous_stream: bool = None, *args):
+        if continuous_stream is None:
+            # active = continuous stream, inactive = single shot
+            continuous_stream = self.stream_type_toggle_row.get_active()
+
+        if continuous_stream:
             self.single_pub_btn.set_visible(False)
             self.toggle_stream_btn.set_visible(True)
             self.publishing_rate_row.set_visible(True)
@@ -245,6 +248,9 @@ class TopicPublisherPage(ContentPage):
         if not self.textfield_to_msg():
             return
 
+        if not self.ros2_pub:
+            return
+
         self.single_pub_done = False
         self.ros2_pub.publish(self.msg_instance)
 
@@ -258,6 +264,14 @@ class TopicPublisherPage(ContentPage):
         else:
             self.stop_stream()
 
+    def enable_publish_btn(self, *args):
+        self.single_pub_btn.set_sensitive(True)
+        self.toggle_stream_btn.set_sensitive(True)
+
+    def disable_publish_btn(self, *args):
+        self.single_pub_btn.set_sensitive(False)
+        self.toggle_stream_btn.set_sensitive(False)
+
     def start_stream(self, *args):
         rate = float(self.publishing_rate_row.get_text())
         self.pub_timer = self.ros2_connector.add_timer_callback(period=1.0 / rate, callback=self.publish_msg)
@@ -265,6 +279,7 @@ class TopicPublisherPage(ContentPage):
         self.topic_type_row.set_sensitive(False)
         self.publishing_rate_row.set_sensitive(False)
         self.pub_text_view_row.set_sensitive(False)
+        self.is_publishing = True
 
     def stop_stream(self, *args):
         self.topic_row.set_sensitive(True)
@@ -272,28 +287,40 @@ class TopicPublisherPage(ContentPage):
         self.publishing_rate_row.set_sensitive(True)
         self.pub_text_view_row.set_sensitive(True)
         self.pub_timer.destroy()
+        self.is_publishing = False
 
     def on_topic_name_applied(self, *args):
-        self.topic_name = self.topic_row.get_text()
         try:
+            topic_name = self.topic_row.get_text()
+            if not topic_name or not validate_full_topic_name(topic_name):
+                super().show_toast("Invalid topic name")
+                return
+
+            self.topic_type_row.set_sensitive(True)
+            self.topic_name = topic_name
             self.create_pub()
+
         except InvalidTopicNameException as e:
             self.topic_row.set_text("")
             self.topic_name = None
             super().show_toast(e)
 
-    def on_topic_suggestion_applied(self, *args):
-        self.topic_name = self.topic_row.get_text()
+    def on_topic_suggestion_applied(self, _, item_text: str):
         try:
-            msg_class = get_msg_class(self.ros2_connector.node, self.topic_name)
+            msg_class = get_msg_class(self.ros2_connector.node, item_text)
             selected_topic_type = get_msg_full_name(msg_class)
             found_index = find_str_in_list_store(self.topic_type_list_store, selected_topic_type)
             if found_index:
                 self.topic_type_row.set_selected(found_index)
+                self.topic_type_row.set_sensitive(False)
             else:
                 self.topic_type_row.set_selected(0)
+                super().show_toast(f"There seems to be a problem with the topic type: {selected_topic_type}")
+                return
+
+            self.topic_name = self.topic_row.get_text()  # equals item_text
             self.create_pub()
-            # TODO check the
+
         except InvalidTopicNameException as e:
             self.topic_row.set_text("")
             self.topic_name = None
@@ -304,6 +331,8 @@ class TopicPublisherPage(ContentPage):
             return
 
         topic_type_str = self.topic_type_row.get_selected_item().get_string()
+
+        # TODO when a topic type is changed, check if there is already a topic with the name but a different type
 
         if topic_type_str:
             self.msg_class = get_message(topic_type_str)
@@ -326,12 +355,32 @@ class TopicPublisherPage(ContentPage):
             return
 
         self.publishing_rate = float(rate)
-        # TODO check if rate
-        self.publishing_rate
+
+    def check_topic_name_and_type(self, topic_name: str, topic_type: str, toast: bool = False):
+        if not topic_name or not validate_full_topic_name(topic_name):
+            if toast:
+                super().show_toast("Invalid topic name")
+            return False
+
+        # check if the topic name is already published with a different type
+        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+        for n, t in available_topics:
+            if topic_name == n and n != self.topic_name:
+                if topic_type not in t:
+                    if toast:
+                        super().show_toast(f"Topic {topic_name} already published with a different type!")
+                    return False
+
+        return True
 
     def create_pub(self):
         if not self.msg_class or not self.topic_name:
             return
+
+        if self.check_topic_name_and_type(self.topic_name, get_msg_full_name(self.msg_class), toast=True):
+            self.enable_publish_btn()
+        else:
+            self.disable_publish_btn()
 
         self.remove_pub()
         self.ros2_pub = self.ros2_connector.add_publisher(msg_type=self.msg_class, topic_name=self.topic_name)

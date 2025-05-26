@@ -46,6 +46,8 @@ class JointStatesPage(ContentPage):
             Adw.ComboRow(
                 title="Joint Topic",
                 enable_search=True,
+                use_subtitle=True,
+                css_classes=["property"],
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )

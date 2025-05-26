@@ -22,10 +22,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-# standard imports
 from pathlib import Path
+# import os
 
-# GTK and GUI specific imports
+# # HOTFIX for https://discourse.gnome.org/t/gtk4-efficiency-and-performance-in-x11-export-remote-drawing-mode/8786?utm_source=chatgpt.com
+# os.environ["GSK_RENDERER"] = "cairo"
+
 import gi
 
 gi.require_version("Gtk", "4.0")

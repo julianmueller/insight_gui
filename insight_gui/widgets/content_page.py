@@ -263,8 +263,10 @@ class ContentPage(Adw.NavigationPage):
         if self.nav_view.get_visible_page() == self:
             self.breadcrumbs_bar.update()
 
-    def add_header_btn(self, icon_name: str, tooltip_text: str, func: Callable, **func_kwargs) -> Gtk.Button:
-        btn = Gtk.Button.new_from_icon_name(icon_name)
+    def add_header_btn(
+        self, icon_name: str, tooltip_text: str, func: Callable, func_kwargs: dict = {}, **kwargs
+    ) -> Gtk.Button:
+        btn = Gtk.Button(icon_name=icon_name, **kwargs)
         btn.set_tooltip_text(tooltip_text)
         btn.connect_data("clicked", lambda *_: func(**func_kwargs))
         self.add_header_widget(btn)
@@ -275,18 +277,32 @@ class ContentPage(Adw.NavigationPage):
         return widget
 
     def add_bottom_left_btn(
-        self, *, label: str = "", icon_name: str = "", tooltip_text: str = "", func: Callable, **func_kwargs
+        self,
+        *,
+        label: str = "",
+        icon_name: str = "",
+        tooltip_text: str = "",
+        func: Callable,
+        func_kwargs: dict = {},
+        **kwargs,
     ) -> Gtk.Button:
-        btn = Gtk.Button(tooltip_text=tooltip_text)
+        btn = Gtk.Button(tooltip_text=tooltip_text, **kwargs)
         btn.set_child(Adw.ButtonContent(label=label, icon_name=icon_name))
         btn.connect_data("clicked", lambda *_: func(**func_kwargs))
         self.add_bottom_widget(btn, position="start")
         return btn
 
     def add_bottom_right_btn(
-        self, *, label: str = "", icon_name: str = "", tooltip_text: str = "", func: Callable, **func_kwargs
+        self,
+        *,
+        label: str = "",
+        icon_name: str = "",
+        tooltip_text: str = "",
+        func: Callable,
+        func_kwargs: dict = {},
+        **kwargs,
     ) -> Gtk.Button:
-        btn = Gtk.Button(tooltip_text=tooltip_text)
+        btn = Gtk.Button(tooltip_text=tooltip_text, **kwargs)
         btn.set_child(Adw.ButtonContent(label=label, icon_name=icon_name))
         btn.connect_data("clicked", lambda *_: func(**func_kwargs))
         self.add_bottom_widget(btn, position="end")
