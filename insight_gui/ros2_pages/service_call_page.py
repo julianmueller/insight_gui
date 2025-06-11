@@ -162,7 +162,7 @@ class ServiceCallPage(ContentPage):
         # set the selected service to the preselected one
         found_index = find_str_in_list_store(self.service_list_store, self.preselect_service)
         # found, found_index = self.service_list_store.find(Gtk.StringObject.new(self.preselect_service))
-        if found_index:
+        if found_index >= 0:
             self.service_row.set_selected(found_index)
         else:
             self.service_row.set_selected(0)

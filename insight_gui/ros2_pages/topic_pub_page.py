@@ -192,7 +192,7 @@ class TopicPublisherPage(ContentPage):
         # set the selected service to the preselected one
         found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
         # found, found_index = self.topic_list_store.find(Gtk.StringObject.new(self.preselect_topic))
-        if found_index:
+        if found_index >= 0:
             self.topic_row.set_text(self.preselect_topic)
         else:
             self.topic_row.set_text("")
@@ -319,7 +319,7 @@ class TopicPublisherPage(ContentPage):
             msg_class = get_msg_class(self.ros2_connector.node, item_text)
             selected_topic_type = get_msg_full_name(msg_class)
             found_index = find_str_in_list_store(self.topic_type_list_store, selected_topic_type)
-            if found_index:
+            if found_index >= 0:
                 self.topic_type_row.set_selected(found_index)
                 self.topic_type_row.set_sensitive(False)
             else:

@@ -156,7 +156,7 @@ class TopicSubscriberPage(ContentPage):
         # set the selected service to the preselected one
         found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
         # found, found_index = self.topic_list_store.find(Gtk.StringObject.new(self.preselect_topic))
-        if found_index:
+        if found_index >= 0:
             self.topic_row.set_selected(found_index)
         else:
             self.topic_row.set_selected(0)

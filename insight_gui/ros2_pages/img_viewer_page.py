@@ -146,7 +146,7 @@ class ImageViewerPage(ContentPage):
         # set the selected service to the preselected one
         found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
         # found, found_index = self.img_topic_list_store.find(Gtk.StringObject.new(self.preselect_service))
-        if found_index:
+        if found_index >= 0:
             self.img_topic_row.set_selected(found_index)
         else:
             self.img_topic_row.set_selected(0)

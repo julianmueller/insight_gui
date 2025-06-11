@@ -166,7 +166,7 @@ class TeleoperatorPage(ContentPage):
 
         # set the selected service to the preselected one
         found_index = find_str_in_list_store(self.teleop_topic_list_store, self.preselect_topic)
-        if found_index:
+        if found_index >= 0:
             self.topic_row.set_text(self.preselect_topic)
         else:
             self.topic_row.set_text("")
