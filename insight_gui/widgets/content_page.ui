@@ -26,9 +26,6 @@
 
 
     <object class="AdwToolbarView" id="toolbar_view">
-        <!-- <property name="top-bar-style">raised</property>
-                <property name="bottom-bar-style">raised</property>
-                <property name="extend-content-to-bottom-edge">True</property> -->
 
         <child type="top">
             <object class="AdwHeaderBar" id="header_bar">
@@ -71,7 +68,6 @@
                         <property name="icon-name">external-link-symbolic</property>
                         <property name="tooltip-text">Open in separate window</property>
                         <property name="sensitive">true</property>
-                        <!-- <property name="visible">false</property> -->
                     </object>
                 </child>
 
@@ -87,7 +83,6 @@
                         <property name="placeholder-text">Search</property>
                         <property name="search-delay">100</property>
                         <property name="hexpand">true</property>
-                        <!-- <property name="width-request">300</property> -->
                     </object>
                 </child>
             </object>
@@ -106,7 +101,8 @@
                         <child>
                             <object class="GtkStack" id="content_stack">
                                 <property name="vexpand">True</property>
-                                <child>
+
+                                <!-- <child>
                                     <object class="AdwStatusPage" id="refresh_page">
                                         <property name="title">No Content</property>
                                         <property name="description">Refresh to show content. This may take a second.</property>
@@ -133,7 +129,7 @@
                                         <property name="description">Search found no results.</property>
                                         <property name="icon-name">search-symbolic</property>
                                     </object>
-                                </child>
+                                </child> -->
                             </object>
                         </child>
                     </object>

@@ -42,6 +42,8 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 
+from insight_gui.utils.gtk_utils import find_str_in_list_store
+
 
 class ServiceCallPage(ContentPage):
     __gtype_name__ = "ServiceCallPage"
@@ -158,8 +160,9 @@ class ServiceCallPage(ContentPage):
             self.service_list_store.append(Gtk.StringObject.new(service_name))
 
         # set the selected service to the preselected one
-        found, found_index = self.service_list_store.find(Gtk.StringObject.new(self.preselect_service))
-        if found:
+        found_index = find_str_in_list_store(self.service_list_store, self.preselect_service)
+        # found, found_index = self.service_list_store.find(Gtk.StringObject.new(self.preselect_service))
+        if found_index:
             self.service_row.set_selected(found_index)
         else:
             self.service_row.set_selected(0)

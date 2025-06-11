@@ -20,6 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+import re
 from operator import itemgetter
 from typing import Dict
 
@@ -70,6 +71,17 @@ class ServiceListPage(ContentPage):
             parts = service_name.rstrip("/").split("/")
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
+
+            # skip services that are caused by parameters # TODO add an option to toggle this
+            if re.search(
+                r"/(describe_parameters|get_parameter_types|get_parameters|get_type_description|list_parameters|set_parameters|set_parameters_atomically)",
+                service_name,
+            ):
+                continue
+
+            # skip services that are caused by actions
+            if re.search(r"/_action/(cancel_goal|get_result|send_goal)", service_name):
+                continue
 
             # TODO add a button to enable/disable sorting into groups
             # get the namespace group of the service

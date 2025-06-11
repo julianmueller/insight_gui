@@ -29,6 +29,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gdk, Gio, GLib, GObject
 
+from insight_gui.ros2_pages.welcome_page import WelcomePage
 from insight_gui.ros2_pages.pkg_list_page import PackageListPage
 from insight_gui.ros2_pages.node_list_page import NodeListPage
 from insight_gui.ros2_pages.topic_list_page import TopicListPage
@@ -52,6 +53,7 @@ from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
 
 from insight_gui.utils.adw_colors import AdwAccentColor
 from insight_gui.ros2_connector import ROS2Connector
+from insight_gui.widgets.stack_sidebar import StackSidebar
 
 
 class BaseWindow(Adw.ApplicationWindow):
@@ -193,64 +195,183 @@ class MainWindow(BaseWindow):
 
         self.nav_header_bar: Adw.HeaderBar = builder.get_object("nav_header_bar")
         self.menu_btn: Gtk.Button = builder.get_object("menu_btn")
-        self.stack_sidebar: Gtk.StackSidebar = builder.get_object("stack_sidebar")
         self.content_stack: Gtk.Stack = builder.get_object("content_stack")
         self.content_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
+        self.stack_sidebar: StackSidebar = builder.get_object("stack_sidebar")
+        self.stack_sidebar.set_stack(self.content_stack)
 
-        # all nav pages
-        self.pkg_list_nav_view: Adw.NavigationView = builder.get_object("pkg_list_nav_view")
-        self.pkg_list_nav_view.add(PackageListPage())
+        welcome_view = Adw.NavigationView()
+        welcome_view.add(WelcomePage())
+        self.content_stack.add_named(welcome_view, "welcome")
+        self.content_stack.set_visible_child_name("welcome")
 
-        self.node_list_nav_view: Adw.NavigationView = builder.get_object("node_list_nav_view")
-        self.node_list_nav_view.add(NodeListPage())
+        # Package Management
+        pkg_group = self.stack_sidebar.add_group(title="Packages")
+        self.stack_sidebar.add_page_row(
+            group=pkg_group,
+            title="Packages",
+            page_name="pkg_list",
+            nav_page=PackageListPage(),
+            prefix_icon="package-x-generic-symbolic",
+            subtitle="Browse all packages",
+        )
 
-        self.topic_list_nav_view: Adw.NavigationView = builder.get_object("topic_list_nav_view")
-        self.topic_list_nav_view.add(TopicListPage())
+        # Nodes
+        node_group = self.stack_sidebar.add_group(title="Nodes")
+        self.stack_sidebar.add_page_row(
+            group=node_group,
+            title="Node List",
+            page_name="node_list",
+            nav_page=NodeListPage(),
+            prefix_icon="center-symbolic",
+            subtitle="Browse all active nodes",
+        )
+        self.stack_sidebar.add_page_row(
+            group=node_group,
+            title="Parameters",
+            page_name="param_list",
+            nav_page=ParameterListPage(),
+            prefix_icon="function-third-order-symbolic",
+            subtitle="Manage node parameters",
+        )
+        self.stack_sidebar.add_page_row(
+            group=node_group,
+            title="Graph",
+            page_name="graph_page",
+            nav_page=GraphPage(),
+            prefix_icon="network-proxy-symbolic",
+            subtitle="ROS2 computational graph",
+        )
 
-        self.topic_pub_nav_view: Adw.NavigationView = builder.get_object("topic_pub_nav_view")
-        self.topic_pub_nav_view.add(TopicPublisherPage())
+        # Topics
+        topic_group = self.stack_sidebar.add_group(title="Topics")
+        self.stack_sidebar.add_page_row(
+            group=topic_group,
+            title="Topic List",
+            page_name="topic_list",
+            nav_page=TopicListPage(),
+            prefix_icon="list-compact-symbolic",
+            subtitle="Browse topics",
+        )
+        self.stack_sidebar.add_page_row(
+            group=topic_group,
+            title="Publisher",
+            page_name="topic_pub",
+            nav_page=TopicPublisherPage(),
+            prefix_icon="megaphone-symbolic",
+            subtitle="Publish to topics",
+        )
+        self.stack_sidebar.add_page_row(
+            group=topic_group,
+            title="Subscriber",
+            page_name="topic_sub",
+            nav_page=TopicSubscriberPage(),
+            prefix_icon="listen-symbolic",
+            subtitle="Subscribe to topics",
+        )
+        self.stack_sidebar.add_page_row(
+            group=topic_group,
+            title="Image Viewer",
+            page_name="img_viewer",
+            nav_page=ImageViewerPage(),
+            prefix_icon="image-x-generic-symbolic",
+            subtitle="View image topics",
+        )
+        self.stack_sidebar.add_page_row(
+            group=topic_group,
+            title="Transforms",
+            page_name="tf",
+            nav_page=TransformsPage(),
+            prefix_icon="vertical-arrows-symbolic",
+            subtitle="Inspect transformations",
+        )
 
-        self.topic_sub_nav_view: Adw.NavigationView = builder.get_object("topic_sub_nav_view")
-        self.topic_sub_nav_view.add(TopicSubscriberPage())
+        # Services
+        service_group = self.stack_sidebar.add_group(title="Services")
+        self.stack_sidebar.add_page_row(
+            group=service_group,
+            title="Service List",
+            page_name="service_list",
+            nav_page=ServiceListPage(),
+            prefix_icon="list-compact-symbolic",
+            subtitle="Browse services",
+        )
+        self.stack_sidebar.add_page_row(
+            group=service_group,
+            title="Service Caller",
+            page_name="srv_caller",
+            nav_page=ServiceCallPage(),
+            prefix_icon="call-start-symbolic",
+            subtitle="Call services",
+        )
 
-        self.service_list_nav_view: Adw.NavigationView = builder.get_object("service_list_nav_view")
-        self.service_list_nav_view.add(ServiceListPage())
+        # Actions
+        action_group = self.stack_sidebar.add_group(title="Actions")
+        self.stack_sidebar.add_page_row(
+            group=action_group,
+            title="Action List",
+            page_name="action_list",
+            nav_page=ActionListPage(),
+            prefix_icon="list-compact-symbolic",
+            subtitle="Browse actions",
+        )
+        self.stack_sidebar.add_page_row(
+            group=action_group,
+            title="Action Goal",
+            page_name="action_goal",
+            nav_page=ActionGoalPage(),
+            prefix_icon="emoji-flags-symbolic",
+            subtitle="Send action goals",
+        )
 
-        self.srv_caller_nav_view: Adw.NavigationView = builder.get_object("srv_caller_nav_view")
-        self.srv_caller_nav_view.add(ServiceCallPage())
+        # Interface
+        interface_group = self.stack_sidebar.add_group(title="Interfaces")
+        self.stack_sidebar.add_page_row(
+            group=interface_group,
+            title="Interfaces",
+            page_name="interface_browser",
+            nav_page=InterfaceBrowserPage(),
+            prefix_icon="shapes-symbolic",
+            subtitle="Browse interface definitions",
+        )
 
-        self.action_list_nav_view: Adw.NavigationView = builder.get_object("action_list_nav_view")
-        self.action_list_nav_view.add(ActionListPage())
+        # Visualization & Control
+        control_group = self.stack_sidebar.add_group(title="Control")
+        self.stack_sidebar.add_page_row(
+            group=control_group,
+            title="Joint States",
+            page_name="joint_states",
+            nav_page=JointStatesPage(),
+            prefix_icon="sliders-horizontal-symbolic",
+            subtitle="Manipulate joints",
+        )
+        self.stack_sidebar.add_page_row(
+            group=control_group,
+            title="Teleoperator",
+            page_name="teleop",
+            nav_page=TeleoperatorPage(),
+            prefix_icon="gamepad-symbolic",
+            subtitle="Teleoperate a robot",
+        )
 
-        self.action_goal_nav_view: Adw.NavigationView = builder.get_object("action_goal_nav_view")
-        self.action_goal_nav_view.add(ActionGoalPage())
-
-        self.interface_browser_nav_view: Adw.NavigationView = builder.get_object("interface_browser_nav_view")
-        self.interface_browser_nav_view.add(InterfaceBrowserPage())
-
-        self.graph_nav_view: Adw.NavigationView = builder.get_object("graph_nav_view")
-        self.graph_nav_view.add(GraphPage())
-
-        self.param_list_nav_view: Adw.NavigationView = builder.get_object("param_list_nav_view")
-        self.param_list_nav_view.add(ParameterListPage())
-
-        self.tf_nav_view: Adw.NavigationView = builder.get_object("tf_nav_view")
-        self.tf_nav_view.add(TransformsPage())
-
-        self.img_viewer_nav_view: Adw.NavigationView = builder.get_object("img_viewer_nav_view")
-        self.img_viewer_nav_view.add(ImageViewerPage())
-
-        self.joint_states_nav_view: Adw.NavigationView = builder.get_object("joint_states_nav_view")
-        self.joint_states_nav_view.add(JointStatesPage())
-
-        self.teleop_nav_view: Adw.NavigationView = builder.get_object("teleop_nav_view")
-        self.teleop_nav_view.add(TeleoperatorPage())
-
-        self.logger_nav_view: Adw.NavigationView = builder.get_object("logger_nav_view")
-        self.logger_nav_view.add(LoggerPage())
-
-        self.doctor_nav_view: Adw.NavigationView = builder.get_object("doctor_nav_view")
-        self.doctor_nav_view.add(DoctorPage())
+        # Diagnostics
+        diagnostics_group = self.stack_sidebar.add_group(title="Diagnostics")
+        self.stack_sidebar.add_page_row(
+            group=diagnostics_group,
+            title="Logger",
+            page_name="logger",
+            nav_page=LoggerPage(),
+            prefix_icon="logviewer-symbolic",
+            subtitle="System logs",
+        )
+        self.stack_sidebar.add_page_row(
+            group=diagnostics_group,
+            title="Doctor",
+            page_name="doctor",
+            nav_page=DoctorPage(),
+            prefix_icon="doctor-symbolic",
+            subtitle="System diagnostics",
+        )
 
         # ros time
         self.time_box: Gtk.Box = builder.get_object("time_box")

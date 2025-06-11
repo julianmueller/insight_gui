@@ -63,7 +63,7 @@ class ContentPage(Adw.NavigationPage):
         # self.refresh_btn.connect("clicked", self.on_refresh)
         self.refresh_btn.set_action_name("win.refresh")
         self.refresh_icon: Gtk.Image = builder.get_object("refresh_icon")
-        self.refresh_spinner: Gtk.Spinner = builder.get_object("refresh_spinner")
+        self.refresh_spinner: Gtk.Spinner = builder.get_object("refresh_spinner")  # replace with Adw.Spinner
 
         self.detach_btn: Gtk.Button = builder.get_object("detach_btn")
         # self.detach_btn.connect("clicked", self.on_detach)
@@ -104,9 +104,6 @@ class ContentPage(Adw.NavigationPage):
 
         self.pref_page = PrefPage()
         self.content_stack.add_child(self.pref_page)
-        # if refreshable: # TODO necessary?
-        #     self.content_stack.set_visible_child(self.refresh_page)
-        # else:
         self.content_stack.set_visible_child(self.pref_page)
 
     def _deferred_init(self):

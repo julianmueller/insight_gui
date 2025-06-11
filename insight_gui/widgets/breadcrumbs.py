@@ -127,7 +127,7 @@ class BreadcrumbButton(Gtk.Button):
 
         super().set_css_classes(["flat", "body"])
         super().set_label(page_title)
-        super().set_tooltip_text(f"Go back to '{page_title}")
+        super().set_tooltip_text(f"Go back to '{page_title}'")
 
         self.connect("clicked", self.on_click)
 

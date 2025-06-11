@@ -20,6 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+import re
 from operator import itemgetter
 from typing import Dict
 
@@ -72,6 +73,10 @@ class TopicListPage(ContentPage):
             parts = topic_name.rstrip("/").split("/")
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
+
+            # skip topics that are caused by actions
+            if re.search(r"/_action/(feedback|status)", topic_name):
+                continue
 
             # TODO add a button to enable/disable sorting into groups
             # get the namespace group of the topic

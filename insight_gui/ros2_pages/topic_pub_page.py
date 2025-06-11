@@ -52,11 +52,12 @@ from insight_gui.utils.gtk_utils import find_str_in_list_store
 class TopicPublisherPage(ContentPage):
     __gtype_name__ = "TopicPublisherPage"
 
-    def __init__(self, **kwargs):
+    def __init__(self, preselect_topic: str = "", **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Publish to Topic")
         super().set_refresh_fail_text("No topics found. Refresh to try again.")
 
+        self.preselect_topic = preselect_topic
         self.is_publishing = False
         self.single_pub_done = True
         self.ros2_pub = None
@@ -79,7 +80,7 @@ class TopicPublisherPage(ContentPage):
         )
         self.single_pub_btn = super().add_bottom_left_btn(
             label="Single Publish",
-            icon_name="mail-send-symbolic",
+            icon_name="megaphone-symbolic",
             func=self.publish_msg,
             sensitive=False,
         )
@@ -187,6 +188,14 @@ class TopicPublisherPage(ContentPage):
 
         for topic in self.available_topics:
             self.topic_list_store.append(Gtk.StringObject.new(topic))
+
+        # set the selected service to the preselected one
+        found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
+        # found, found_index = self.topic_list_store.find(Gtk.StringObject.new(self.preselect_topic))
+        if found_index:
+            self.topic_row.set_text(self.preselect_topic)
+        else:
+            self.topic_row.set_text("")
 
     def reset_ui(self):
         if self.is_publishing:

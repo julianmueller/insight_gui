@@ -26,11 +26,20 @@
         <file preprocess="xml-stripblanks">logo/insight-symbolic.svg</file>
 
         <file preprocess="xml-stripblanks">icons/git-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/arrow4-left-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/arrow4-right-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/vertical-arrows-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/bug-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/check-round-outline-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/cross-small-circle-outline-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/network-proxy-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/center-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/megaphone-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/sliders-horizontal-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/listen-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/gamepad-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/list-compact-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/shapes-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/function-third-order-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/doctor-symbolic.svg</file>
+
         <file preprocess="xml-stripblanks">icons/plus-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/minus-symbolic.svg</file>
 
@@ -42,6 +51,10 @@
         <file preprocess="xml-stripblanks">icons/arrow2-top-left-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/arrow2-top-right-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/arrow2-up-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/vertical-arrows-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow4-left-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/arrow4-right-symbolic.svg</file>
 
     </gresource>
 </gresources>

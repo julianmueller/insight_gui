@@ -103,7 +103,6 @@ class InterfaceBrowserPage(ContentPage):
                 msg_type_full_name = f"{pkg_name}/{msg}"
                 msg_type = msg.removeprefix("msg/")  # remove namespace
 
-                # TODO add some kind of a label that a row is a message interface
                 row = PrefRow(title=msg_type, subtitle=msg_type_full_name, tags=["msg"])
                 row.set_subpage_link(
                     nav_view=self.nav_view,

@@ -30,6 +30,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
+from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
 from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
@@ -49,13 +50,19 @@ class TopicInfoPage(ContentPage):
         self.topic_types = topic_types
         self.detach_kwargs = {"topic_name": topic_name, "topic_types": topic_types}
 
+        # super().add_bottom_left_btn(
+        #     label="Publish to topic",
+        #     icon_name="megaphone-symbolic",
+        #     func=self.on_goto_publisher_page,
+        #     tooltip_text="Go to the topic publisher",
+        # )
+
         super().add_bottom_left_btn(
-            label="Open Echoer",
-            icon_name="hearing-symbolic",
-            func=self.on_goto_echoer_page,
-            tooltip_text="Go to the topic echoer",
+            label="Subscribe to topic",
+            icon_name="listen-symbolic",
+            func=self.on_goto_subscriber_page,
+            tooltip_text="Go to the topic subscriber",
         )
-        # TODO also add the publisher/subscriber links here
 
         # Message Type
         self.message_type_group = self.pref_page.add_group(title="Message Type")
@@ -67,8 +74,6 @@ class TopicInfoPage(ContentPage):
         self.subscribers_group = self.pref_page.add_group(
             title="Subscribers", empty_group_text="Topic has no subscribers"
         )
-
-        # TODO add a "echo" group, to listen to that specific topic
 
     def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a pub/sub of this topic
@@ -137,7 +142,10 @@ class TopicInfoPage(ContentPage):
         self.subscribers_group.clear()
 
     def trigger(self):
-        self.on_goto_echoer_page()
+        self.on_goto_subscriber_page()
 
-    def on_goto_echoer_page(self, *args):
+    def on_goto_publisher_page(self, *args):
+        self.nav_view.push(TopicPublisherPage(preselect_topic=self.topic_name))
+
+    def on_goto_subscriber_page(self, *args):
         self.nav_view.push(TopicSubscriberPage(preselect_topic=self.topic_name))

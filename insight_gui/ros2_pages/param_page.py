@@ -56,6 +56,7 @@ class ParameterListPage(ContentPage):
         self.parameter_lists: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
+        super().show_toast("Collecting parameters... This may take a few seconds.")
         self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
 
         if len(self.available_nodes) == 0:

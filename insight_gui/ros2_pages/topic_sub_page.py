@@ -38,6 +38,8 @@ from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
+from insight_gui.utils.gtk_utils import find_str_in_list_store
+
 
 class TopicSubscriberPage(ContentPage):
     __gtype_name__ = "TopicSubscriberPage"
@@ -67,7 +69,7 @@ class TopicSubscriberPage(ContentPage):
             position="start",
         )
         self.single_sub_btn = super().add_bottom_left_btn(
-            label="Single Subscription", icon_name="mail-send-symbolic", func=self.on_single_sub
+            label="Single Subscription", icon_name="listen-symbolic", func=self.on_single_sub
         )
         super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
 
@@ -152,8 +154,9 @@ class TopicSubscriberPage(ContentPage):
             self.topic_list_store.append(Gtk.StringObject.new(topic_name))
 
         # set the selected service to the preselected one
-        found, found_index = self.topic_list_store.find(Gtk.StringObject.new(self.preselect_topic))
-        if found:
+        found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
+        # found, found_index = self.topic_list_store.find(Gtk.StringObject.new(self.preselect_topic))
+        if found_index:
             self.topic_row.set_selected(found_index)
         else:
             self.topic_row.set_selected(0)

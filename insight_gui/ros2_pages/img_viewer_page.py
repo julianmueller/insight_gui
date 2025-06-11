@@ -36,6 +36,8 @@ from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
+from insight_gui.utils.gtk_utils import find_str_in_list_store
+
 
 class ImageViewerPage(ContentPage):
     __gtype_name__ = "ImageViewerPage"
@@ -142,8 +144,9 @@ class ImageViewerPage(ContentPage):
             self.img_topic_list_store.append(Gtk.StringObject.new(topic_name))
 
         # set the selected service to the preselected one
-        found, found_index = self.img_topic_list_store.find(Gtk.StringObject.new(self.preselect_service))
-        if found:
+        found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
+        # found, found_index = self.img_topic_list_store.find(Gtk.StringObject.new(self.preselect_service))
+        if found_index:
             self.img_topic_row.set_selected(found_index)
         else:
             self.img_topic_row.set_selected(0)
