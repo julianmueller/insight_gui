@@ -58,7 +58,7 @@ class TopicInfoPage(ContentPage):
         # )
 
         super().add_bottom_left_btn(
-            label="Subscribe to topic",
+            label="Subscribe to Topic",
             icon_name="listen-symbolic",
             func=self.on_goto_subscriber_page,
             tooltip_text="Go to the topic subscriber",

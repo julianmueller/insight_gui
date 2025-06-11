@@ -27,8 +27,6 @@
 
         <file preprocess="xml-stripblanks">icons/git-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/bug-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/check-round-outline-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/cross-small-circle-outline-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/network-proxy-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/center-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/megaphone-symbolic.svg</file>
@@ -39,6 +37,12 @@
         <file preprocess="xml-stripblanks">icons/shapes-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/function-third-order-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/doctor-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/padlock2-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/padlock2-open-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/check-round-outline-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/cross-small-circle-outline-symbolic.svg</file>
 
         <file preprocess="xml-stripblanks">icons/plus-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/minus-symbolic.svg</file>

@@ -153,10 +153,12 @@ class PrefGroup(Adw.PreferencesGroup):
         btn = Gtk.Button(icon_name=icon_name, visible=visible, tooltip_text=tooltip_text)
         btn.connect("clicked", lambda *_: func(**func_kwargs))
         btn.add_css_class("flat")
+        return self.add_suffix_widget(btn)
 
-        self.suffix_box.append(btn)  # add to gtk box
+    def add_suffix_widget(self, widget: Gtk.Widget):
+        self.suffix_box.append(widget)
         self.suffix_box.set_visible(True)
-        return btn
+        return widget
 
     def set_description_to_row_count(self):
         super().set_description(f"Count: {self.num_rows}")

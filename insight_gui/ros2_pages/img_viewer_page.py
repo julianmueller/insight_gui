@@ -42,12 +42,12 @@ from insight_gui.utils.gtk_utils import find_str_in_list_store
 class ImageViewerPage(ContentPage):
     __gtype_name__ = "ImageViewerPage"
 
-    def __init__(self, preselect_img_topic: str = "", **kwargs):
+    def __init__(self, preselect_topic: str = "", **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Image Viewer")
         super().set_refresh_fail_text("No image topics found. Refresh to try again.")
 
-        self.preselect_img_topic = preselect_img_topic
+        self.preselect_topic = preselect_topic
         self.is_streaming = False
         self.single_img_done = True
         self.cv_bridge = CvBridge()

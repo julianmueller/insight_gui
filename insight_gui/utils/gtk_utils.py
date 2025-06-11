@@ -95,12 +95,12 @@ def add_css_classes(widget: Gtk.Widget, classes: list):
 
 # rather use: success, pos = list_store.find(Gtk.StringObject.new(string)
 def find_str_in_list_store(list_store: Gio.ListStore, string: str) -> int:
-    """Find a string in a Gio.ListStore and return its index."""
+    """Find a string in a Gio.ListStore and return its index (-1 when not found)."""
     for i, item in enumerate(list_store):
         if item.get_string() == string:
             return i
     else:
-        return False
+        return -1
 
 
 # TODO test and adopt this
