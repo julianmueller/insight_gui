@@ -21,11 +21,9 @@
 # =============================================================================
 
 import re
-from operator import itemgetter
 from typing import Dict
 
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
-from ros2service.api import get_service_names_and_types
 
 import gi
 
@@ -53,9 +51,7 @@ class ServiceListPage(ContentPage):
         self.service_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.available_services = sorted(
-            get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True), key=itemgetter(0)
-        )
+        self.available_services = self.ros2_connector.get_available_services(include_hidden=True)
         return len(self.available_services) > 0
 
     def refresh_ui(self):
@@ -109,6 +105,9 @@ class ServiceListPage(ContentPage):
                 },
             )
             group.add_row(row)
+
+        # sort the groups alphabetically by title
+        self.pref_page.sort_groups()
 
     def reset_ui(self):
         for group in reversed(self.service_ns_groups.values()):

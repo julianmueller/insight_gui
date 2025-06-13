@@ -23,7 +23,7 @@
 import json
 import time
 
-from ros2topic.api import get_topic_names_and_types, get_msg_class
+from ros2topic.api import get_msg_class
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
 
 import gi
@@ -143,9 +143,7 @@ class TopicSubscriberPage(ContentPage):
         # TODO add rows that display infos about the topic, like qos and rate etc
 
     def refresh_bg(self) -> bool:
-        self.available_topics = sorted(
-            get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True)
-        )
+        self.available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
         return len(self.available_topics) > 0
 
     def refresh_ui(self):

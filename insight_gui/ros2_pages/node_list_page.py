@@ -20,9 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from operator import itemgetter
-
-from ros2node.api import _is_hidden_name, get_node_names
+from ros2node.api import _is_hidden_name
 
 import gi
 
@@ -48,9 +46,7 @@ class NodeListPage(ContentPage):
         self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
 
     def refresh_bg(self) -> bool:
-        self.available_nodes = sorted(
-            get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True), key=itemgetter(0)
-        )
+        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=True)
 
         if len(self.available_nodes) == 0:
             self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
@@ -72,6 +68,9 @@ class NodeListPage(ContentPage):
             rows.append(row)
 
         self.node_list_group.add_rows_idle(rows)
+
+        # sort the groups alphabetically by title
+        self.pref_page.sort_groups()
 
     def reset_ui(self):
         self.node_list_group.clear()

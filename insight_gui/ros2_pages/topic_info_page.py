@@ -22,7 +22,7 @@
 
 from operator import itemgetter
 
-from ros2node.api import _is_hidden_name, get_node_names
+from ros2node.api import _is_hidden_name
 
 import gi
 
@@ -77,7 +77,7 @@ class TopicInfoPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a pub/sub of this topic
-        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
+        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=True)
         return len(self.available_nodes) > 0
 
     def refresh_ui(self):

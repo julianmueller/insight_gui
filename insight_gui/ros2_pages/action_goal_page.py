@@ -23,8 +23,6 @@
 from operator import itemgetter
 from typing import Dict
 
-from rclpy.action import get_action_names_and_types
-
 # from ros2action.api import get_action_
 from rosidl_runtime_py import set_message_fields
 from rosidl_runtime_py.utilities import get_service
@@ -152,7 +150,7 @@ class ActionGoalPage(ContentPage):
         self.result_text_view_row = self.result_group.add_row(TextViewRow(editable=False, wrap_mode=Gtk.WrapMode.NONE))
 
     def refresh_bg(self) -> bool:
-        self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
+        self.available_actions = self.ros2_connector.get_available_actions()
         return len(self.available_actions) > 0
 
     def refresh_ui(self):

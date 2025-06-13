@@ -23,9 +23,6 @@
 import networkx as nx
 from operator import itemgetter
 
-from ros2node.api import get_node_names
-from ros2topic.api import get_topic_names_and_types
-
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -64,12 +61,8 @@ class GraphPage(ContentPage):
         self.nx_graph.clear()
 
         # get all nodes and topics
-        self.available_nodes = sorted(
-            get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True), key=itemgetter(0)
-        )
-        self.available_topics = sorted(
-            get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True), key=itemgetter(0)
-        )
+        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=True)
+        self.available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
 
         # collect node and topic info
         for node_name, node_namespace, node_full_name in self.available_nodes:

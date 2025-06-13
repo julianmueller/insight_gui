@@ -24,7 +24,7 @@ import json
 import yaml
 import time
 
-from ros2topic.api import get_topic_names_and_types, get_msg_class
+from ros2topic.api import get_msg_class
 from rosidl_runtime_py import (
     message_to_yaml,
     message_to_csv,
@@ -174,9 +174,7 @@ class TopicPublisherPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()
-        self.available_topics = sorted(
-            [n for n, t in get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True)]
-        )
+        self.available_topics = sorted([n for n, t in self.ros2_connector.get_available_topics(include_hidden=True)])
         return len(self.available_msgs) + len(self.available_topics) > 0
 
     def refresh_ui(self):
@@ -372,7 +370,7 @@ class TopicPublisherPage(ContentPage):
             return False
 
         # check if the topic name is already published with a different type
-        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+        available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
         for n, t in available_topics:
             if topic_name == n and n != self.topic_name:
                 if topic_type not in t:

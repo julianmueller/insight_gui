@@ -23,7 +23,6 @@
 from operator import itemgetter
 
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
-from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
 from ros2param.api import (
     call_list_parameters,
     call_get_parameters,
@@ -118,13 +117,13 @@ class NodeInfoPage(ContentPage):
         )
 
         # Action Servers
-        self.action_servers_list = get_action_server_names_and_types_by_node(
-            node=self.ros2_connector.node, remote_node_name=self.node_name, remote_node_namespace=self.node_namespace
+        self.action_servers_list = self.ros2_connector.get_action_servers_by_node(
+            node_name=self.node_name, node_namespace=self.node_namespace
         )
 
         # Action Clients
-        self.action_clients_list = get_action_client_names_and_types_by_node(
-            node=self.ros2_connector.node, remote_node_name=self.node_name, remote_node_namespace=self.node_namespace
+        self.action_clients_list = self.ros2_connector.get_action_clients_by_node(
+            node_name=self.node_name, node_namespace=self.node_namespace
         )
 
         # Parameters

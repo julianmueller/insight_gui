@@ -22,7 +22,7 @@
 
 from operator import itemgetter
 
-from ros2node.api import _is_hidden_name, get_node_names
+from ros2node.api import _is_hidden_name
 
 import gi
 
@@ -71,7 +71,7 @@ class ServiceInfoPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a server/client of the service
-        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=False)
+        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=False)
         return len(self.available_nodes) > 0
 
     def refresh_ui(self):

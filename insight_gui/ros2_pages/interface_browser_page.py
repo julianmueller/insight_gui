@@ -150,6 +150,9 @@ class InterfaceBrowserPage(ContentPage):
                 act_rows.append(row)
             actions_group.add_rows_idle(act_rows)
 
+        # sort the groups alphabetically by title
+        self.pref_page.sort_groups()
+
         if self.pref_page.num_groups == 0:
             self.pref_page.set_empty_page_text("No interfaces found. Refresh to try again.")
 

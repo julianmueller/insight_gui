@@ -23,7 +23,6 @@
 from typing import Dict
 from operator import itemgetter
 
-from ros2node.api import get_node_names
 from ros2param.api import (
     call_list_parameters,
     call_get_parameters,
@@ -57,7 +56,7 @@ class ParameterListPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         super().show_toast("Collecting parameters... This may take a few seconds.")
-        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
+        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=True)
 
         if len(self.available_nodes) == 0:
             self.pref_page.set_empty_group_text("No Parameters found. Refresh to try again.")

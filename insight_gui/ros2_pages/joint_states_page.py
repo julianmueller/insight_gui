@@ -20,7 +20,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from ros2topic.api import get_topic_names_and_types
 from sensor_msgs.msg import JointState
 
 import gi
@@ -60,7 +59,7 @@ class JointStatesPage(ContentPage):
     def refresh_bg(self) -> bool:
         self.joint_states_topic_list = []
 
-        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+        available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
 
         for i, (topic_name, topic_types) in enumerate(available_topics):
             # topic_types is a list, as multiple servers can advertise different types to the same topic

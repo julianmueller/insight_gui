@@ -20,10 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from operator import itemgetter
 from typing import Dict
-
-from rclpy.action import get_action_names_and_types
 
 import gi
 
@@ -51,7 +48,7 @@ class ActionListPage(ContentPage):
         self.action_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.available_actions = sorted(get_action_names_and_types(node=self.ros2_connector.node), key=itemgetter(0))
+        self.available_actions = self.ros2_connector.get_available_actions()
         return len(self.available_actions) > 0
 
     def refresh_ui(self):
@@ -86,6 +83,9 @@ class ActionListPage(ContentPage):
                 subpage_kwargs={"action_name": action_name, "action_types": action_types},
             )
             group.add_row(row)
+
+        # sort the groups alphabetically by title
+        self.pref_page.sort_groups()
 
     def reset_ui(self):
         for group in reversed(self.action_ns_groups.values()):

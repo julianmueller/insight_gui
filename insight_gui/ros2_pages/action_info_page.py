@@ -22,8 +22,7 @@
 
 from operator import itemgetter
 
-from ros2node.api import _is_hidden_name, get_node_names
-from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
+from ros2node.api import _is_hidden_name
 
 import gi
 
@@ -68,7 +67,7 @@ class ActionInfoPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a server/client of this action
-        self.available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
+        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=True)
         return len(self.available_nodes) > 0
 
     def refresh_ui(self):
@@ -89,9 +88,8 @@ class ActionInfoPage(ContentPage):
 
         for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
             # add those nodes, that are servers to the action
-
-            action_servers_list = get_action_server_names_and_types_by_node(
-                node=self.ros2_connector.node, remote_node_name=node_name, remote_node_namespace=node_namespace
+            action_servers_list = self.ros2_connector.get_action_servers_by_node(
+                node_name=node_name, node_namespace=node_namespace
             )
             if any(self.action_name in server for server in action_servers_list):
                 row = PrefRow(title=node_name, subtitle=node_full_name)
@@ -106,8 +104,8 @@ class ActionInfoPage(ContentPage):
                 self.action_servers_group.add_row(row)
 
             # add those nodes, that are clients to the action
-            action_clients_list = get_action_client_names_and_types_by_node(
-                node=self.ros2_connector.node, remote_node_name=node_name, remote_node_namespace=node_namespace
+            action_clients_list = self.ros2_connector.get_action_clients_by_node(
+                node_name=node_name, node_namespace=node_namespace
             )
             if any(self.action_name in client for client in action_clients_list):
                 row = PrefRow(title=node_name, subtitle=node_full_name)

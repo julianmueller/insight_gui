@@ -20,27 +20,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from operator import itemgetter
-from typing import Dict
-
-from rclpy.action import get_action_names_and_types
-
-# from ros2action.api import get_action_
-from rosidl_runtime_py import set_message_fields
-from rosidl_runtime_py.utilities import get_service
-from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
-
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GLib, Pango
+from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.action_info_page import ActionInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_group import PrefGroup
-from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
-from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 class WelcomePage(ContentPage):

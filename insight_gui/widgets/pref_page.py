@@ -97,6 +97,15 @@ class PrefPage(Adw.PreferencesPage):
         else:
             return None
 
+    def sort_groups(self, reverse=False):
+        """Sorts the groups by a given key."""
+        self.groups.sort(key=lambda g: g.get_title(), reverse=reverse)
+        for group in self.groups:
+            super().remove(group)
+        # Re-add the groups to the page to update their order
+        for group in self.groups:
+            super().add(group)
+
     def remove_group(self, pref_group: PrefGroup):
         super().remove(pref_group)
         self.groups.remove(pref_group)

@@ -22,7 +22,6 @@
 
 import time
 
-from ros2topic.api import get_topic_names_and_types
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -122,7 +121,7 @@ class ImageViewerPage(ContentPage):
         self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
 
     def refresh_bg(self) -> bool:
-        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+        available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
         self.available_img_topics = []
 
         for topic_name, topic_types in available_topics:

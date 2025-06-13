@@ -20,7 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from ros2topic.api import get_topic_names_and_types, get_msg_class
+from ros2topic.api import get_msg_class
 from rosidl_runtime_py import (
     message_to_yaml,
     message_to_csv,
@@ -143,7 +143,7 @@ class TeleoperatorPage(ContentPage):
         self.angular_scaling = 1.0
 
     def refresh_bg(self) -> bool:
-        available_topics = sorted(get_topic_names_and_types(node=self.ros2_connector.node, include_hidden_topics=True))
+        available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
         self.available_teleop_topics = []
 
         for topic_name, topic_types in available_topics:

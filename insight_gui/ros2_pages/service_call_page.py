@@ -24,7 +24,7 @@ import yaml
 import json
 import threading
 
-from ros2service.api import get_service_names_and_types, get_service_class
+from ros2service.api import get_service_class
 from rosidl_runtime_py import set_message_fields
 from rosidl_runtime_py.utilities import get_service
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
@@ -149,9 +149,7 @@ class ServiceCallPage(ContentPage):
         )
 
     def refresh_bg(self) -> bool:
-        self.available_services = sorted(
-            get_service_names_and_types(node=self.ros2_connector.node, include_hidden_services=True)
-        )
+        self.available_services = self.ros2_connector.get_available_services(include_hidden=True)
         return len(self.available_services) > 0
 
     def refresh_ui(self):
