@@ -99,7 +99,7 @@ class TopicInfoPage(ContentPage):
         for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
             # TODO maybe use self.ros2_connector.node.get_publishers_info_by_topic()
             # add those nodes, that publish that topic
-            publishers_list = self.ros2_connector.node.get_publisher_names_and_types_by_node(
+            publishers_list = self.ros2_connector.get_publishers_by_node(
                 node_name=node_name,
                 node_namespace=node_namespace,
             )
@@ -117,7 +117,7 @@ class TopicInfoPage(ContentPage):
 
             # add those nodes, that subscribe to that
             # TODO maybe use self.ros2_connector.node.get_subscribers_info_by_topic()
-            subscribers_list = self.ros2_connector.node.get_subscriber_names_and_types_by_node(
+            subscribers_list = self.ros2_connector.get_subscribers_by_node(
                 node_name=node_name, node_namespace=node_namespace
             )
             if any(self.topic_name in sub for sub in subscribers_list):

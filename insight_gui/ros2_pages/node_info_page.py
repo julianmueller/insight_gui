@@ -23,13 +23,6 @@
 from operator import itemgetter
 
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
-from ros2param.api import (
-    call_list_parameters,
-    call_get_parameters,
-    call_describe_parameters,
-    get_value,
-    get_parameter_type_string,
-)
 from ros2node.api import parse_node_name
 
 import gi
@@ -93,26 +86,22 @@ class NodeInfoPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         # Publishers
-        # self.publisher_list = get_publisher_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
-        self.publisher_list = self.ros2_connector.node.get_publisher_names_and_types_by_node(
+        self.publisher_list = self.ros2_connector.get_publishers_by_node(
             node_name=self.node_name, node_namespace=self.node_namespace
         )
 
         # Subscribers
-        # self.subscriber_list = get_subscriber_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
-        self.subscriber_list = self.ros2_connector.node.get_subscriber_names_and_types_by_node(
+        self.subscriber_list = self.ros2_connector.get_subscribers_by_node(
             node_name=self.node_name, node_namespace=self.node_namespace
         )
 
         # Service Servers
-        # service_servers_list = get_service_server_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
-        self.service_server_list = self.ros2_connector.node.get_service_names_and_types_by_node(
+        self.service_server_list = self.ros2_connector.get_service_servers_by_node(
             node_name=self.node_name, node_namespace=self.node_namespace
         )
 
         # Service Clients
-        # service_clients_list = get_service_client_info(node=ros2_connector, remote_node_name=node_name, include_hidden=True)
-        self.service_client_list = self.ros2_connector.node.get_client_names_and_types_by_node(
+        self.service_client_list = self.ros2_connector.get_service_clients_by_node(
             node_name=self.node_name, node_namespace=self.node_namespace
         )
 
@@ -127,8 +116,7 @@ class NodeInfoPage(ContentPage):
         )
 
         # Parameters
-        future = call_list_parameters(node=self.ros2_connector.node, node_name=self.node_name)
-        self.parameter_list = future.result().result.names if future else []
+        self.parameter_list = self.ros2_connector.get_parameters_by_node(node_name=self.node_name)
 
         return (
             len(self.publisher_list)
@@ -251,18 +239,9 @@ class NodeInfoPage(ContentPage):
 
         # Parameters
         for param_name in sorted(self.parameter_list):
-            param_type = get_parameter_type_string(
-                call_describe_parameters(
-                    node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[param_name]
-                )
-                .descriptors[0]
-                .type
-            )
-            param_value = get_value(
-                parameter_value=call_get_parameters(
-                    node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[param_name]
-                ).values[0]
-            )
+            param_info = self.ros2_connector.get_parameter_info(node_name=self.node_name, parameter_name=param_name)
+            param_type = param_info["type"]
+            param_value = param_info["value"]
             row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
             row.add_suffix_btn(
                 icon_name="document-edit-symbolic",

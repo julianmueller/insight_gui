@@ -20,7 +20,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from ros2topic.api import get_msg_class
 from rosidl_runtime_py import (
     message_to_yaml,
     message_to_csv,
@@ -211,8 +210,8 @@ class TeleoperatorPage(ContentPage):
 
     def on_topic_suggestion_applied(self, _, item_text: str):
         try:
-            msg_class = get_msg_class(self.ros2_connector.node, item_text)
-            selected_topic_type = get_msg_full_name(msg_class)
+            msg_class = self.ros2_connector.get_message_class(topic_name=item_text)
+            selected_topic_type = self.ros2_connector.get_message_type_name(msg_class)
             found_index = find_str_in_list_store(self.teleop_type_list_store, selected_topic_type)
             if found_index >= 0:
                 self.teleop_type_row.set_selected(found_index)
@@ -409,11 +408,3 @@ class TeleopRow(AdditionalContentRow):
     def disable(self):
         for btn in self.btns:
             btn.set_sensitive(False)
-
-
-def get_msg_full_name(msg_class):
-    module_name = msg_class.__module__
-    package_name = module_name.split(".")[0]
-    message_type = module_name.split(".")[1]
-    message_name = msg_class.__name__
-    return f"{package_name}/{message_type}/{message_name}"

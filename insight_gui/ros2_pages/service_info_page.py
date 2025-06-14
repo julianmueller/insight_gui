@@ -92,7 +92,7 @@ class ServiceInfoPage(ContentPage):
 
         for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
             # add those nodes, that serve this service
-            self.service_server_list = self.ros2_connector.node.get_service_names_and_types_by_node(
+            self.service_server_list = self.ros2_connector.get_service_servers_by_node(
                 node_name=node_name,
                 node_namespace=node_namespace,
             )
@@ -109,7 +109,7 @@ class ServiceInfoPage(ContentPage):
                 self.service_servers_group.add_row(row)
 
             # add those nodes, that are clients to this service
-            self.service_client_list = self.ros2_connector.node.get_client_names_and_types_by_node(
+            self.service_client_list = self.ros2_connector.get_service_clients_by_node(
                 node_name=node_name, node_namespace=node_namespace
             )
             if any(self.service_name in service for service in self.service_client_list):

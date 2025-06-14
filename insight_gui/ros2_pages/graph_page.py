@@ -68,14 +68,12 @@ class GraphPage(ContentPage):
         for node_name, node_namespace, node_full_name in self.available_nodes:
             self.nx_graph.add_node(node_full_name, type="node")
 
-            publishers = self.ros2_connector.node.get_publisher_names_and_types_by_node(
-                node_name=node_name, node_namespace=node_namespace
-            )
+            publishers = self.ros2_connector.get_publishers_by_node(node_name=node_name, node_namespace=node_namespace)
             for topic_name, topic_types in publishers:
                 self.nx_graph.add_node(topic_name, type="topic")
                 self.nx_graph.add_edge(node_full_name, topic_name, type="publisher")
 
-            subscribers = self.ros2_connector.node.get_subscriber_names_and_types_by_node(
+            subscribers = self.ros2_connector.get_subscribers_by_node(
                 node_name=node_name, node_namespace=node_namespace
             )
             for topic_name, topic_types in subscribers:

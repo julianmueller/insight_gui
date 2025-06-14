@@ -24,7 +24,6 @@ import yaml
 import json
 import threading
 
-from ros2service.api import get_service_class
 from rosidl_runtime_py import set_message_fields
 from rosidl_runtime_py.utilities import get_service
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
@@ -37,11 +36,7 @@ from gi.repository import Gtk, Adw, Gio, GLib, Pango, GObject
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
-
-# from insight_gui.widgets.entry_row import EntryRow
-
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
-
 from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
@@ -184,12 +179,8 @@ class ServiceCallPage(ContentPage):
             return
 
         self.selected_service_name = self.service_row.get_selected_item().get_string()
-        self.service_class = get_service_class(
-            node=self.ros2_connector.node,
-            service_name=self.selected_service_name,
-            include_hidden_services=True,
-        )
-        self.selected_service_type = get_msg_full_name(self.service_class)
+        self.service_class = self.ros2_connector.get_service_class(service_name=self.selected_service_name)
+        self.selected_service_type = self.ros2_connector.get_service_type_name(self.service_class)
         self.service_type_row.set_subtitle(self.selected_service_type)
         self.service_type_row.set_subpage_link(
             nav_view=self.nav_view,
@@ -306,11 +297,3 @@ class ServiceCallPage(ContentPage):
         text = self.response_text_view_row.get_text()
         clip.set(str(text))
         self.show_toast("Response text copied!")
-
-
-def get_msg_full_name(msg_class):
-    module_name = msg_class.__module__
-    package_name = module_name.split(".")[0]
-    message_type = module_name.split(".")[1]
-    message_name = msg_class.__name__
-    return f"{package_name}/{message_type}/{message_name}"

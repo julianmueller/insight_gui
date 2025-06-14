@@ -23,13 +23,6 @@
 from typing import Dict
 from operator import itemgetter
 
-from ros2param.api import (
-    call_list_parameters,
-    call_get_parameters,
-    call_describe_parameters,
-    get_value,
-    get_parameter_type_string,
-)
 
 import gi
 
@@ -66,12 +59,7 @@ class ParameterListPage(ContentPage):
             # TODO add a button to enable/disable sorting into groups
             # get the namespace group of the action
 
-            # TODO this somehow also blocks
-            future = call_list_parameters(node=self.ros2_connector.node, node_name=node_name)
-            if future is None:
-                continue
-
-            param_list = future.result().result.names
+            param_list = self.ros2_connector.get_parameters_by_node(node_name=node_name)
             if len(param_list) == 0:
                 continue
 
@@ -84,18 +72,9 @@ class ParameterListPage(ContentPage):
             # create a group and add all parameters
             group = self.pref_page.add_group(title=node_name)
             for param_name in sorted(param_list):
-                param_type = get_parameter_type_string(
-                    call_describe_parameters(
-                        node=self.ros2_connector.node, node_name=node_name, parameter_names=[param_name]
-                    )
-                    .descriptors[0]
-                    .type
-                )
-                param_value = get_value(
-                    parameter_value=call_get_parameters(
-                        node=self.ros2_connector.node, node_name=node_name, parameter_names=[param_name]
-                    ).values[0]
-                )
+                param_info = self.ros2_connector.get_parameter_info(node_name=node_name, parameter_name=param_name)
+                param_type = param_info["type"]
+                param_value = param_info["value"]
                 row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
                 row.add_suffix_btn(
                     icon_name="document-edit-symbolic",

@@ -23,7 +23,6 @@
 import json
 import time
 
-from ros2topic.api import get_msg_class
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
 
 import gi
@@ -214,9 +213,9 @@ class TopicSubscriberPage(ContentPage):
         topic_name = self.topic_row.get_selected_item().get_string()
 
         if topic_name:
-            msg_class = get_msg_class(self.ros2_connector.node, topic_name)
+            msg_class = self.ros2_connector.get_message_class(topic_name=topic_name)
 
-            self.selected_topic_type = get_msg_full_name(msg_class)
+            self.selected_topic_type = self.ros2_connector.get_message_type_name(msg_class)
             self.topic_type_row.set_subtitle(self.selected_topic_type)
             self.topic_type_row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -284,11 +283,3 @@ class TopicSubscriberPage(ContentPage):
                 self.single_echo_done = True
 
             GLib.idle_add(_idle)
-
-
-def get_msg_full_name(msg_class):
-    module_name = msg_class.__module__
-    package_name = module_name.split(".")[0]
-    message_type = module_name.split(".")[1]
-    message_name = msg_class.__name__
-    return f"{package_name}/{message_type}/{message_name}"

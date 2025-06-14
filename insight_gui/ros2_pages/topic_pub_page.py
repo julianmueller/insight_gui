@@ -24,7 +24,6 @@ import json
 import yaml
 import time
 
-from ros2topic.api import get_msg_class
 from rosidl_runtime_py import (
     message_to_yaml,
     message_to_csv,
@@ -314,8 +313,8 @@ class TopicPublisherPage(ContentPage):
 
     def on_topic_suggestion_applied(self, _, item_text: str):
         try:
-            msg_class = get_msg_class(self.ros2_connector.node, item_text)
-            selected_topic_type = get_msg_full_name(msg_class)
+            msg_class = self.ros2_connector.get_message_class(topic_name=item_text)
+            selected_topic_type = self.ros2_connector.get_message_type_name(msg_class)
             found_index = find_str_in_list_store(self.topic_type_list_store, selected_topic_type)
             if found_index >= 0:
                 self.topic_type_row.set_selected(found_index)
@@ -384,7 +383,9 @@ class TopicPublisherPage(ContentPage):
         if not self.msg_class or not self.topic_name:
             return
 
-        if self.check_topic_name_and_type(self.topic_name, get_msg_full_name(self.msg_class), toast=True):
+        if self.check_topic_name_and_type(
+            self.topic_name, self.ros2_connector.get_message_type_name(self.msg_class), toast=True
+        ):
             self.enable_publish_btn()
         else:
             self.disable_publish_btn()
@@ -441,11 +442,3 @@ class TopicPublisherPage(ContentPage):
         except Exception as e:
             super().show_toast(f"Error parsing the message data: {e}")
             return False
-
-
-def get_msg_full_name(msg_class):
-    module_name = msg_class.__module__
-    package_name = module_name.split(".")[0]
-    message_type = module_name.split(".")[1]
-    message_name = msg_class.__name__
-    return f"{package_name}/{message_type}/{message_name}"
