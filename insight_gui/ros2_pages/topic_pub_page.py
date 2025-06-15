@@ -173,7 +173,9 @@ class TopicPublisherPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()
-        self.available_topics = sorted([n for n, t in self.ros2_connector.get_available_topics(include_hidden=True)])
+        self.available_topics = sorted(
+            [n for n, t in self.ros2_connector.get_available_topics(include_hidden=True, include_action_topics=False)]
+        )
         return len(self.available_msgs) + len(self.available_topics) > 0
 
     def refresh_ui(self):

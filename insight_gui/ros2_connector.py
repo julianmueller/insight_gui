@@ -20,10 +20,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from typing import Callable, Dict, Any, Tuple, List
-from operator import itemgetter
+import re
 import time
 import threading
+import importlib
+from typing import Callable, Dict, Any, Tuple, List
+from operator import itemgetter
 
 import rclpy
 from rclpy.node import Node
@@ -31,18 +33,46 @@ from rclpy.publisher import Publisher, MsgType
 from rclpy.subscription import Subscription
 from rclpy.service import Service, SrvType, SrvTypeRequest, SrvTypeResponse
 from rclpy.timer import Timer
-
-# ROS2 API imports for data collection
-from ros2topic.api import get_topic_names_and_types, get_msg_class
-from ros2node.api import get_node_names
-from ros2service.api import get_service_names_and_types, get_service_class
+from rclpy.action import ActionClient
+from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from rclpy.action import get_action_names_and_types
 from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
+
+# ROS2 API imports for data collection
+from ros2node.api import get_node_names, _is_hidden_name
+from ros2topic.api import get_topic_names_and_types, get_msg_class
+from ros2service.api import get_service_names_and_types, get_service_class
+from ros2param.api import (
+    call_describe_parameters,
+    get_parameter_type_string,
+    call_get_parameters,
+    get_value,
+    call_list_parameters,
+)
 
 import gi
 
 gi.require_version("GLib", "2.0")
 from gi.repository import GLib, Gio
+
+# Cache key constants
+CACHE_NODES = "nodes"
+CACHE_TOPICS = "topics"
+CACHE_SERVICES = "services"
+CACHE_ACTIONS = "actions"
+CACHE_PUBLISHERS = "publishers"
+CACHE_SUBSCRIBERS = "subscribers"
+CACHE_SERVICE_CLIENTS = "service_clients"
+CACHE_SERVICE_SERVERS = "service_servers"
+CACHE_ACTION_CLIENTS = "action_clients"
+CACHE_ACTION_SERVERS = "action_servers"
+CACHE_PARAMETERS = "parameters"
+CACHE_PARAM_VALUE = "param_value"
+CACHE_PARAM_TYPE = "param_type"
+CACHE_PARAM_INFO = "param_info"
+CACHE_MSG_CLASS = "msg_class"
+CACHE_SRV_CLASS = "srv_class"
+CACHE_ACTION_CLASS = "action_class"
 
 
 class ROS2Connector:
@@ -206,49 +236,114 @@ class ROS2Connector:
         """Set the cache timeout in seconds."""
         self.cache_timeout = timeout
 
+    # Helper methods for filtering
+    def _filter_hidden_nodes(self, nodes: List[Tuple[str, str, str]]) -> List[Tuple[str, str, str]]:
+        """Filter out hidden nodes from a list of nodes."""
+        return [(name, namespace, full_name) for name, namespace, full_name in nodes if not _is_hidden_name(name)]
+
+    def _filter_hidden_topics_services(self, items: List[Tuple[str, List[str]]]) -> List[Tuple[str, List[str]]]:
+        """Filter out hidden topics or services from a list."""
+        return [(name, types) for name, types in items if not topic_or_service_is_hidden(name)]
+
+    def _filter_action_topics(self, topics: List[Tuple[str, List[str]]]) -> List[Tuple[str, List[str]]]:
+        """Filter out action-related topics from a list of topics."""
+        return [
+            (name, types)
+            for name, types in topics
+            if not re.search(r"/_action/(status|feedback|cancel_goal|get_result|send_goal)", name)
+        ]
+
+    def _filter_action_services(self, services: List[Tuple[str, List[str]]]) -> List[Tuple[str, List[str]]]:
+        """Filter out action-related services from a list of services."""
+        return [
+            (name, types)
+            for name, types in services
+            if not re.search(r"/_action/(cancel_goal|get_result|send_goal)", name)
+        ]
+
+    def _filter_param_services(self, services: List[Tuple[str, List[str]]]) -> List[Tuple[str, List[str]]]:
+        """Filter out parameter-related services from a list of services."""
+        return [
+            (name, types)
+            for name, types in services
+            if not re.search(
+                r"/(describe_parameters|get_parameters|get_parameter_types|list_parameters|set_parameters|set_parameters_atomically|get_type_description)",
+                name,
+            )
+        ]
+
     # Standardized ROS2 data collection methods with caching
     def get_available_nodes(self, include_hidden: bool = True, use_cache: bool = True) -> List[Tuple[str, str, str]]:
         """Get available nodes with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"nodes{'_hidden' if include_hidden else ''}"
-
         if use_cache:
-            cached_data = self._get_from_cache(cache_key)
+            cached_data = self._get_from_cache(CACHE_NODES)
             if cached_data is not None:
+                # Filter hidden nodes if requested
+                if not include_hidden:
+                    cached_data = [
+                        (name, namespace, full_name)
+                        for name, namespace, full_name in cached_data
+                        if not _is_hidden_name(name)
+                    ]
                 return cached_data
 
         try:
-            nodes = get_node_names(node=self.node, include_hidden_nodes=include_hidden)
+            # Always fetch with hidden nodes included for caching
+            nodes = get_node_names(node=self.node, include_hidden_nodes=True)
             nodes = sorted(nodes, key=itemgetter(0))  # Sort by node name
 
             if use_cache:
-                self._store_in_cache(cache_key, nodes)
+                self._store_in_cache(CACHE_NODES, nodes)
+
+            # Filter hidden nodes if requested
+            if not include_hidden:
+                nodes = [
+                    (name, namespace, full_name) for name, namespace, full_name in nodes if not _is_hidden_name(name)
+                ]
 
             return nodes
         except Exception as e:
             print(f"Error getting nodes: {e}")
             return []
 
-    def get_available_topics(self, include_hidden: bool = True, use_cache: bool = True) -> List[Tuple[str, List[str]]]:
+    def get_available_topics(
+        self, include_hidden: bool = True, include_action_topics: bool = True, use_cache: bool = True
+    ) -> List[Tuple[str, List[str]]]:
         """Get available topics with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"topics{'_hidden' if include_hidden else ''}"
-
         if use_cache:
-            cached_data = self._get_from_cache(cache_key)
+            cached_data = self._get_from_cache(CACHE_TOPICS)
             if cached_data is not None:
+                # Filter hidden topics if requested
+                if not include_hidden:
+                    cached_data = self._filter_hidden_topics_services(cached_data)
+
+                # Filter action-related topics if requested
+                if not include_action_topics:
+                    cached_data = self._filter_action_topics(cached_data)
+
                 return cached_data
 
         try:
-            topics = get_topic_names_and_types(node=self.node, include_hidden_topics=include_hidden)
+            # Always fetch with hidden topics included for caching
+            topics = get_topic_names_and_types(node=self.node, include_hidden_topics=True)
             topics = sorted(topics, key=itemgetter(0))  # Sort by topic name
 
             if use_cache:
-                self._store_in_cache(cache_key, topics)
+                self._store_in_cache(CACHE_TOPICS, topics)
+
+            # Filter hidden topics if requested
+            if not include_hidden:
+                topics = self._filter_hidden_topics_services(topics)
+
+            # Filter action-related topics if requested
+            if not include_action_topics:
+                topics = self._filter_action_topics(topics)
 
             return topics
         except Exception as e:
@@ -256,17 +351,20 @@ class ROS2Connector:
             return []
 
     def get_publishers_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
+        self, node_name: str, node_namespace: str = "/", include_action_topics: bool = True, use_cache: bool = True
     ) -> List[Tuple[str, List[str]]]:
         """Get publishers for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"publishers_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_PUBLISHERS}_{node_namespace}_{node_name}"
 
         if use_cache:
             cached_data = self._get_from_cache(cache_key)
             if cached_data is not None:
+                # Filter action-related topics if requested
+                if not include_action_topics:
+                    cached_data = self._filter_action_topics(cached_data)
                 return cached_data
 
         try:
@@ -278,23 +376,30 @@ class ROS2Connector:
             if use_cache:
                 self._store_in_cache(cache_key, publishers)
 
+            # Filter action-related topics if requested
+            if not include_action_topics:
+                publishers = self._filter_action_topics(publishers)
+
             return publishers
         except Exception as e:
             print(f"Error getting publishers for node {node_namespace}/{node_name}: {e}")
             return []
 
     def get_subscribers_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
+        self, node_name: str, node_namespace: str = "/", include_action_topics: bool = True, use_cache: bool = True
     ) -> List[Tuple[str, List[str]]]:
         """Get subscribers for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"subscribers_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_SUBSCRIBERS}_{node_namespace}_{node_name}"
 
         if use_cache:
             cached_data = self._get_from_cache(cache_key)
             if cached_data is not None:
+                # Filter action-related topics if requested
+                if not include_action_topics:
+                    cached_data = self._filter_action_topics(cached_data)
                 return cached_data
 
         try:
@@ -306,31 +411,62 @@ class ROS2Connector:
             if use_cache:
                 self._store_in_cache(cache_key, subscribers)
 
+            # Filter action-related topics if requested
+            if not include_action_topics:
+                subscribers = self._filter_action_topics(subscribers)
+
             return subscribers
         except Exception as e:
             print(f"Error getting subscribers for node {node_namespace}/{node_name}: {e}")
             return []
 
     def get_available_services(
-        self, include_hidden: bool = True, use_cache: bool = True
+        self,
+        include_hidden: bool = True,
+        include_action_srvs: bool = True,
+        include_param_srvs: bool = True,
+        use_cache: bool = True,
     ) -> List[Tuple[str, List[str]]]:
         """Get available services with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"services{'_hidden' if include_hidden else ''}"
-
         if use_cache:
-            cached_data = self._get_from_cache(cache_key)
+            cached_data = self._get_from_cache(CACHE_SERVICES)
             if cached_data is not None:
+                # Filter hidden services if requested
+                if not include_hidden:
+                    cached_data = self._filter_hidden_topics_services(cached_data)
+
+                # Filter action-related services if requested
+                if not include_action_srvs:
+                    cached_data = self._filter_action_services(cached_data)
+
+                # Filter parameter-related services if requested
+                if not include_param_srvs:
+                    cached_data = self._filter_param_services(cached_data)
+
                 return cached_data
 
         try:
-            services = get_service_names_and_types(node=self.node, include_hidden_services=include_hidden)
+            # Always fetch with hidden services included for caching
+            services = get_service_names_and_types(node=self.node, include_hidden_services=True)
             services = sorted(services, key=itemgetter(0))  # Sort by service name
 
             if use_cache:
-                self._store_in_cache(cache_key, services)
+                self._store_in_cache(CACHE_SERVICES, services)
+
+            # Filter hidden services if requested
+            if not include_hidden:
+                services = self._filter_hidden_topics_services(services)
+
+            # Filter action-related services if requested
+            if not include_action_srvs:
+                services = self._filter_action_services(services)
+
+            # Filter parameter-related services if requested
+            if not include_param_srvs:
+                services = self._filter_param_services(services)
 
             return services
         except Exception as e:
@@ -338,17 +474,28 @@ class ROS2Connector:
             return []
 
     def get_service_clients_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
+        self,
+        node_name: str,
+        node_namespace: str = "/",
+        include_action_srvs: bool = True,
+        include_param_srvs: bool = True,
+        use_cache: bool = True,
     ) -> List[Tuple[str, List[str]]]:
         """Get service clients for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"service_clients_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_SERVICE_CLIENTS}_{node_namespace}_{node_name}"
 
         if use_cache:
             cached_data = self._get_from_cache(cache_key)
             if cached_data is not None:
+                # Filter action-related services if requested
+                if not include_action_srvs:
+                    cached_data = self._filter_action_services(cached_data)
+                # Filter parameter-related services if requested
+                if not include_param_srvs:
+                    cached_data = self._filter_param_services(cached_data)
                 return cached_data
 
         try:
@@ -360,23 +507,41 @@ class ROS2Connector:
             if use_cache:
                 self._store_in_cache(cache_key, service_clients)
 
+            # Filter action-related services if requested
+            if not include_action_srvs:
+                service_clients = self._filter_action_services(service_clients)
+            # Filter parameter-related services if requested
+            if not include_param_srvs:
+                service_clients = self._filter_param_services(service_clients)
+
             return service_clients
         except Exception as e:
             print(f"Error getting service clients for node {node_namespace}/{node_name}: {e}")
             return []
 
     def get_service_servers_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
+        self,
+        node_name: str,
+        node_namespace: str = "/",
+        include_action_srvs: bool = True,
+        include_param_srvs: bool = True,
+        use_cache: bool = True,
     ) -> List[Tuple[str, List[str]]]:
         """Get service servers for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"service_servers_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_SERVICE_SERVERS}_{node_namespace}_{node_name}"
 
         if use_cache:
             cached_data = self._get_from_cache(cache_key)
             if cached_data is not None:
+                # Filter action-related services if requested
+                if not include_action_srvs:
+                    cached_data = self._filter_action_services(cached_data)
+                # Filter parameter-related services if requested
+                if not include_param_srvs:
+                    cached_data = self._filter_param_services(cached_data)
                 return cached_data
 
         try:
@@ -388,6 +553,13 @@ class ROS2Connector:
             if use_cache:
                 self._store_in_cache(cache_key, service_servers)
 
+            # Filter action-related services if requested
+            if not include_action_srvs:
+                service_servers = self._filter_action_services(service_servers)
+            # Filter parameter-related services if requested
+            if not include_param_srvs:
+                service_servers = self._filter_param_services(service_servers)
+
             return service_servers
         except Exception as e:
             print(f"Error getting service servers for node {node_namespace}/{node_name}: {e}")
@@ -398,10 +570,8 @@ class ROS2Connector:
         if not self.is_running or not self.node:
             return []
 
-        cache_key = "actions"
-
         if use_cache:
-            cached_data = self._get_from_cache(cache_key)
+            cached_data = self._get_from_cache(CACHE_ACTIONS)
             if cached_data is not None:
                 return cached_data
 
@@ -410,7 +580,7 @@ class ROS2Connector:
             actions = sorted(actions, key=lambda x: x[0])  # Sort by action name
 
             if use_cache:
-                self._store_in_cache(cache_key, actions)
+                self._store_in_cache(CACHE_ACTIONS, actions)
 
             return actions
         except Exception as e:
@@ -424,7 +594,7 @@ class ROS2Connector:
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"action_clients_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_ACTION_CLIENTS}_{node_namespace}_{node_name}"
 
         if use_cache:
             cached_data = self._get_from_cache(cache_key)
@@ -452,7 +622,7 @@ class ROS2Connector:
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"action_servers_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_ACTION_SERVERS}_{node_namespace}_{node_name}"
 
         if use_cache:
             cached_data = self._get_from_cache(cache_key)
@@ -487,8 +657,6 @@ class ROS2Connector:
                 return cached_data
 
         try:
-            from ros2param.api import call_list_parameters
-
             future = call_list_parameters(node=self.node, node_name=node_name)
             parameters = future.result().result.names if future else []
             parameters = sorted(parameters)  # Sort parameter names
@@ -514,8 +682,6 @@ class ROS2Connector:
                 return cached_data
 
         try:
-            from ros2param.api import call_get_parameters, get_value
-
             param_value = get_value(
                 parameter_value=call_get_parameters(
                     node=self.node, node_name=node_name, parameter_names=[parameter_name]
@@ -543,8 +709,6 @@ class ROS2Connector:
                 return cached_data
 
         try:
-            from ros2param.api import call_describe_parameters, get_parameter_type_string
-
             param_type = get_parameter_type_string(
                 call_describe_parameters(node=self.node, node_name=node_name, parameter_names=[parameter_name])
                 .descriptors[0]
@@ -572,13 +736,6 @@ class ROS2Connector:
                 return cached_data
 
         try:
-            from ros2param.api import (
-                call_get_parameters,
-                call_describe_parameters,
-                get_value,
-                get_parameter_type_string,
-            )
-
             # Get both type and value in one go for efficiency
             param_type = get_parameter_type_string(
                 call_describe_parameters(node=self.node, node_name=node_name, parameter_names=[parameter_name])
@@ -702,102 +859,183 @@ class ROS2Connector:
             service_name = srv_class.__name__
             return f"{package_name}/{service_type}/{service_name}"
 
+    def get_action_class(self, action_name: str, use_cache: bool = True) -> Any:
+        """Get action class for a specific action with caching support."""
+        if not self.is_running or not self.node:
+            return None
+
+        cache_key = f"action_class_{action_name}"
+
+        if use_cache:
+            cached_data = self._get_from_cache(cache_key)
+            if cached_data is not None:
+                return cached_data
+
+        try:
+            # Get the action type from available actions
+            available_actions = self.get_available_actions()
+            action_type = None
+            for name, types in available_actions:
+                if name == action_name:
+                    action_type = types[0] if types else None
+                    break
+
+            if not action_type:
+                return None
+
+            # Import the action class dynamically
+            package_name, interface_type, action_name_only = action_type.split("/")
+            module_name = f"{package_name}.{interface_type}"
+
+            module = importlib.import_module(module_name)
+            action_class = getattr(module, action_name_only)
+
+            if use_cache:
+                self._store_in_cache(cache_key, action_class)
+
+            return action_class
+        except Exception as e:
+            print(f"Error getting action class for action {action_name}: {e}")
+            return None
+
+    def get_action_type_name(self, action_class) -> str:
+        """Get the full type name for an action class (e.g., 'example_interfaces/action/Fibonacci')."""
+        if not action_class:
+            return ""
+
+        try:
+            # Action classes have the same module structure as messages
+            module_name = action_class.__module__
+            parts = module_name.split(".")
+            if len(parts) >= 3:
+                package_name = parts[0]
+                interface_type = parts[1]  # should be 'action'
+                action_name = action_class.__name__
+                return f"{package_name}/{interface_type}/{action_name}"
+            else:
+                # Fallback for edge cases
+                return f"{action_class.__module__}.{action_class.__name__}"
+        except Exception as e:
+            print(f"Error getting action type name: {e}")
+            # Fallback implementation
+            module_name = action_class.__module__
+            package_name = module_name.split(".")[0]
+            action_type = module_name.split(".")[1] if len(module_name.split(".")) > 1 else "action"
+            action_name = action_class.__name__
+            return f"{package_name}/{action_type}/{action_name}"
+
+    def send_action_goal(self, action_type, action_name: str, goal, feedback_callback=None, timeout_sec: int = -1):
+        """Send an action goal and return the action client for managing the goal."""
+        if not self.is_running:
+            return None
+
+        action_client = ActionClient(self.node, action_type, action_name)
+
+        if not action_client.wait_for_server(timeout_sec=2.0):
+            raise RuntimeError(f"Action server '{action_name}' not available")
+
+        goal_future = action_client.send_goal_async(goal, feedback_callback=feedback_callback)
+
+        return action_client, goal_future
+
     # Convenience methods for cache management
     def refresh_nodes_cache(self, include_hidden: bool = True) -> List[Tuple[str, str, str]]:
         """Force refresh nodes cache and return new data."""
-        cache_key = f"nodes{'_hidden' if include_hidden else ''}"
-        self.clear_cache(cache_key)
+        self.clear_cache(CACHE_NODES)
         return self.get_available_nodes(include_hidden=include_hidden, use_cache=True)
 
     def refresh_topics_cache(self, include_hidden: bool = True) -> List[Tuple[str, List[str]]]:
         """Force refresh topics cache and return new data."""
-        cache_key = f"topics{'_hidden' if include_hidden else ''}"
-        self.clear_cache(cache_key)
+        self.clear_cache(CACHE_TOPICS)
         return self.get_available_topics(include_hidden=include_hidden, use_cache=True)
 
     def refresh_publishers_cache(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Force refresh publishers cache for a specific node and return new data."""
-        cache_key = f"publishers_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_PUBLISHERS}_{node_namespace}_{node_name}"
         self.clear_cache(cache_key)
         return self.get_publishers_by_node(node_name=node_name, node_namespace=node_namespace, use_cache=True)
 
     def refresh_subscribers_cache(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Force refresh subscribers cache for a specific node and return new data."""
-        cache_key = f"subscribers_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_SUBSCRIBERS}_{node_namespace}_{node_name}"
         self.clear_cache(cache_key)
         return self.get_subscribers_by_node(node_name=node_name, node_namespace=node_namespace, use_cache=True)
 
     def refresh_services_cache(self, include_hidden: bool = True) -> List[Tuple[str, List[str]]]:
         """Force refresh services cache and return new data."""
-        cache_key = f"services{'_hidden' if include_hidden else ''}"
-        self.clear_cache(cache_key)
+        self.clear_cache(CACHE_SERVICES)
         return self.get_available_services(include_hidden=include_hidden, use_cache=True)
 
     def refresh_service_clients_cache(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Force refresh service clients cache for a specific node and return new data."""
-        cache_key = f"service_clients_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_SERVICE_CLIENTS}_{node_namespace}_{node_name}"
         self.clear_cache(cache_key)
         return self.get_service_clients_by_node(node_name=node_name, node_namespace=node_namespace, use_cache=True)
 
     def refresh_service_servers_cache(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Force refresh service servers cache for a specific node and return new data."""
-        cache_key = f"service_servers_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_SERVICE_SERVERS}_{node_namespace}_{node_name}"
         self.clear_cache(cache_key)
         return self.get_service_servers_by_node(node_name=node_name, node_namespace=node_namespace, use_cache=True)
 
     def refresh_actions_cache(self) -> List[Tuple[str, List[str]]]:
         """Force refresh actions cache and return new data."""
-        cache_key = "actions"
-        self.clear_cache(cache_key)
+        self.clear_cache(CACHE_ACTIONS)
         return self.get_available_actions(use_cache=True)
 
     def refresh_action_clients_cache(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Force refresh action clients cache for a specific node and return new data."""
-        cache_key = f"action_clients_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_ACTION_CLIENTS}_{node_namespace}_{node_name}"
         self.clear_cache(cache_key)
         return self.get_action_clients_by_node(node_name=node_name, node_namespace=node_namespace, use_cache=True)
 
     def refresh_action_servers_cache(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Force refresh action servers cache for a specific node and return new data."""
-        cache_key = f"action_servers_{node_namespace}_{node_name}"
+        cache_key = f"{CACHE_ACTION_SERVERS}_{node_namespace}_{node_name}"
         self.clear_cache(cache_key)
         return self.get_action_servers_by_node(node_name=node_name, node_namespace=node_namespace, use_cache=True)
 
     def refresh_parameters_cache(self, node_name: str) -> List[str]:
         """Force refresh parameters cache for a specific node and return new data."""
-        cache_key = f"parameters_{node_name}"
+        cache_key = f"{CACHE_PARAMETERS}_{node_name}"
         self.clear_cache(cache_key)
         return self.get_parameters_by_node(node_name=node_name, use_cache=True)
 
     def refresh_parameter_value_cache(self, node_name: str, parameter_name: str) -> Any:
         """Force refresh parameter value cache for a specific parameter and return new data."""
-        cache_key = f"param_value_{node_name}_{parameter_name}"
+        cache_key = f"{CACHE_PARAM_VALUE}_{node_name}_{parameter_name}"
         self.clear_cache(cache_key)
         return self.get_parameter_value(node_name=node_name, parameter_name=parameter_name, use_cache=True)
 
     def refresh_parameter_type_cache(self, node_name: str, parameter_name: str) -> str:
         """Force refresh parameter type cache for a specific parameter and return new data."""
-        cache_key = f"param_type_{node_name}_{parameter_name}"
+        cache_key = f"{CACHE_PARAM_TYPE}_{node_name}_{parameter_name}"
         self.clear_cache(cache_key)
         return self.get_parameter_type(node_name=node_name, parameter_name=parameter_name, use_cache=True)
 
     def refresh_parameter_info_cache(self, node_name: str, parameter_name: str) -> Dict[str, Any]:
         """Force refresh parameter info cache for a specific parameter and return new data."""
-        cache_key = f"param_info_{node_name}_{parameter_name}"
+        cache_key = f"{CACHE_PARAM_INFO}_{node_name}_{parameter_name}"
         self.clear_cache(cache_key)
         return self.get_parameter_info(node_name=node_name, parameter_name=parameter_name, use_cache=True)
 
     def refresh_message_class_cache(self, topic_name: str) -> Any:
         """Force refresh message class cache for a specific topic and return new data."""
-        cache_key = f"msg_class_{topic_name}"
+        cache_key = f"{CACHE_MSG_CLASS}_{topic_name}"
         self.clear_cache(cache_key)
         return self.get_message_class(topic_name=topic_name, use_cache=True)
 
     def refresh_service_class_cache(self, service_name: str) -> Any:
         """Force refresh service class cache for a specific service and return new data."""
-        cache_key = f"srv_class_{service_name}"
+        cache_key = f"{CACHE_SRV_CLASS}_{service_name}"
         self.clear_cache(cache_key)
         return self.get_service_class(service_name=service_name, use_cache=True)
+
+    def refresh_action_class_cache(self, action_name: str) -> Any:
+        """Force refresh action class cache for a specific action and return new data."""
+        cache_key = f"{CACHE_ACTION_CLASS}_{action_name}"
+        self.clear_cache(cache_key)
+        return self.get_action_class(action_name=action_name, use_cache=True)
 
     def refresh_all_node_caches(self, node_name: str, node_namespace: str = "/") -> None:
         """Force refresh all caches for a specific node."""
