@@ -59,7 +59,7 @@ class JointStatesPage(ContentPage):
     def refresh_bg(self) -> bool:
         self.joint_states_topic_list = []
 
-        available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
+        available_topics = self.ros2_connector.get_available_topics()
 
         for i, (topic_name, topic_types) in enumerate(available_topics):
             # topic_types is a list, as multiple servers can advertise different types to the same topic

@@ -173,9 +173,7 @@ class TopicPublisherPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()
-        self.available_topics = sorted(
-            [n for n, t in self.ros2_connector.get_available_topics(include_hidden=True, include_action_topics=False)]
-        )
+        self.available_topics = sorted([n for n, t in self.ros2_connector.get_available_topics()])
         return len(self.available_msgs) + len(self.available_topics) > 0
 
     def refresh_ui(self):
@@ -371,7 +369,7 @@ class TopicPublisherPage(ContentPage):
             return False
 
         # check if the topic name is already published with a different type
-        available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
+        available_topics = self.ros2_connector.get_available_topics()
         for n, t in available_topics:
             if topic_name == n and n != self.topic_name:
                 if topic_type not in t:

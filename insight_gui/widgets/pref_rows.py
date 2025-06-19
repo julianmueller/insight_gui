@@ -886,7 +886,8 @@ class MultiToggleButtonRow(AdditionalContentRow):
         self.content_box.set_properties(
             orientation=Gtk.Orientation.HORIZONTAL,
             spacing=0,
-            halign=Gtk.Align.CENTER,
+            halign=Gtk.Align.FILL,
+            hexpand=True,
             css_classes=["linked"],
         )
 
@@ -907,7 +908,7 @@ class MultiToggleButtonRow(AdditionalContentRow):
             if btn_id == unique_id:
                 raise ValueError(f"ToggleButton with unique_id '{unique_id}' already exists, but they must be unique")
 
-        toggle_btn = ToggleButton(func=self.on_btn_toggled, **kwargs)
+        toggle_btn = ToggleButton(func=self.on_btn_toggled, hexpand=True, halign=Gtk.Align.FILL, **kwargs)
         # toggle_btn.connect("toggled", self.on_btn_toggled)
         self.content_box.append(toggle_btn)
         self.buttons[unique_id] = toggle_btn

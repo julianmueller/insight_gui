@@ -46,7 +46,7 @@ class NodeListPage(ContentPage):
         self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
 
     def refresh_bg(self) -> bool:
-        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=True)
+        self.available_nodes = self.ros2_connector.get_available_nodes()
 
         if len(self.available_nodes) == 0:
             self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")

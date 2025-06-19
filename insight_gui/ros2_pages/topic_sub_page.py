@@ -142,9 +142,7 @@ class TopicSubscriberPage(ContentPage):
         # TODO add rows that display infos about the topic, like qos and rate etc
 
     def refresh_bg(self) -> bool:
-        self.available_topics = self.ros2_connector.get_available_topics(
-            include_hidden=True, include_action_topics=False
-        )
+        self.available_topics = self.ros2_connector.get_available_topics()
         return len(self.available_topics) > 0
 
     def refresh_ui(self):

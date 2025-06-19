@@ -40,11 +40,15 @@ from insight_gui.window import MainWindow
 from insight_gui.ros2_connector import ROS2Connector
 
 
+APPLICATION_ID = "com.github.julianmueller.Insight"
+APPLICATION_PATH = APPLICATION_ID.replace(".", "/")
+
+
 class Ros2GuiApp(Adw.Application):
     __gtype_name__ = "InsightApplication"
 
     def __init__(self, share_dir: Path = None):
-        super().__init__(application_id="com.github.julianmueller.Insight")
+        super().__init__(application_id=APPLICATION_ID)
         Gtk.init()
         Adw.init()
 
@@ -56,10 +60,22 @@ class Ros2GuiApp(Adw.Application):
 
         # set the application icon
         theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
-        theme.add_resource_path("/com/github/julianmueller/Insight/logo")
+        theme.add_resource_path(APPLICATION_PATH + "/logo")
 
         self.window: Adw.ApplicationWindow = None
         self.detached_windows: list[Adw.ApplicationWindow] = []
+
+        # Initialize settings
+        try:
+            # self.settings = Gio.Settings.new(APPLICATION_ID)
+            schema_source = Gio.SettingsSchemaSource.new_from_directory(
+                str(self.share_dir), Gio.SettingsSchemaSource.get_default(), False
+            )
+            schema = schema_source.lookup(APPLICATION_ID, False)
+            self.settings = Gio.Settings.new_full(schema, None, None)
+
+        except Exception as e:
+            print(f"Application: Could not initialize GSettings normally: {e}")
 
     def do_startup(self):
         Adw.Application.do_startup(self)

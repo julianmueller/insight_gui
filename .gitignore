@@ -1,5 +1,6 @@
 # GTK4
-*.gresource
+resources.gresource
+gschemas.compiled
 
 # https://github.com/github/gitignore/blob/main/community/ROS2.gitignore
 # 2024-11-20

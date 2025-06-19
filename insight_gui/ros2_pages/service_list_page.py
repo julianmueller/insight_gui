@@ -51,7 +51,7 @@ class ServiceListPage(ContentPage):
         self.service_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.available_services = self.ros2_connector.get_available_services(include_hidden=True)
+        self.available_services = self.ros2_connector.get_available_services()
         return len(self.available_services) > 0
 
     def refresh_ui(self):
@@ -68,18 +68,6 @@ class ServiceListPage(ContentPage):
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
 
-            # skip services that are caused by parameters # TODO add an option to toggle this
-            if re.search(
-                r"/(describe_parameters|get_parameter_types|get_parameters|get_type_description|list_parameters|set_parameters|set_parameters_atomically)",
-                service_name,
-            ):
-                continue
-
-            # skip services that are caused by actions
-            if re.search(r"/_action/(cancel_goal|get_result|send_goal)", service_name):
-                continue
-
-            # TODO add a button to enable/disable sorting into groups
             # get the namespace group of the service
             if namespace in self.service_ns_groups.keys():
                 group = self.service_ns_groups[namespace]

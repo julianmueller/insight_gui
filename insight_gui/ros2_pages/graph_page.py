@@ -61,8 +61,8 @@ class GraphPage(ContentPage):
         self.nx_graph.clear()
 
         # get all nodes and topics
-        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=True)
-        self.available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
+        self.available_nodes = self.ros2_connector.get_available_nodes()
+        self.available_topics = self.ros2_connector.get_available_topics()
 
         # collect node and topic info
         for node_name, node_namespace, node_full_name in self.available_nodes:

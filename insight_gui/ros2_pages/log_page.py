@@ -79,13 +79,17 @@ class LoggerPage(ContentPage):
         super().__init__(refreshable=False, searchable=False, **kwargs)
         super().set_title("Logger")
 
+    def _deferred_init(self):
+        super()._deferred_init()
+
         # self.is_logging = False
-        self.rosout_sub = None
+        # self.rosout_sub = None
+        self.rosout_sub = self.ros2_connector.add_subsciption(Log, "/rosout", self.log_callback)
 
         # Btn for opening the online link to msg definition
         self.play_pause_btn = super().add_bottom_widget(
             PlayPauseButton(
-                default_active=False,
+                default_active=True,
                 func=self.on_logging_btn_toggled,
                 labels=("Stop logging", "Start logging"),
             ),
@@ -163,18 +167,20 @@ class LoggerPage(ContentPage):
         # logger = get_logger("custom_logger")
         # logger.set_handler(custom_log_handler)
 
+        self.play_pause_btn.activate()
+
     @GObject.Property(type=bool, default=False)
     def is_logging(self) -> bool:
         return self.play_pause_btn.is_active
 
     @is_logging.setter
     def is_logging(self, value: bool):
-        if value:
-            # create subscription to the rosout topic via the ros2 connector
-            self.rosout_sub = self.ros2_connector.add_subsciption(Log, "/rosout", self.log_callback)
-        else:
-            self.ros2_connector.destroy_subscription(self.rosout_sub)
-            self.rosout_sub = None
+        self.play_pause_btn.set_active(value)
+        # if value:
+        #     # create subscription to the rosout topic via the ros2 connector
+        # else:
+        #     self.ros2_connector.destroy_subscription(self.rosout_sub)
+        #     self.rosout_sub = None
 
     def on_unrealize(self, *args):
         # super().on_unrealize(*args)

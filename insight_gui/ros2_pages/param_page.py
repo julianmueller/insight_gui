@@ -49,16 +49,14 @@ class ParameterListPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         super().show_toast("Collecting parameters... This may take a few seconds.")
-        self.available_nodes = self.ros2_connector.get_available_nodes(include_hidden=True)
+        self.available_nodes = self.ros2_connector.get_available_nodes()
 
         if len(self.available_nodes) == 0:
             self.pref_page.set_empty_group_text("No Parameters found. Refresh to try again.")
             return False
 
         for node_name, node_namespace, node_full_name in sorted(self.available_nodes):
-            # TODO add a button to enable/disable sorting into groups
             # get the namespace group of the action
-
             param_list = self.ros2_connector.get_parameters_by_node(node_name=node_name)
             if len(param_list) == 0:
                 continue

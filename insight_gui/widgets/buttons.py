@@ -44,14 +44,14 @@ class ToggleButton(Gtk.ToggleButton):
         icon_names: tuple[str, str] | str = None,
         tooltip_texts: tuple[str, str] | str = None,
         css_classes: tuple[list[str], list[str]] | list[str] = None,
+        # vexpand=False,
+        # valign=Gtk.Align.CENTER,
+        # hexpand=False,
+        # halign=Gtk.Align.CENTER,
         **kwargs,
     ):
         super().__init__(
             active=default_active,
-            vexpand=False,
-            valign=Gtk.Align.CENTER,
-            hexpand=False,
-            halign=Gtk.Align.CENTER,
             **kwargs,
         )
 

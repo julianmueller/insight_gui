@@ -144,9 +144,7 @@ class ServiceCallPage(ContentPage):
         )
 
     def refresh_bg(self) -> bool:
-        self.available_services = self.ros2_connector.get_available_services(
-            include_hidden=True, include_action_srvs=False, include_param_srvs=False
-        )
+        self.available_services = self.ros2_connector.get_available_services()
         return len(self.available_services) > 0
 
     def refresh_ui(self):

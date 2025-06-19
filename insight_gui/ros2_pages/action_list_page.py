@@ -65,7 +65,6 @@ class ActionListPage(ContentPage):
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
 
-            # TODO add a button to enable/disable sorting into groups
             # get the namespace group of the action
             if namespace in self.action_ns_groups.keys():
                 group = self.action_ns_groups[namespace]

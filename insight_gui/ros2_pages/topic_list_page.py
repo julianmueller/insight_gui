@@ -50,7 +50,7 @@ class TopicListPage(ContentPage):
         self.topic_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.available_topics = self.ros2_connector.get_available_topics(include_hidden=True)
+        self.available_topics = self.ros2_connector.get_available_topics()
         return len(self.available_topics) > 0
 
     def refresh_ui(self):
@@ -70,11 +70,6 @@ class TopicListPage(ContentPage):
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
 
-            # skip topics that are caused by actions
-            if re.search(r"/_action/(feedback|status)", topic_name):
-                continue
-
-            # TODO add a button to enable/disable sorting into groups
             # get the namespace group of the topic
             if namespace in self.topic_ns_groups.keys():
                 group = self.topic_ns_groups[namespace]

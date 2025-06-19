@@ -60,5 +60,8 @@
         <file preprocess="xml-stripblanks">icons/arrow4-left-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/arrow4-right-symbolic.svg</file>
 
+        <!-- GSettings Schema -->
+        <file>com.github.julianmueller.Insight.gschema.xml</file>
+
     </gresource>
 </gresources>
