@@ -22,11 +22,13 @@
 
 from typing import Dict
 
+from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
+
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Pango
 
 from insight_gui.ros2_pages.action_info_page import ActionInfoPage
 from insight_gui.widgets.content_page import ContentPage
@@ -65,6 +67,10 @@ class ActionListPage(ContentPage):
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
 
+            # put all actions in one group if grouping is disabled
+            if not self.app.settings.get_boolean("group-actions-by-namespace"):
+                namespace = ""
+
             # get the namespace group of the action
             if namespace in self.action_ns_groups.keys():
                 group = self.action_ns_groups[namespace]
@@ -75,7 +81,12 @@ class ActionListPage(ContentPage):
             # TODO this somehow messes with the sorting :( again ...
 
             row = PrefRow(title=action_name, subtitle=action_types)
-            # , is_hidden=action_or_service_is_hidden(action_name)) # TODO is_hidden possible for actions?
+            row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.START)
+            row.subtitle_lbl.set_tooltip_text(action_name)
+
+            if topic_or_service_is_hidden(action_name):
+                row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,

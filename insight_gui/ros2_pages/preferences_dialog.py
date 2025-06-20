@@ -128,7 +128,11 @@ class PreferencesDialog(Adw.PreferencesDialog):
         )
         self.controls_row.add_suffix(
             PlayPauseButton(
-                tooltip_texts=("Start Node", "Stop Node"), func=self.on_toggle_ros2_node, default_active=True
+                tooltip_texts=("Start Node", "Stop Node"),
+                func=self.on_toggle_ros2_node,
+                default_active=True,
+                vexpand=False,
+                valign=Gtk.Align.CENTER,
             )
         )
         self.node_state_changed_handler = is_running_action.connect("notify::state", self.on_change_node_running_state)
@@ -338,19 +342,19 @@ class PreferencesDialog(Adw.PreferencesDialog):
             title="Parameter Options", description="Control how parameters are displayed and organized"
         )
 
-        self.group_parameters_by_namespace_row = parameter_options_group.add_row(
-            Adw.SwitchRow(
-                title="Group Parameters by Namespace",
-                subtitle="Organize parameters by their namespace",
-                active=True,
-            )
-        )
-        self.app.settings.bind(
-            "group-parameters-by-namespace",
-            self.group_parameters_by_namespace_row,
-            "active",
-            Gio.SettingsBindFlags.DEFAULT,
-        )
+        # self.group_parameters_by_namespace_row = parameter_options_group.add_row(
+        #     Adw.SwitchRow(
+        #         title="Group Parameters by Namespace",
+        #         subtitle="Organize parameters by their namespace",
+        #         active=True,
+        #     )
+        # )
+        # self.app.settings.bind(
+        #     "group-parameters-by-namespace",
+        #     self.group_parameters_by_namespace_row,
+        #     "active",
+        #     Gio.SettingsBindFlags.DEFAULT,
+        # )
 
         # self.show_hidden_parameters_row = parameter_options_group.add_row(
         #     Adw.SwitchRow(

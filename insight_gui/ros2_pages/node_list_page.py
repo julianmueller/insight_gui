@@ -20,6 +20,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+from typing import Dict
+
 from ros2node.api import _is_hidden_name
 
 import gi
@@ -30,6 +32,7 @@ from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
+from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
@@ -40,22 +43,39 @@ class NodeListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Nodes")
+        super().set_empty_page_text("No nodes to show")
         super().set_search_entry_placeholder_text("Search for nodes")
         super().set_refresh_fail_text("No active nodes found. Refresh to try again.")
 
-        self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
+        self.node_ns_groups: Dict[PrefGroup] = {}
+
+        # self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
 
     def refresh_bg(self) -> bool:
         self.available_nodes = self.ros2_connector.get_available_nodes()
 
         if len(self.available_nodes) == 0:
-            self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
+            # self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
             return False
         return True
 
     def refresh_ui(self):
-        rows = []
         for node_name, node_namespace, node_full_name in self.available_nodes:
+            # if the namespace is empty (root namespace) use an empty string
+            if node_namespace == "/":
+                node_namespace = ""
+
+            # put all nodes in one group if grouping is disabled
+            if not self.app.settings.get_boolean("group-nodes-by-namespace"):
+                node_namespace = ""
+
+            # get the namespace group of the action
+            if node_namespace in self.node_ns_groups.keys():
+                group = self.node_ns_groups[node_namespace]
+            else:
+                group = self.pref_page.add_group(title=node_namespace)
+                self.node_ns_groups[node_namespace] = group
+
             row = PrefRow(title=node_name, subtitle=node_full_name)
             if _is_hidden_name(node_name):
                 row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
@@ -65,12 +85,13 @@ class NodeListPage(ContentPage):
                 subpage_class=NodeInfoPage,
                 subpage_kwargs={"node_full_name": node_full_name},
             )
-            rows.append(row)
-
-        self.node_list_group.add_rows_idle(rows)
+            group.add_row(row)
 
         # sort the groups alphabetically by title
         self.pref_page.sort_groups()
 
     def reset_ui(self):
-        self.node_list_group.clear()
+        for group in reversed(self.node_ns_groups.values()):
+            self.pref_page.remove_group(group)
+        self.node_ns_groups.clear()
+        # self.node_list_group.clear()

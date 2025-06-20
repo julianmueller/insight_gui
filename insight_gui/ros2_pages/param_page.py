@@ -23,6 +23,8 @@
 from typing import Dict
 from operator import itemgetter
 
+from rclpy.parameter import Parameter
+from rcl_interfaces.msg import ParameterDescriptor
 
 import gi
 
@@ -73,13 +75,24 @@ class ParameterListPage(ContentPage):
                 param_info = self.ros2_connector.get_parameter_info(node_name=node_name, parameter_name=param_name)
                 param_type = param_info["type"]
                 param_value = param_info["value"]
+
+                # TODO use the following instead of ros2param
+                # param: Parameter = self.ros2_connector.node.get_parameter(param_name)
+                # param.name, (param_to_python func) param.type_, param.value
+
                 row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
-                row.add_suffix_btn(
+                suffix_btn = row.add_suffix_btn(
                     icon_name="document-edit-symbolic",
                     tooltip_text="Edit",
                     func=self.on_edit_param,
                     func_kwargs={"node_name": node_name, "param_name": param_name},
                 )
+
+                # if the parameter is read-only, a prefix icon is added to the row
+                if self.ros2_connector.node.describe_parameter(param_name).read_only:
+                    row.add_prefix_icon(icon_name="lock-symbolic", tooltip_text="Read-only parameter")
+                    suffix_btn.set_icon_name("eye-open-negative-filled-symbolic")
+
                 group.add_row(row)
 
             group.set_description_to_row_count()

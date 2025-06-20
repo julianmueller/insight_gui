@@ -70,6 +70,10 @@ class TopicListPage(ContentPage):
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
 
+            # put all topics in one group if grouping is disabled
+            if not self.app.settings.get_boolean("group-topics-by-namespace"):
+                namespace = ""
+
             # get the namespace group of the topic
             if namespace in self.topic_ns_groups.keys():
                 group = self.topic_ns_groups[namespace]
@@ -89,10 +93,7 @@ class TopicListPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
-                subpage_kwargs={
-                    "topic_name": topic_name,
-                    "topic_types": topic_types,
-                },
+                subpage_kwargs={"topic_name": topic_name, "topic_types": topic_types},
             )
             group.add_row(row)
 

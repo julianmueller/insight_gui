@@ -68,6 +68,10 @@ class ServiceListPage(ContentPage):
             namespace = "/".join(parts[:-1])  # Everything except the last part
             name = "/" + parts[-1]  # The last part, prefixed with '/'
 
+            # put all services in one group if grouping is disabled
+            if not self.app.settings.get_boolean("group-services-by-namespace"):
+                namespace = ""
+
             # get the namespace group of the service
             if namespace in self.service_ns_groups.keys():
                 group = self.service_ns_groups[namespace]
@@ -87,10 +91,7 @@ class ServiceListPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
-                subpage_kwargs={
-                    "service_name": service_name,
-                    "service_types": service_types,
-                },
+                subpage_kwargs={"service_name": service_name, "service_types": service_types},
             )
             group.add_row(row)
 

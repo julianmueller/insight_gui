@@ -54,7 +54,7 @@ class ParamEditDialog(Adw.PreferencesDialog):
 
     def __init__(self, node_name: str, param_name: str, ros2_connector: ROS2Connector = None, **kwargs):
         super().__init__(**kwargs)
-        super().set_title(f"Edit Parameter {param_name}")
+        super().set_title(f"Parameter {param_name}")
         super().set_size_request(400, 600)
         GLib.idle_add(self._deferred_init)
 
@@ -69,7 +69,7 @@ class ParamEditDialog(Adw.PreferencesDialog):
         self.param_msg.name = self.param_name
         self.param_msg.value: ParameterValue = ParameterValue()  # is this okay to leave it empty here?
 
-        self.page = PrefPage(title="Edit Parameter", icon_name="document-edit-symbolic")
+        self.page = PrefPage(title="Parameter", icon_name="document-edit-symbolic")
         super().add(self.page)
 
         self.group = self.page.add_group()

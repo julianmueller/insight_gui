@@ -107,11 +107,11 @@
 
         <!-- Parameter Display Settings -->
 
-        <key name="group-parameters-by-namespace" type="b">
+        <!-- <key name="group-parameters-by-namespace" type="b">
             <default>true</default>
             <summary>Group Parameters by Namespace</summary>
             <description>Organize parameters by their namespace</description>
-        </key>
+        </key> -->
 
         <!-- <key name="show-hidden-parameters" type="b">
             <default>false</default>
