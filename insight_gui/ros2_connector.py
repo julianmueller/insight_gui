@@ -78,9 +78,9 @@ CACHE_ACTION_CLASS = "action_class"
 
 
 class ROS2Connector:
-    def __init__(self, application, cache_timeout: float = 5.0):
+    def __init__(self):
         super().__init__()
-        self.app = application
+        self.app = Gio.Application.get_default()
 
         self.node: Node = None
         self.thread: GLib.Thread = None
@@ -88,24 +88,26 @@ class ROS2Connector:
         self.start_time = None
 
         # Cache system
-        self.cache_timeout = cache_timeout  # Cache timeout in seconds
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._cache_lock = threading.Lock()
 
         rclpy.init(args=None)
 
-    def start_node(self, node_name: str = "insight_gui", namespace: str = "", *args, **kwargs):
+    def start_node(self, *args, **kwargs):
         if self.is_running:
             return
 
         # print(f"Starting ROS2 Node with name '{node_name}'")
-        self.node = Node(node_name=node_name, namespace=namespace)
+        self.node = Node(
+            node_name=self.app.settings.get_string("gui-node-name"),
+            namespace=self.app.settings.get_string("gui-node-namespace"),
+        )
         self.start_time = self.node.get_clock().now()
         self.thread = GLib.Thread.new("ros2-thread", self.spin, None)
         self.is_running = True
         self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(True))
 
-    def stop_node(self):
+    def stop_node(self, *args, **kwargs):
         if not self.is_running:
             return
 
@@ -117,6 +119,12 @@ class ROS2Connector:
         self.node.destroy_node()
         self.node = None
         self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(False))
+
+    def restart_node(self, *args, **kwargs):
+        """Restart the ROS2 node."""
+        if self.is_running:
+            self.stop_node()
+        self.start_node()
 
     def spin(self, *args, **kwargs):
         try:
@@ -216,7 +224,6 @@ class ROS2Connector:
         # self.is_running = False
         self.stop_node()
         # rclpy.shutdown()
-        print("Shutting down ROS2 Node.")
 
     # Cache management methods
     def _is_cache_valid(self, cache_key: str) -> bool:
@@ -226,10 +233,13 @@ class ROS2Connector:
 
         cache_entry = self._cache[cache_key]
         current_time = time.time()
-        return (current_time - cache_entry["timestamp"]) < self.cache_timeout
+        return (current_time - cache_entry["timestamp"]) < self.app.settings.get_double("cache-expiration-time")
 
     def _get_from_cache(self, cache_key: str) -> Any:
         """Get data from cache if valid, otherwise return None."""
+        if not self.app.settings.get_boolean("enable-caching"):
+            return None
+
         with self._cache_lock:
             if self._is_cache_valid(cache_key):
                 return self._cache[cache_key]["data"]

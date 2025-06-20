@@ -37,6 +37,7 @@
         <file preprocess="xml-stripblanks">icons/shapes-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/function-third-order-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/doctor-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/funnel-outline-symbolic.svg</file>
 
         <file preprocess="xml-stripblanks">icons/padlock2-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/padlock2-open-symbolic.svg</file>

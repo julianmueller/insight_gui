@@ -47,8 +47,8 @@ class BreadcrumbsBar(Gtk.Frame):
             hscrollbar_policy=Gtk.PolicyType.AUTOMATIC,
             vscrollbar_policy=Gtk.PolicyType.AUTOMATIC.NEVER,
         )
-        # self.scrolled_window.get_hscrollbar().set_visible(False)  # this gets in the way
         self.scrolled_window.get_hscrollbar().set_can_target(False)  # this gets in the way
+
         scroll_controller = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
         scroll_controller.connect("scroll", self.on_scroll)
         self.scrolled_window.add_controller(scroll_controller)
@@ -80,8 +80,15 @@ class BreadcrumbsBar(Gtk.Frame):
             page = nav_stack.get_item(i)
             bc_btn = BreadcrumbButton(nav_view=self.nav_view, nav_page=page)
             self.box.append(bc_btn)
+
+            # add a separator label if not the last item
             if i < num_pages - 1:
                 self.box.append(Gtk.Label(label=">"))
+
+            else:
+                # if this is the last item, make the label bold
+                bc_btn.label.set_use_markup(True)
+                bc_btn.set_label(f"<b>{bc_btn.label.get_text()}</b>")
 
         # scroll to the far right
         GLib.idle_add(self._scroll_to_right)
@@ -129,6 +136,7 @@ class BreadcrumbButton(Gtk.Button):
         super().set_label(page_title)
         super().set_tooltip_text(f"Go back to '{page_title}'")
 
+        self.label = super().get_first_child()
         self.connect("clicked", self.on_click)
 
     def on_click(self, *args):

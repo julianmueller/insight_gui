@@ -21,14 +21,9 @@
             <description>Namespace for the ROS2 GUI-Node (leave empty for root namespace)</description>
         </key>
 
-        <!-- Display Settings -->
+        <!-- Filter Settings -->
 
-        <!-- Node Display Settings -->
-        <key name="group-nodes-by-namespace" type="b">
-            <default>true</default>
-            <summary>Group Nodes by Namespace</summary>
-            <description>Organize nodes by their namespace</description>
-        </key>
+        <!-- Node Filter Settings -->
 
         <key name="show-hidden-nodes" type="b">
             <default>false</default>
@@ -37,11 +32,6 @@
         </key>
 
         <!-- Topic Display Settings -->
-        <key name="group-topics-by-namespace" type="b">
-            <default>true</default>
-            <summary>Group Topics by Namespace</summary>
-            <description>Organize topics by their namespace</description>
-        </key>
 
         <key name="show-hidden-topics" type="b">
             <default>false</default>
@@ -68,12 +58,6 @@
         </key>
 
         <!-- Service Display Settings -->
-        <key name="group-services-by-namespace" type="b">
-            <default>true</default>
-            <summary>Group Services by Namespace</summary>
-            <description>Organize services by their namespace</description>
-        </key>
-
         <key name="show-hidden-services" type="b">
             <default>false</default>
             <summary>Show Hidden Services</summary>
@@ -93,12 +77,6 @@
         </key>
 
         <!-- Action Display Settings -->
-        <key name="group-actions-by-namespace" type="b">
-            <default>true</default>
-            <summary>Group Actions by Namespace</summary>
-            <description>Organize actions by their namespace</description>
-        </key>
-
         <key name="show-hidden-actions" type="b">
             <default>false</default>
             <summary>Show Hidden Actions</summary>
@@ -106,12 +84,6 @@
         </key>
 
         <!-- Parameter Display Settings -->
-
-        <!-- <key name="group-parameters-by-namespace" type="b">
-            <default>true</default>
-            <summary>Group Parameters by Namespace</summary>
-            <description>Organize parameters by their namespace</description>
-        </key> -->
 
         <!-- <key name="show-hidden-parameters" type="b">
             <default>false</default>
@@ -125,6 +97,60 @@
             <description>Display parameters related to Quality of Service settings</description>
         </key>
 
+        <!-- Appearance Page -->
+
+        <key name="group-nodes-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Nodes by Namespace</summary>
+            <description>Organize nodes by their namespace</description>
+        </key>
+
+        <key name="group-topics-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Topics by Namespace</summary>
+            <description>Organize topics by their namespace</description>
+        </key>
+
+        <key name="group-services-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Services by Namespace</summary>
+            <description>Organize services by their namespace</description>
+        </key>
+
+        <key name="group-actions-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Actions by Namespace</summary>
+            <description>Organize actions by their namespace</description>
+        </key>
+
+        <!-- <key name="group-parameters-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Parameters by Namespace</summary>
+            <description>Organize parameters by their namespace</description>
+        </key> -->
+
+        <!--  Misc Appearance Settings -->
+
+        <key name="show-breadcrumbs-bar" type="b">
+            <default>true</default>
+            <summary>Show Breadcrumbs</summary>
+            <description>Display top breadcrumbs bar (a &gt; b &gt; ...) for navigation</description>
+        </key>
+
+        <!-- CACHING SETTING -->
+
+        <key name="enable-caching" type="b">
+            <default>true</default>
+            <summary>Enable Caching</summary>
+            <description>Cache node, topic, etc. information for faster access</description>
+        </key>
+
+        <key name="cache-expiration-time" type="d">
+            <default>5</default>
+            <range min="0" max="60" />
+            <summary>Cache Expiration Time</summary>
+            <description>Time in seconds after which the cache expires and new data is fetched</description>
+        </key>
 
         <!-- <key name="auto-refresh" type="b">
             <default>false</default>

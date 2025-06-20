@@ -25,7 +25,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GObject, GLib
+from gi.repository import Gtk, Adw, GObject, GLib, Gio
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
@@ -49,6 +49,9 @@ class ContentPage(Adw.NavigationPage):
         super().connect("map", self.on_map)
         super().connect("unmap", self.on_unmap)
         GLib.idle_add(self._deferred_init)
+
+        self.app = Gio.Application.get_default()
+        self.ros2_connector: ROS2Connector = self.app.ros2_connector
 
         builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
@@ -76,8 +79,9 @@ class ContentPage(Adw.NavigationPage):
         self.search_entry: Gtk.SearchEntry = builder.get_object("search_entry")
         self.search_entry.connect("search-changed", self.on_search_changed)
 
-        self.breadcrumbs_bar = BreadcrumbsBar()
-        self.toolbar_view.add_top_bar(self.breadcrumbs_bar)
+        if self.app.settings.get_boolean("show-breadcrumbs-bar"):
+            self.breadcrumbs_bar = BreadcrumbsBar()
+            self.toolbar_view.add_top_bar(self.breadcrumbs_bar)
 
         self.toast_overlay: Adw.ToastOverlay = builder.get_object("toast_overlay")
         self.banner: Adw.Banner = builder.get_object("banner")
@@ -90,14 +94,31 @@ class ContentPage(Adw.NavigationPage):
         super().set_child(self.toolbar_view)
 
         self.searchable = searchable
+        self.search_btn.set_visible(self.searchable)
         self.refreshable = refreshable
+        self.refresh_btn.set_visible(self.refreshable)
         self.detachable = detachable
+        self.detach_btn.set_visible(self.detachable)
 
         # tags and search_text for filtering
         self.filter_tags: set[str] = set()
         self.search_text: str = ""
 
-        self.detach_kwargs = {}
+        if self.detachable:
+            self.detach_kwargs: dict = {}
+
+            # TODO look into this
+            # import inspect
+
+            # frame = inspect.currentframe()
+            # args, varargs, varkw, _locals = inspect.getargvalues(frame)
+
+            # for arg in args:
+            #     if arg == "self":
+            #         continue
+
+            #     self.detach_kwargs[arg] = _locals[arg]
+
         self.refreshing = False
         self.refresh_thread: threading.Thread = None
         self.refresh_fail_text = "Refresh yielded no results"
@@ -107,24 +128,20 @@ class ContentPage(Adw.NavigationPage):
         self.content_stack.set_visible_child(self.pref_page)
 
     def _deferred_init(self):
-        # get these properties, after the widget has been realized in the window
-        self.window = super().get_root()
-        self.nav_view: Adw.NavigationView = super().get_ancestor(Adw.NavigationView)
-        self.ros2_connector: ROS2Connector = self.window.ros2_connector
-
-        self.breadcrumbs_bar.set_nav_view(self.nav_view)
-        self.breadcrumbs_bar.update()
-        self.nav_view.connect("pushed", self.update_breadcrumbs)
-        self.nav_view.connect("popped", self.update_breadcrumbs)
-
-        self.search_btn.set_visible(self.searchable)
-        self.refresh_btn.set_visible(self.refreshable)
-        self.detach_btn.set_visible(self.detachable)
+        pass
 
     def on_realize(self, *args):
         # refresh the gui
         # if self.refreshable: # TODO check if this is okay, to always refresh
         GLib.idle_add(self.refresh)
+
+        self.nav_view: Adw.NavigationView = super().get_ancestor(Adw.NavigationView)
+
+        if self.app.settings.get_boolean("show-breadcrumbs-bar"):
+            self.breadcrumbs_bar.set_nav_view(self.nav_view)
+            self.breadcrumbs_bar.update()
+            self.nav_view.connect("pushed", self.update_breadcrumbs)
+            self.nav_view.connect("popped", self.update_breadcrumbs)
 
     def on_unrealize(self, *args):
         pass
@@ -219,17 +236,17 @@ class ContentPage(Adw.NavigationPage):
         from insight_gui.window import DetachedWindow
 
         if self.detachable:
-            application: Adw.Application = self.get_ancestor(Adw.ApplicationWindow).app
             detached_window = DetachedWindow(
-                application=application,
+                app=self.app,
                 nav_page_class=self.__class__,
                 nav_page_kwargs=self.detach_kwargs,
             )
-            application.detached_windows.append(detached_window)
+            self.app.detached_windows.append(detached_window)
             detached_window.show()
 
-    def show_toast(self, toast_text: str):
-        self.toast_overlay.add_toast(Adw.Toast(title=str(toast_text)))
+    def show_toast(self, title: str, *, priority: Adw.ToastPriority = Adw.ToastPriority.NORMAL, timeout: int = 2):
+        """Show a toast message"""
+        self.toast_overlay.add_toast(Adw.Toast(title=title, priority=priority, timeout=timeout))
 
     def show_toast_w_btn(self, toast_text: str, btn_label: str, func: Callable, **func_kwargs):
         toast = Adw.Toast(title=str(toast_text), button_label=str(btn_label))

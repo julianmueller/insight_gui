@@ -16,10 +16,10 @@
     - ~~add "spacebar" shortcut and action for "main page trigger", like "call page" or "start echo"~~
     - ~~add btn to "close all detatched windows", maybe in menu?~~
     - ~~CTRL+Click on navigation to open in detatched window instead of switching to that page~~
-    - CTRL+Click for every link/subpage to open in detatched window instead of switching to that page
+    - ~~CTRL+Click for every link/subpage to open in detatched window instead of switching to that page~~
+    - ~~add when a new window is opened as a detach, make it have the same content as the detached content_page~~ (solved by caching)
     - add Gtk/Gio Notifications
     - add gtk action for all major actions
-    - add when a new window is opened as a detach, make it have the same content as the detached content_page
     - add "experimental" flag/info to not really working pages
     - Add a Link to the latest online tutorial, that explains eg how to subscribe etc
 
@@ -30,11 +30,10 @@
     - ~~add action send_goal~~
     - ~~add topic publisher (+once)~~
     - ~~add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open~~
-    - add a save btn to the interface dialog and topic echo and service call page
-    - add static/dynamic tf2 broadcaster
-    - add tf inspection subpage (show the stuff that rviz shows)
-    - add a launch page to directly launch nodes with a set of arguments
-    - add service echo
+    - static/dynamic tf2 broadcaster
+    - tf inspection subpage (show the stuff that rviz shows)
+    - a launch page to directly launch nodes with a set of arguments
+    - service echo (listener)
     - qos info page
     - URDF/robot_description viewer
     - rosbag page
@@ -46,15 +45,18 @@
 
 - additional settings:
     - ~~maybe add an option, that all parameter-related services are hidden (/describe_parameters etc)~~
+    - ~~add options to tune the caching (caching timeout, clear cache, etc)~~
+    - ~~add opton to show/hide the breadcrumbs bar~~
     - add option to preferences to hide everything related to insight, like node, parameters etc
     - add option to add new env variables in the pref dialog (and add a refresh btn)
 
 - page enhancements:
+    - add a save btn to the interface dialog and topic echo and service call page
+    - for topic pub/sub, service call, action goal pages, add a btn that opens the interface definition dialog in the header of the textfields
     - Interface Info Page:
         - ~~add constants to be visible in msg definitions (like ur_msgs/msg/SetIO)~~
     - Package Info Page:
         - add the ros wiki explainations for packages? like what are all possible subscribed/published topics? or just a btn?
-    - for topic pub/sub, service call, action goal pages, add a btn that opens the interface definition dialog in the header of the textfields
     - Param Page:
         - dump + load + save params
     - Topic List Page:

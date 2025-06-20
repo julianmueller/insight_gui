@@ -41,7 +41,7 @@ from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
 from insight_gui.ros2_pages.action_list_page import ActionListPage
 from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
 from insight_gui.ros2_pages.graph_page import GraphPage
-from insight_gui.ros2_pages.param_page import ParameterListPage
+from insight_gui.ros2_pages.param_list_page import ParameterListPage
 from insight_gui.ros2_pages.tf_page import TransformsPage
 from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
 from insight_gui.ros2_pages.joint_states_page import JointStatesPage
@@ -59,8 +59,11 @@ from insight_gui.widgets.stack_sidebar import StackSidebar
 class BaseWindow(Adw.ApplicationWindow):
     __gtype_name__ = "BaseWindow"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, app: Adw.Application, **kwargs):
+        super().__init__(application=app, **kwargs)
+        self.app = app
+        self.ros2_connector = app.ros2_connector
+
         self._setup_accent_colors()
 
         # window actions
@@ -124,14 +127,6 @@ class BaseWindow(Adw.ApplicationWindow):
 
         # Add controller to window
         self.add_controller(self.shortcut_controller)
-
-    @property
-    def app(self) -> Adw.Application:
-        return self.get_application()
-
-    @property
-    def ros2_connector(self) -> ROS2Connector:
-        return self.app.ros2_connector
 
     def on_refresh(self, *args):
         if self.current_page and self.current_page.refreshable:

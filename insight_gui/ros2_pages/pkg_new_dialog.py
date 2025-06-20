@@ -154,6 +154,10 @@ class PackageNewDialog(Adw.PreferencesDialog):
             parent=self.get_root(), callback=callback, user_data=None
         )
 
+    def show_toast(self, title: str, *, priority: Adw.ToastPriority = Adw.ToastPriority.NORMAL, timeout: int = 2):
+        """Show a toast message"""
+        self.add_toast(Adw.Toast(title=title, priority=priority, timeout=timeout))
+
     # adapted from https://github.com/ros2/ros2cli/blob/rolling/ros2pkg/ros2pkg/verb/create.py
     def on_create_pkg(self, *args):
         build_type = "ament_python" if self.python_switch_row.get_active() else "ament_cmake"
@@ -166,19 +170,16 @@ class PackageNewDialog(Adw.PreferencesDialog):
         description = self.description_row.get_text()
         dependencies = [dep.strip() for dep in self.dependencies_row.get_text().split(";")]
 
-        def show_toast_message(msg):
-            self.add_toast(Adw.Toast(title=msg))
-
         if self.dest_dir is None or self.dest_dir == "":
-            show_toast_message("Destination directory must not be empty.")
+            self.show_toast("Destination directory must not be empty.")
             return
 
         if pkg_name == "":
-            show_toast_message("Package name must not be empty.")
+            self.show_toast("Package name must not be empty.")
             return
 
         if library_name == node_name and not library_name == "":
-            show_toast_message("If set, library name and node name must be different.")
+            self.show_toast("If set, library name and node name must be different.")
             return
 
         if maintainer_name == "":
@@ -206,7 +207,7 @@ class PackageNewDialog(Adw.PreferencesDialog):
         if build_type == "ament_python" and pkg_name == "test":
             # If the package name is 'test', there will be a conflict between the directory the source code for the
             # package goes in and the directory the tests for the package go in.
-            show_toast_message("'ament_python' packages can't be named 'test'")
+            self.show_toast("'ament_python' packages can't be named 'test'")
             return
 
         maintainer = Person(name=maintainer_name, email=maintainer_mail)
@@ -225,7 +226,7 @@ class PackageNewDialog(Adw.PreferencesDialog):
 
         package_path = os.path.join(self.dest_dir, pkg_name)
         if os.path.exists(package_path):
-            show_toast_message(f"directory '{package_path}' already exists")
+            self.show_toast(f"directory '{package_path}' already exists")
             return
 
         package_directory, source_directory, include_directory = create_package_environment(
@@ -233,7 +234,7 @@ class PackageNewDialog(Adw.PreferencesDialog):
         )
 
         if not package_directory:
-            show_toast_message(f"unable to create folder '{self.dest_dir}'")
+            self.show_toast(f"unable to create folder '{self.dest_dir}'")
             return
 
         # populate the package directories
@@ -245,7 +246,7 @@ class PackageNewDialog(Adw.PreferencesDialog):
 
         if build_type == "ament_python":
             if not source_directory:
-                show_toast_message(f"unable to create source folder in {self.dest_dir}")
+                self.show_toast(f"unable to create source folder in {self.dest_dir}")
                 return
 
             populate_ament_python(package, package_directory, source_directory, node_name)
@@ -260,12 +261,12 @@ class PackageNewDialog(Adw.PreferencesDialog):
 
             if node_name:
                 if not source_directory:
-                    show_toast_message(f"unable to create source folder in '{self.dest_dir}'")
+                    self.show_toast(f"unable to create source folder in '{self.dest_dir}'")
                     return
                 populate_cpp_node(package, source_directory, node_name)
             if library_name:
                 if not source_directory or not include_directory:
-                    show_toast_message(f"unable to create source or include folder in '{self.dest_dir}'")
+                    self.show_toast(f"unable to create source or include folder in '{self.dest_dir}'")
                     return
                 populate_cpp_library(package, source_directory, include_directory, library_name)
 
@@ -274,6 +275,6 @@ class PackageNewDialog(Adw.PreferencesDialog):
                 for lic in self.available_licenses[license_name]:
                     outfp.write(lic)
         else:
-            show_toast_message("Unknown license. So no LICENSE file was created.")
+            self.show_toast("Unknown license. So no LICENSE file was created.")
 
         self.close()

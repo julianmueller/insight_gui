@@ -1,5 +1,5 @@
 # =============================================================================
-# param_page.py
+# param_list_page.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller

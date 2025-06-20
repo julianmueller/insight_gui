@@ -26,7 +26,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, GObject, Adw
+from gi.repository import Gtk, GObject, Adw, Gdk
+
+from insight_gui.widgets.pref_rows import PrefRow
 
 
 class StackSidebar(Adw.PreferencesPage):
@@ -60,19 +62,32 @@ class StackSidebar(Adw.PreferencesPage):
         if group not in self.groups:
             raise ValueError(f"Group '{group.get_title()}' does not exist.")
 
-        def on_row_activated(*args, **kwargs):
-            if not self.stack:
-                return
-            child = self.stack.get_child_by_name(page_name)
-            self.stack.set_visible_child(child)
+        if not self.stack:
+            return
+
+        def _on_pressed(controller: Gtk.GestureClick, n_press: int, x: float, y: float):
+            state = controller.get_current_event_state()
+
+            # add CTRL+click functionality to open in detached window
+            if state & Gdk.ModifierType.CONTROL_MASK:
+                nav_page.detach()
+
+            # regular click
+            else:
+                nav_view = self.stack.get_child_by_name(page_name)
+                self.stack.set_visible_child(nav_view)
 
         nav_view = Adw.NavigationView()
         nav_view.add(nav_page)
         self.stack.add_titled(child=nav_view, name=page_name, title=title)
 
-        row = Adw.ActionRow(activatable=True, title=title, subtitle=subtitle)
+        row = PrefRow(activatable=True, title=title, subtitle=subtitle)
         row.add_prefix(Gtk.Image(icon_name=prefix_icon)) if prefix_icon else None
-        row.connect("activated", on_row_activated)
+
+        gesture = Gtk.GestureClick()
+        gesture.connect("pressed", _on_pressed)
+        row.add_controller(gesture)
+
         group.add(row)
 
     def clear_all(self):

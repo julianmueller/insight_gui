@@ -322,17 +322,21 @@ class ParamEditDialog(Adw.PreferencesDialog):
         else:
             self.apply_btn.set_sensitive(True)
 
+    def show_toast(self, title: str, *, priority: Adw.ToastPriority = Adw.ToastPriority.NORMAL, timeout: int = 2):
+        """Show a toast message"""
+        self.add_toast(Adw.Toast(title=title, priority=priority, timeout=timeout))
+
     def on_apply(self, *args):
         try:
             resp: SetParameters_Response = call_set_parameters(
                 node=self.ros2_connector.node, node_name=self.node_name, parameters=[self.param_msg]
             )
             if resp.results[0].successful:
-                self.add_toast(Adw.Toast(title="Parameter changed successfully"))
+                self.show_toast("Parameter changed successfully")
                 GLib.idle_add(self._deferred_init)  # TODO change this whole behaviour into reload etc
             else:
                 reason = str(resp.results[0].reason)
-                self.add_toast(Adw.Toast(title=f"Parameter changed failed: {reason}"))
+                self.show_toast(f"Parameter changed failed: {reason}", priority=Adw.ToastPriority.HIGH)
         except Exception as e:
-            self.add_toast(Adw.Toast(title=f"Error: {e}"))
+            self.show_toast(f"Error: {e}", priority=Adw.ToastPriority.HIGH)
         # self.close()

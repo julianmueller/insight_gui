@@ -225,14 +225,25 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
     def set_subpage_link(
         self, *, nav_view: Adw.NavigationView, subpage_class: Type[Adw.NavigationPage], subpage_kwargs: dict
     ):
-        def _on_activate(*args):
+        def _on_pressed(controller: Gtk.GestureClick, n_press: int, x: float, y: float):
+            state = controller.get_current_event_state()
             subpage = subpage_class(**subpage_kwargs)
-            nav_view.push(subpage)
+
+            # add CTRL+click functionality to open in detached window
+            if state & Gdk.ModifierType.CONTROL_MASK:
+                subpage.detach()
+
+            # regular click
+            else:
+                nav_view.push(subpage)
 
         if hasattr(self, "subpage_signal_handler"):
             super().disconnect(self.subpage_signal_handler)
 
-        self.subpage_signal_handler = super().connect("activated", _on_activate)
+        self.gesture_click = Gtk.GestureClick()
+        self.subpage_signal_handler = self.gesture_click.connect("pressed", _on_pressed)
+        super().add_controller(self.gesture_click)
+
         super().set_activatable(True)
         self.next_page_icon.set_visible(True)
 
