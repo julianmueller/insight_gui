@@ -47,6 +47,8 @@ class ImageViewerPage(ContentPage):
         super().set_refresh_fail_text("No image topics found. Refresh to try again.")
 
         self.preselect_topic = preselect_topic
+        self.detach_kwargs = {"preselect_topic": preselect_topic}
+
         self.is_streaming = False
         self.single_img_done = True
         self.cv_bridge = CvBridge()

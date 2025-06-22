@@ -73,6 +73,7 @@ class TeleoperatorPage(ContentPage):
         super().set_refresh_fail_text("No teleop topics found. Refresh to try again.")
 
         self.preselect_topic = preselect_topic
+        self.detach_kwargs = {"preselect_topic": preselect_topic}
         # ros2 run teleop_twist_keyboard teleop_twist_keyboard
         # ros2 run teleop_twist_joy teleop_twist_joy
 

@@ -6,5 +6,7 @@
         "ms-python.debugpy",
         "charliermarsh.ruff",
         "gruntfuggly.todo-tree",
+        "redhat.vscode-yaml",
+        "redhat.vscode-xml",
     ]
 }

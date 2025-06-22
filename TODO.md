@@ -30,9 +30,9 @@
     - ~~add action send_goal~~
     - ~~add topic publisher (+once)~~
     - ~~add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open~~
+    - ~~a launch page to directly launch nodes with a set of arguments~~
     - static/dynamic tf2 broadcaster
     - tf inspection subpage (show the stuff that rviz shows)
-    - a launch page to directly launch nodes with a set of arguments
     - service echo (listener)
     - qos info page
     - URDF/robot_description viewer
@@ -97,6 +97,8 @@
 - look into `from rclpy.expand_topic_name import expand_topic_name`
 - change the whole connect to signals of rows, so that the signals of specific widgets are re-emitted by the row (like with the ScaleRow)
 - replace all ros2cli commands with rclpy/rosidl etc commands
+- be strict/consistent about private ("_") instance variables and method names!
+- move expensive imports into methods/classes only where needed
 
 
 ## Bugs

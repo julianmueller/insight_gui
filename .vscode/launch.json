@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "Attach to ROS2 Node (debugpy)",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "justMyCode": false,
+        }
+    ],
+}

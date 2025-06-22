@@ -49,6 +49,8 @@ class ServiceCallPage(ContentPage):
         super().set_refresh_fail_text("No services found. Refresh to try again.")
 
         self.preselect_service = preselect_service
+        self.detach_kwargs = {"preselect_service": preselect_service}
+
         self.request_class = None
         self.request_instance = None
         self.response_class = None

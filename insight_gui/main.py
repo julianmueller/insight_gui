@@ -22,6 +22,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+import sys
 import signal
 from insight_gui.application import InsightApplication
 
@@ -30,13 +31,18 @@ def main(args=None):
     # Enable Ctrl+C handling
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    # import debugpy
-    # debugpy.listen(("0.0.0.0", 5678))
-    # debugpy.wait_for_client()
+    # Make sure to install debugpy with pip if not already installed
+    if "--debugpy" in sys.argv[1:]:
+        import debugpy
+
+        print("Starting debugpy... Waiting for debugger to attach.")
+        debugpy.listen(("0.0.0.0", 5678))
+        debugpy.wait_for_client()
+        sys.argv.remove("--debugpy")
 
     try:
         gui_app = InsightApplication()
-        signal.signal(signal.SIGINT, lambda *_: gui_app.shutdown())
+        signal.signal(signal.SIGINT, gui_app.shutdown)
         gui_app.run(None)
 
     except Exception as e:

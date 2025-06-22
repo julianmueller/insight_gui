@@ -49,6 +49,8 @@ class TopicSubscriberPage(ContentPage):
         super().set_refresh_fail_text("No topics found. Refresh to try again.")
 
         self.preselect_topic = preselect_topic
+        self.detach_kwargs = {"preselect_topic": preselect_topic}
+
         self.is_echoing = False
         self.single_echo_done = True
         self.msg_instance = None

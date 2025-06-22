@@ -226,6 +226,15 @@ class MainWindow(BaseWindow):
         )
         self.stack_sidebar.add_page_row(
             group=node_group,
+            title="Launch Files",
+            page_name="launch_list",
+            nav_page=LaunchListPage(),
+            # prefix_icon="rocket-symbolic",
+            prefix_icon="media-playback-start-symbolic",
+            subtitle="Browse launch files",
+        )
+        self.stack_sidebar.add_page_row(
+            group=node_group,
             title="Parameters",
             page_name="param_list",
             nav_page=ParameterListPage(),
@@ -320,17 +329,6 @@ class MainWindow(BaseWindow):
             nav_page=ActionGoalPage(),
             prefix_icon="emoji-flags-symbolic",
             subtitle="Send action goals",
-        )
-
-        # Launch Files
-        launch_group = self.stack_sidebar.add_group(title="Launch")
-        self.stack_sidebar.add_page_row(
-            group=launch_group,
-            title="Launch Files",
-            page_name="launch_list",
-            nav_page=LaunchListPage(),
-            prefix_icon="media-playback-start-symbolic",
-            subtitle="Browse and execute launch files",
         )
 
         # Interface

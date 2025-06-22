@@ -51,6 +51,8 @@ class ActionGoalPage(ContentPage):
         super().set_refresh_fail_text("No actions found. Refresh to try again.")
 
         self.preselect_action = preselect_action
+        self.detach_kwargs = {"preselect_action": preselect_action}
+
         self.goal_class = None
         self.goal_instance = None
         self.feedback_class = None

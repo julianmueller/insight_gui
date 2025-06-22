@@ -45,6 +45,8 @@ class InterfaceDefinitionPage(ContentPage):
         super().set_title(f"Interface Definition {interface_full_name}")
         # TODO this needs to resemble whether its a Request/Response etc
 
+        self.interface_full_name = interface_full_name
+        self.intface_class = interface_class
         self.detach_kwargs = {
             "interface_full_name": interface_full_name,
             "interface_class": interface_class,
