@@ -25,8 +25,9 @@
     <requires lib="adw" version="1.0" />
 
     <object class="AdwNavigationSplitView" id="split_view">
-        <property name="min-sidebar-width">150</property>
+        <property name="min-sidebar-width">100</property>
         <property name="max-sidebar-width">250</property>
+        <property name="sidebar-width-fraction">0.3</property>
         <property name="show-content">true</property>
 
         <property name="sidebar">
@@ -166,8 +167,12 @@
                 <property name="title">Content</property>
 
                 <property name="child">
-                    <object class="GtkStack" id="content_stack" />
+                    <object class="GtkStack" id="content_stack">
+                        <property name="hhomogeneous">False</property>
+                        <property name="vhomogeneous">False</property>
+                    </object>
                 </property>
+
             </object>
         </property>
     </object>

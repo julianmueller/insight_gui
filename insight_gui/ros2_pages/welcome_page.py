@@ -39,7 +39,7 @@ class WelcomePage(ContentPage):
         status_page = Adw.StatusPage(
             title="Welcome to Insight GUI",
             description="Select the pages in the left navigation.",
-            icon_name="insight-logo",
+            icon_name="insight",
         )
         self.content_stack.add_child(status_page)
         self.content_stack.set_visible_child(status_page)

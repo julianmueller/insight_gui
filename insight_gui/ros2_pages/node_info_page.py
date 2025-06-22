@@ -31,7 +31,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.param_edit_dialog import ParamEditDialog
+from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
@@ -144,10 +144,7 @@ class NodeInfoPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
-                subpage_kwargs={
-                    "topic_name": topic_name,
-                    "topic_types": topic_types,
-                },
+                subpage_kwargs={"topic_name": topic_name, "topic_types": topic_types},
             )
             self.publishers_group.add_row(row)
         self.publishers_group.set_description_to_row_count()
@@ -161,10 +158,7 @@ class NodeInfoPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
-                subpage_kwargs={
-                    "topic_name": topic_name,
-                    "topic_types": topic_types,
-                },
+                subpage_kwargs={"topic_name": topic_name, "topic_types": topic_types},
             )
             self.subscribers_group.add_row(row)
         self.subscribers_group.set_description_to_row_count()
@@ -178,10 +172,7 @@ class NodeInfoPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
-                subpage_kwargs={
-                    "service_name": service_name,
-                    "service_types": service_types,
-                },
+                subpage_kwargs={"service_name": service_name, "service_types": service_types},
             )
             self.service_servers_group.add_row(row)
         self.service_servers_group.set_description_to_row_count()
@@ -195,10 +186,7 @@ class NodeInfoPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
-                subpage_kwargs={
-                    "service_name": service_name,
-                    "service_types": service_types,
-                },
+                subpage_kwargs={"service_name": service_name, "service_types": service_types},
             )
             self.service_clients_group.add_row(row)
         self.service_clients_group.set_description_to_row_count()
@@ -212,10 +200,7 @@ class NodeInfoPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,
-                subpage_kwargs={
-                    "action_name": action_name,
-                    "action_types": action_types,
-                },
+                subpage_kwargs={"action_name": action_name, "action_types": action_types},
             )
             self.action_servers_group.add_row(row)
         self.action_servers_group.set_description_to_row_count()
@@ -229,10 +214,7 @@ class NodeInfoPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,
-                subpage_kwargs={
-                    "action_name": action_name,
-                    "action_types": action_types,
-                },
+                subpage_kwargs={"action_name": action_name, "action_types": action_types},
             )
             self.action_clients_group.add_row(row)
         self.action_clients_group.set_description_to_row_count()
@@ -242,13 +224,17 @@ class NodeInfoPage(ContentPage):
             param_info = self.ros2_connector.get_parameter_info(node_name=self.node_name, parameter_name=param_name)
             param_type = param_info["type"]
             param_value = param_info["value"]
+            param_read_only = param_info["read_only"]
+
             row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
-            row.add_suffix_btn(
-                icon_name="document-edit-symbolic",
-                tooltip_text="Edit",
-                func=self.on_edit_param,
-                func_kwargs={"node_name": self.node_name, "param_name": param_name},
+            row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=ParamEditPage,
+                subpage_kwargs={"node_name": self.node_name, "param_name": param_name},
             )
+            if param_read_only:
+                row.add_prefix_icon(icon_name="lock-symbolic", tooltip_text="Read-only parameter")
+
             self.parameters_group.add_row(row)
         self.parameters_group.set_description_to_row_count()
 
@@ -260,10 +246,3 @@ class NodeInfoPage(ContentPage):
         self.action_servers_group.clear()
         self.action_clients_group.clear()
         self.parameters_group.clear()
-
-    def on_edit_param(self, *args, node_name: str, param_name: str):
-        ParamEditDialog(
-            node_name=node_name,
-            param_name=param_name,
-            ros2_connector=self.ros2_connector,
-        ).present(self)

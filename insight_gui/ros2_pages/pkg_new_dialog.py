@@ -55,6 +55,7 @@ class PackageNewDialog(Adw.PreferencesDialog):
         super().__init__(**kwargs)
         super().set_title("Create New ROS2 Package")
         super().set_size_request(width=300, height=500)
+        super().set_presentation_mode(Adw.DialogPresentationMode.AUTO)
 
         self.page = PrefPage(title="New pkg", icon_name="document-new-symbolic")
         super().add(self.page)

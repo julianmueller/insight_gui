@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="insight_gui/data/logo/insight-logo.svg" alt="Insight" height="170"/>
+  <img src="insight_gui/data/logo/insight.svg" alt="Insight" height="170"/>
   <br>
   Insight - a minimalist GUI for ROS2
 </h1>

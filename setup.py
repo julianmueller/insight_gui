@@ -47,7 +47,7 @@ def collect_data_files(*suffixes: list[str]):
 
 # compile the gresources for the gtk4 application (here mainly used for svg-icons)
 def compile_gresources():
-    resources_xml_file = data_dir / "resources.gresource.xml"
+    resources_xml_file = data_dir / "com.github.julianmueller.Insight.gresource.xml"
 
     # Run glib-compile-resources inline
     try:
@@ -73,7 +73,8 @@ def compile_gresources():
 
 # install GSettings schema for persistent preferences
 def install_gsettings_schema():
-    gschema_xml_file = data_dir / "com.github.julianmueller.Insight.gschema.xml"
+    # gschema_xml_file = data_dir / f"com.github.julianmueller.Insight.gschema.xml"
+    # TODO maybe install install into GLib.user_data_dir() instead own ros dir
 
     try:
         # Compile schemas

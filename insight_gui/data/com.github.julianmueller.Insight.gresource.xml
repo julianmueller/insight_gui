@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    resources.gresource.xml
+
+    This file is part of https://github.com/julianmueller/insight_gui
+    Copyright (C) 2025 Julian Müller
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<gresources>
+    <gresource prefix="/com/github/julianmueller/Insight">
+        <file preprocess="xml-stripblanks">icons/scalable/actions/insight.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/insight-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/scalable/actions/git-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/bug-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/network-proxy-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/center-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/megaphone-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/sliders-horizontal-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/listen-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/gamepad-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/list-compact-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/shapes-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/function-third-order-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/doctor-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/funnel-outline-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/scalable/actions/padlock2-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/padlock2-open-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/scalable/actions/check-round-outline-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/cross-small-circle-outline-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/scalable/actions/plus-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/minus-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-bottom-left-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-bottom-right-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-down-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-left-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-right-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-top-left-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-top-right-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-up-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/scalable/actions/vertical-arrows-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow4-left-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/arrow4-right-symbolic.svg</file>
+
+        <!-- GSettings Schema -->
+        <file>com.github.julianmueller.Insight.gschema.xml</file>
+
+    </gresource>
+</gresources>

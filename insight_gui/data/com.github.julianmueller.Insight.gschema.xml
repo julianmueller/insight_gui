@@ -167,12 +167,17 @@
 
         <!-- Behavior Settings -->
 
-
-        <!-- <key name="restore-last-page" type="b">
-            <default>false</default>
+        <key name="restore-last-page" type="b">
+            <default>true</default>
             <summary>Restore Last Page</summary>
             <description>Open the last viewed page on startup</description>
-        </key> -->
+        </key>
+
+        <key name="last-page" type="s">
+            <default>""</default>
+            <summary>Last Page</summary>
+            <description>The last viewed page when the application was closed</description>
+        </key>
 
         <!-- <key name="confirm-page-close" type="b">
             <default>true</default>

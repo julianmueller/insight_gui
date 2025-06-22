@@ -217,6 +217,7 @@ class CopyButton(Gtk.Button):
         copy_callback: Callable = None,
         tooltip_text: str = "Copy to clipboard",
         toast_host: Gtk.Widget = None,
+        toast_text: str = None,
         **kwargs,
     ):
         super().__init__(
@@ -225,6 +226,7 @@ class CopyButton(Gtk.Button):
         self.copy_text = copy_text
         self.copy_callback = copy_callback
         self.toast_host = toast_host
+        self.toast_text = toast_text
         self.connect("clicked", self.on_copy_button_clicked)
 
     def on_copy_button_clicked(self, *args):
@@ -235,7 +237,10 @@ class CopyButton(Gtk.Button):
         clip.set(str(self.copy_text))
 
         if self.toast_host:
-            self.toast_host.add_toast(Adw.Toast(title=f"Copied '{self.copy_text}' to clipboard"))
+            if not self.toast_text:
+                self.toast_text = f"Copied '{self.copy_text}' to clipboard"
+
+            self.toast_host.add_toast(Adw.Toast(title=self.toast_text))
 
 
 class RevealButton(Gtk.ToggleButton):

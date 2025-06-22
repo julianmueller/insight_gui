@@ -42,6 +42,8 @@
     - monitor param changes
     - remap page, where topics and be remapped to another name?
     - documentation Page, with Links to the ros2 webpages? maybe even a webview renderer?
+    - clock page with manipulation options
+
 
 - additional settings:
     - ~~maybe add an option, that all parameter-related services are hidden (/describe_parameters etc)~~
@@ -49,10 +51,11 @@
     - ~~add opton to show/hide the breadcrumbs bar~~
     - add option to preferences to hide everything related to insight, like node, parameters etc
     - add option to add new env variables in the pref dialog (and add a refresh btn)
+    - light/dark/system color theme
 
 - page enhancements:
-    - add a save btn to the interface dialog and topic echo and service call page
-    - for topic pub/sub, service call, action goal pages, add a btn that opens the interface definition dialog in the header of the textfields
+    - add a save btn to the interface page and topic echo and service call page
+    - for topic pub/sub, service call, action goal pages, add a link to the interface definition page in the header of the textfields
     - Interface Info Page:
         - ~~add constants to be visible in msg definitions (like ur_msgs/msg/SetIO)~~
     - Package Info Page:
@@ -66,6 +69,8 @@
         - add hz & bw sliders
         - add an "echo" group for topics_info_page (and call for services etc), to listen to current data on the topic
         - maybe just add a row to a subpage to echo/call that topic/service
+    - Node Info Page:
+        - start nodes with certain cli/ros2 arguments
 
 - ros2 stuff
     - (optional) add every page of the gui as a ros2 executable, so a window with only this page starts
@@ -78,11 +83,14 @@
     - add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length
     - make btns of img viewer work
     - some rows shall vexpand (like the logs) which is currently not working
+    - with the caching in place, sometimes old topics/services are beeing displayed, and can be inspected in subpages. Add a warning/banner, when a info-subpage is opened for a non-existing topic/etc. that says that it is not beeing published anymore
 
 ## Refactor
 
 - ~~merge all "msg_type_info_page" etc into one class when differs in what it displays depending on the interface type~~
 - ~~replace "webbrowser" stuff with gtk File/Web Launcher~~
+- ~~change that the overwritten _deferred_init of the subclasses of contentpage use the refresh methods instead~~
+- ~~turn interface dialog into content page~~
 - remove "status_page" in window.ui
 - rename all function, to fit GTK style "on_xxx" and "do_xxx"
 - clean up the mess of XXX.connect_(..., func(**func_kwargs)) and connect_data(...) and rather use connect(..., data)
@@ -91,19 +99,19 @@
 - replace all ros2cli commands with rclpy/rosidl etc commands
 
 
-## Bug Fixes
+## Bugs
 
 - ~~fix ros2 clock (broken since actions update)~~
 - ~~when the sidebar is collapsed and a different stack page is chosen, the "realize" function gets called again for the content pages and they dupe their rows etc~~
 - ~~gui freezes when calling a not available (anymore) service~~
+- ~~icons, that were added as gresource are not available in white when dark style is activated~~
+- ~~gui still sometimes freezes~~
 - banner reload throws an error!
-- gui still sometimes freezes
 - Search bar does not always have "focus" when a subpage is popped from the nav_view - then the row has focus?
-- icons, that were added as gresource are not available in white when dark style is activated (see https://developer.gnome.org/documentation/tutorials/themed-icons.html#symbolic-icons)
 - ellippsize throws sometimes an error if the label text is too short
-- change that the overwritten _deferred_init of the subclasses of contentpage use the refresh methods instead
 - fix, that the link to the online-lookup of msg definitions is currently completely wrong (must point to the pkg the msgs is defined in)
 - "Failed to realize renderer of type 'GskGLRenderer' for surface 'GdkX11Popup': GL-Kontext kann nicht erstellt werden"
 - "Failed to realize renderer of type 'GskNglRenderer' for surface 'GdkX11Toplevel': GL-Kontext kann nicht erstellt werden"
 - in pub:
     - when an exisiting topic is selected, then the topic name changed, the type changed and the name back to the suggested, an exisiting topic name will get a different type, which results in an error (RCLError)
+

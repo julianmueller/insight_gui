@@ -25,6 +25,8 @@ import json
 import threading
 import time
 
+
+import rclpy
 from rosidl_runtime_py import set_message_fields
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
 
@@ -68,8 +70,11 @@ class ActionGoalPage(ContentPage):
             icon_name="emoji-flags-symbolic",
             func=self.on_send_goal,
             tooltip_text="Send the action goal",
+            css_classes=["suggested-action"],
         )
-        super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
+        super().add_bottom_right_btn(
+            label="Clear", icon_name="trash-symbolic", func=self.on_clear_text, css_classes=["destructive-action"]
+        )
 
         # select group
         self.select_group = self.pref_page.add_group(title="Select Action")
@@ -210,20 +215,14 @@ class ActionGoalPage(ContentPage):
             return
 
         def _thread_worker():
-            def _disable_button():
-                self.send_goal_btn.set_sensitive(False)
-
-            GLib.idle_add(_disable_button)
+            self.send_goal_btn.set_sensitive(False)
 
             try:
                 # Clear previous feedback and result
                 self.feedback_text = ""
 
-                def _clear_feedback():
-                    self.feedback_text_view_row.set_text("")
-                    self.result_text_view_row.set_text("")
-
-                GLib.idle_add(_clear_feedback)
+                self.feedback_text_view_row.clear()
+                self.result_text_view_row.clear()
 
                 # Send the goal with feedback callback
                 self.action_client, goal_future = self.ros2_connector.send_action_goal(
@@ -235,8 +234,6 @@ class ActionGoalPage(ContentPage):
                 )
 
                 # Wait for goal to be accepted
-                import rclpy
-
                 start = time.monotonic()
                 while not goal_future.done():
                     rclpy.spin_once(self.ros2_connector.node, timeout_sec=0.01)
@@ -245,18 +242,9 @@ class ActionGoalPage(ContentPage):
 
                 self.goal_handle = goal_future.result()
                 if not self.goal_handle.accepted:
-
-                    def _goal_rejected():
-                        self.show_toast("Goal was rejected by action server")
-                        self.send_goal_btn.set_sensitive(True)
-
-                    GLib.idle_add(_goal_rejected)
+                    self.show_toast("Goal was rejected by action server")
+                    self.send_goal_btn.set_sensitive(True)
                     return
-
-                def _goal_accepted():
-                    self.show_toast("Goal accepted, waiting for result...")
-
-                GLib.idle_add(_goal_accepted)
 
                 # Get the result
                 result_future = self.goal_handle.get_result_async()
@@ -268,28 +256,18 @@ class ActionGoalPage(ContentPage):
                 result = result_future.result()
                 self.result_instance = result.result
 
-                def _update_result():
-                    if self.msg_format == "YAML":
-                        result_text = message_to_yaml(self.result_instance)
-                    elif self.msg_format == "JSON":
-                        result_text = str(json.dumps(message_to_ordereddict(self.result_instance), indent=4))
+                if self.msg_format == "YAML":
+                    result_text = message_to_yaml(self.result_instance)
+                elif self.msg_format == "JSON":
+                    result_text = str(json.dumps(message_to_ordereddict(self.result_instance), indent=4))
 
-                    self.result_text_view_row.set_text(result_text)
-                    self.send_goal_btn.set_sensitive(True)
-                    self.show_toast("Action completed!")
-
-                GLib.idle_add(_update_result)
+                self.result_text_view_row.set_text(result_text)
+                self.send_goal_btn.set_sensitive(True)
+                self.show_toast("Action completed!")
 
             except Exception as e:
-                # Capture the error message before passing to idle_add
-                error_msg = str(e)
-
-                def _handle_error_with_msg():
-                    self.show_toast(f"Action Error: {error_msg}")
-                    self.send_goal_btn.set_sensitive(True)
-
-                GLib.idle_add(_handle_error_with_msg)
-                return
+                self.show_toast(f"Action Error: {e}")
+                self.send_goal_btn.set_sensitive(True)
 
         threading.Thread(target=_thread_worker, daemon=True).start()
 
@@ -317,9 +295,9 @@ class ActionGoalPage(ContentPage):
         GLib.idle_add(_update_feedback)
 
     def on_clear_text(self):
-        self.goal_text_view_row.text_view.set_text("")
-        self.feedback_text_view_row.text_view.set_text("")
-        self.result_text_view_row.text_view.set_text("")
+        self.goal_text_view_row.clear()
+        self.feedback_text_view_row.clear()
+        self.result_text_view_row.clear()
 
     def on_action_selected(self, *args):
         if self.action_list_store.get_n_items() <= 0:
@@ -429,12 +407,12 @@ class ActionGoalPage(ContentPage):
         if not self.result_instance:
             return
 
-        def _idle():
-            self.result_text_view_row.set_text(result_text)
-
         if self.msg_format == "YAML":
             result_text = message_to_yaml(self.result_instance).rstrip()
         elif self.msg_format == "JSON":
             result_text = str(json.dumps(message_to_ordereddict(self.result_instance), indent=4))
+
+        def _idle():
+            self.result_text_view_row.set_text(result_text)
 
         GLib.idle_add(_idle)

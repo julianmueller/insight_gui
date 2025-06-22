@@ -1,5 +1,5 @@
 # =============================================================================
-# interface_type_dialog.py
+# interface_definition_page.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
@@ -31,68 +31,71 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
+from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.pref_rows import TextViewRow
+from insight_gui.widgets.buttons import CopyButton
 
-# TODO turn this into a content page
 
-
-class InterfaceTypeDialog(Adw.PreferencesDialog):
-    __gtype_name__ = "InterfaceTypeDialog"
+class InterfaceDefinitionPage(ContentPage):
+    __gtype_name__ = "InterfaceDefinitionPage"
 
     def __init__(self, interface_full_name: str, interface_class: Type, **kwargs):
-        super().__init__(**kwargs)
-        super().set_title(str(interface_full_name))  # TODO this needs to resemble whether its a Request/Response etc
-        super().set_size_request(width=300, height=800)
+        super().__init__(searchable=False, refreshable=False, **kwargs)
+        super().set_title(f"Interface Definition {interface_full_name}")
+        # TODO this needs to resemble whether its a Request/Response etc
 
-        pref_page = PrefPage()
-        super().add(pref_page)
+        self.detach_kwargs = {
+            "interface_full_name": interface_full_name,
+            "interface_class": interface_class,
+        }
 
-        interface_instance = interface_class()
+        self.interface_instance = interface_class()
+
+    def on_realize(self, *args):
+        super().on_realize()
 
         # YAML Message Text
-        yaml_text = message_to_yaml(interface_instance).rstrip()
+        yaml_text = message_to_yaml(self.interface_instance).rstrip()
 
         # TODO make it, that the scroll window shriks, when content is smaller than "max size"
         # TODO test it with "action_tutorials_interfaces/action/Fibonacci" that a min hight is show, even with no content
-        yaml_group = pref_page.add_group(title="YAML")
-        yaml_group.add_suffix_btn(
-            icon_name="edit-copy-symbolic",
-            tooltip_text="Copy YAML",
-            func=self.on_text_to_clipboard,
-            text=yaml_text,
-            text_type="YAML",
+        yaml_group = self.pref_page.add_group(title="YAML")
+        yaml_group.add_suffix_widget(
+            CopyButton(
+                copy_text=yaml_text,
+                tooltip_text="Copy YAML",
+                toast_host=self.toast_overlay,
+                toast_text="YAML text copied!",
+            ),
         )
         yaml_text_view = yaml_group.add_row(TextViewRow(editable=False))
         yaml_text_view.set_text(yaml_text)
 
         # JSON Message Text
-        json_text = str(json.dumps(message_to_ordereddict(interface_instance), indent=4)).replace('"', "'")
-        json_group = pref_page.add_group(title="JSON")
-        json_group.add_suffix_btn(
-            icon_name="edit-copy-symbolic",
-            tooltip_text="Copy JSON",
-            func=self.on_text_to_clipboard,
-            text=json_text,
-            text_type="JSON",
+        json_text = str(json.dumps(message_to_ordereddict(self.interface_instance), indent=4)).replace('"', "'")
+        json_group = self.pref_page.add_group(title="JSON")
+        json_group.add_suffix_widget(
+            CopyButton(
+                copy_text=json_text,
+                tooltip_text="Copy JSON",
+                toast_host=self.toast_overlay,
+                toast_text="JSON text copied!",
+            ),
         )
         json_text_view = json_group.add_row(TextViewRow(editable=False))
         json_text_view.set_text(json_text)
 
         # CSV Message Text
-        csv_text = message_to_csv(interface_instance)
-        csv_group = pref_page.add_group(title="CSV")
-        csv_group.add_suffix_btn(
-            icon_name="edit-copy-symbolic",
-            tooltip_text="Copy CSV",
-            func=self.on_text_to_clipboard,
-            text=csv_text,
-            text_type="CSV",
+        csv_text = message_to_csv(self.interface_instance)
+        csv_group = self.pref_page.add_group(title="CSV")
+        csv_group.add_suffix_widget(
+            CopyButton(
+                copy_text=csv_text,
+                tooltip_text="Copy CSV",
+                toast_host=self.toast_overlay,
+                toast_text="CSV text copied!",
+            ),
         )
         csv_text_view = csv_group.add_row(TextViewRow(editable=False))
         csv_text_view.set_text(csv_text)
-
-    def on_text_to_clipboard(self, text: str, text_type: str):
-        clip = self.get_clipboard()
-        clip.set(str(text))
-        self.add_toast(Adw.Toast(title=f"{text_type} text copied!"))

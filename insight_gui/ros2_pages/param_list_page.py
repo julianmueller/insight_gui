@@ -24,6 +24,7 @@ from typing import Dict
 from operator import itemgetter
 
 from rclpy.parameter import Parameter
+from rclpy.exceptions import ParameterNotDeclaredException
 from rcl_interfaces.msg import ParameterDescriptor
 
 import gi
@@ -32,10 +33,10 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
+from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.ros2_pages.param_edit_dialog import ParamEditDialog
 
 
 class ParameterListPage(ContentPage):
@@ -50,7 +51,6 @@ class ParameterListPage(ContentPage):
         self.parameter_lists: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        super().show_toast("Collecting parameters... This may take a few seconds.")
         self.available_nodes = self.ros2_connector.get_available_nodes()
 
         if len(self.available_nodes) == 0:
@@ -75,23 +75,22 @@ class ParameterListPage(ContentPage):
                 param_info = self.ros2_connector.get_parameter_info(node_name=node_name, parameter_name=param_name)
                 param_type = param_info["type"]
                 param_value = param_info["value"]
+                param_read_only = param_info["read_only"]
 
                 # TODO use the following instead of ros2param
                 # param: Parameter = self.ros2_connector.node.get_parameter(param_name)
                 # param.name, (param_to_python func) param.type_, param.value
 
                 row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
-                suffix_btn = row.add_suffix_btn(
-                    icon_name="document-edit-symbolic",
-                    tooltip_text="Edit",
-                    func=self.on_edit_param,
-                    func_kwargs={"node_name": node_name, "param_name": param_name},
+                row.set_subpage_link(
+                    nav_view=self.nav_view,
+                    subpage_class=ParamEditPage,
+                    subpage_kwargs={"node_name": node_name, "param_name": param_name},
                 )
 
                 # if the parameter is read-only, a prefix icon is added to the row
-                if self.ros2_connector.node.describe_parameter(param_name).read_only:
+                if param_read_only:
                     row.add_prefix_icon(icon_name="lock-symbolic", tooltip_text="Read-only parameter")
-                    suffix_btn.set_icon_name("eye-open-negative-filled-symbolic")
 
                 group.add_row(row)
 
@@ -99,10 +98,3 @@ class ParameterListPage(ContentPage):
 
     def reset_ui(self):
         self.pref_page.clear()
-
-    def on_edit_param(self, *args, node_name: str, param_name: str):
-        ParamEditDialog(
-            node_name=node_name,
-            param_name=param_name,
-            ros2_connector=self.ros2_connector,
-        ).present(self)

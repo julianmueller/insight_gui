@@ -22,11 +22,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from pathlib import Path
 # import os
+from pathlib import Path
 
-# # HOTFIX for https://discourse.gnome.org/t/gtk4-efficiency-and-performance-in-x11-export-remote-drawing-mode/8786?utm_source=chatgpt.com
+# # HOTFIX for https://discourse.gnome.org/t/gtk4-efficiency-and-performance-in-x11-export-remote-drawing-mode/8786
 # os.environ["GSK_RENDERER"] = "cairo"
+
+from ament_index_python import get_package_share_directory
 
 import gi
 
@@ -44,23 +46,24 @@ APPLICATION_ID = "com.github.julianmueller.Insight"
 APPLICATION_PATH = APPLICATION_ID.replace(".", "/")
 
 
-class Ros2GuiApp(Adw.Application):
+class InsightApplication(Adw.Application):
     __gtype_name__ = "InsightApplication"
 
-    def __init__(self, share_dir: Path = None):
+    def __init__(self):
         super().__init__(application_id=APPLICATION_ID)
         Gtk.init()
         Adw.init()
 
-        self.share_dir = share_dir
+        # find the shared data directory
+        self.share_dir = Path(get_package_share_directory("insight_gui")) / "data"
 
         # Load the compiled GResource file
-        resource = Gio.Resource.load(str(share_dir / "resources.gresource"))
-        Gio.Resource._register(resource)
+        Gio.Resource.load(str(self.share_dir / "resources.gresource"))._register()
 
         # set the application icon
-        theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
-        theme.add_resource_path(APPLICATION_PATH + "/logo")
+        icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+        # icon_theme.add_resource_path(APPLICATION_PATH + "/icons")
+        icon_theme.add_resource_path(APPLICATION_PATH + "/logo")
 
         self.main_window: Adw.ApplicationWindow = None
         self.detached_windows: list[Adw.ApplicationWindow] = []
@@ -79,6 +82,14 @@ class Ros2GuiApp(Adw.Application):
 
     def do_startup(self):
         Adw.Application.do_startup(self)
+
+        # set color scheme
+        self.style_manager = Adw.StyleManager.get_default()
+        self.style_manager.set_color_scheme(Adw.ColorScheme.DEFAULT)
+        self.style_manager.connect("notify::dark", self.on_theme_changed)
+
+        # set the default icon for the application
+        Gtk.Window.set_default_icon_name("insight")
 
         # ros2 connector handles all connections to the ros2 node
         self.ros2_connector = ROS2Connector()
@@ -105,7 +116,7 @@ class Ros2GuiApp(Adw.Application):
 
     def do_activate(self):
         if not self.main_window:
-            self.main_window = MainWindow(app=self, title="Insight", icon_name="insight-logo")
+            self.main_window = MainWindow(app=self, title="Insight", icon_name="insight")
 
         action = Gio.SimpleAction.new("preferences", None)
         action.connect("activate", self.main_window.on_preferences_dialog)
@@ -135,3 +146,19 @@ class Ros2GuiApp(Adw.Application):
         for win in reversed(self.detached_windows):
             win.close()
             self.detached_windows.remove(win)
+
+    def on_theme_changed(self, *args):
+        # TODO implement settings here, to choose light/dark/system
+        dark = Adw.StyleManager.get_default().get_dark()
+        provider = Gtk.CssProvider()
+
+        if dark:
+            provider.load_from_data(b"image { color: white; }")
+            self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+        else:
+            provider.load_from_data(b"image { color: black; }")
+            self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )

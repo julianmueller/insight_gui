@@ -1,5 +1,5 @@
 # =============================================================================
-# param_edit_dialog.py
+# param_edit_page.py
 #
 # This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
@@ -44,35 +44,44 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GLib
 
-from insight_gui.ros2_connector import ROS2Connector
+from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_page import PrefPage
-from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ScaleRow
+from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ScaleRow, MultiButtonRow
 
 
-class ParamEditDialog(Adw.PreferencesDialog):
-    __gtype_name__ = "ParamEditDialog"
+class ParamEditPage(ContentPage):
+    __gtype_name__ = "ParamEditPage"
 
-    def __init__(self, node_name: str, param_name: str, ros2_connector: ROS2Connector = None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, node_name: str, param_name: str, **kwargs):
+        super().__init__(searchable=False, **kwargs)
         super().set_title(f"Parameter {param_name}")
-        super().set_size_request(400, 600)
-        GLib.idle_add(self._deferred_init)
-
-        # TODO add a refresh button
 
         self.node_name = node_name
         self.param_name = param_name
-        self.ros2_connector = ros2_connector
+        self.detach_kwargs = {
+            "node_name": node_name,
+            "param_name": param_name,
+        }
 
         # the message that holds the parameter
         self.param_msg = Parameter()
         self.param_msg.name = self.param_name
         self.param_msg.value: ParameterValue = ParameterValue()  # is this okay to leave it empty here?
 
-        self.page = PrefPage(title="Parameter", icon_name="document-edit-symbolic")
-        super().add(self.page)
+    def on_realize(self, *args):
+        super().on_realize()
 
-        self.group = self.page.add_group()
+        self.group = self.pref_page.add_group()
+
+        # apply button
+        self.apply_btn = super().add_bottom_left_btn(
+            label="Apply Changes",
+            icon_name="emoji-flags-symbolic",
+            func=self.on_apply,
+            sensitive=False,
+            tooltip_text="Apply changes to parameter",
+            css_classes=["suggested-action"],
+        )
 
         self.name_row = self.group.add_row(
             PrefRow(title="Parameter Name", subtitle=self.param_name, css_classes=["property"])
@@ -116,20 +125,16 @@ class ParamEditDialog(Adw.PreferencesDialog):
             PrefRow(title="Additional Constraints", visible=False, css_classes=["property"])
         )
 
-        # finally the apply button
-        self.apply_btn = self.group.add_row(ButtonRow(label="Apply change", func=self.on_apply, sensitive=False))
-
-        # show note if param is read only
-        self.read_only_row = self.group.add_row(PrefRow(title="Parameter is read-only!", visible=False))
-        self.read_only_row.add_prefix_icon("warning-symbolic")
-
-    def _deferred_init(self):
+    def refresh_bg(self):
         # get parameter infos
         # TODO this call could be done async without waiting the 5 seconds timeout
-        param_descriptor = call_describe_parameters(
+        self.param_descriptor = call_describe_parameters(
             node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[self.param_name]
         ).descriptors[0]
 
+        return self.param_descriptor is not None
+
+    def refresh_ui(self):
         # get the current value of the parameter
         self.current_param_value = get_value(
             parameter_value=call_get_parameters(
@@ -138,17 +143,17 @@ class ParamEditDialog(Adw.PreferencesDialog):
         )
 
         # Parameter Description
-        if param_descriptor.description:
-            self.param_description = str(param_descriptor.description)
+        if self.param_descriptor.description:
+            self.param_description = str(self.param_descriptor.description)
             self.description_row.set_subtitle(subtitle=self.param_description)
 
         # Parameter Type
-        if param_descriptor.type:
-            self.param_type = param_descriptor.type
-            self.param_type_str = str(get_parameter_type_string(param_descriptor.type))
+        if self.param_descriptor.type:
+            self.param_type = self.param_descriptor.type
+            self.param_type_str = str(get_parameter_type_string(self.param_descriptor.type))
 
             # check if param type is dynamic
-            if param_descriptor.dynamic_typing:
+            if self.param_descriptor.dynamic_typing:
                 # TODO dynamic typing is not supported by the gui
                 self.param_type_str += " (dynamic, allowed to change type)"
 
@@ -172,8 +177,8 @@ class ParamEditDialog(Adw.PreferencesDialog):
             self.param_msg.value.integer_value = self.current_number_value
 
             # param constraints are used to create a scale widget
-            if param_descriptor.integer_range:
-                int_range = param_descriptor.integer_range[0]  # TODO why is this a list?
+            if self.param_descriptor.integer_range:
+                int_range = self.param_descriptor.integer_range[0]  # TODO why is this a list?
                 from_value = int(int_range.from_value)
                 to_value = int(int_range.to_value)
                 step = int(int_range.step)
@@ -214,8 +219,8 @@ class ParamEditDialog(Adw.PreferencesDialog):
             self.param_msg.value.double_value = self.current_number_value
 
             # param constraints are used to create a scale widget
-            if param_descriptor.floating_point_range:
-                float_range = param_descriptor.floating_point_range[0]  # TODO why is this a list?
+            if self.param_descriptor.floating_point_range:
+                float_range = self.param_descriptor.floating_point_range[0]  # TODO why is this a list?
                 from_value = float(float_range.from_value)
                 to_value = float(float_range.to_value)
                 step = float(float_range.step)
@@ -261,22 +266,25 @@ class ParamEditDialog(Adw.PreferencesDialog):
             self.new_text_row.set_text(str(self.current_text_value))
 
         # Additional Contraints as plain text
-        if param_descriptor.additional_constraints:
+        if self.param_descriptor.additional_constraints:
             self.additional_constraints_row.set_visible(True)
-            self.additional_constraints_row.set_subtitle(str(param_descriptor.additional_constraints))
+            self.additional_constraints_row.set_subtitle(str(self.param_descriptor.additional_constraints))
 
         # check if param is read only
-        self.is_read_only = param_descriptor.read_only
+        self.is_read_only = self.param_descriptor.read_only
 
         # disable the change button
         if self.is_read_only:
+            self.show_banner("This parameter is read-only and cannot be changed.")
+
             self.new_bool_row.set_visible(False)
             self.new_number_range_row.set_visible(False)
             self.new_number_text_row.set_visible(False)
             self.new_text_row.set_visible(False)
-            self.apply_btn.set_visible(False)
+            self.apply_btn.set_sensitive(False)
 
-            self.read_only_row.set_visible(True)
+    def reset_ui(self):
+        pass
 
     def on_bool_value_change(self, *args):
         new_bool_value = bool(self.new_bool_row.get_active())
@@ -322,10 +330,6 @@ class ParamEditDialog(Adw.PreferencesDialog):
         else:
             self.apply_btn.set_sensitive(True)
 
-    def show_toast(self, title: str, *, priority: Adw.ToastPriority = Adw.ToastPriority.NORMAL, timeout: int = 2):
-        """Show a toast message"""
-        self.add_toast(Adw.Toast(title=title, priority=priority, timeout=timeout))
-
     def on_apply(self, *args):
         try:
             resp: SetParameters_Response = call_set_parameters(
@@ -333,10 +337,9 @@ class ParamEditDialog(Adw.PreferencesDialog):
             )
             if resp.results[0].successful:
                 self.show_toast("Parameter changed successfully")
-                GLib.idle_add(self._deferred_init)  # TODO change this whole behaviour into reload etc
+                self.refresh()
             else:
                 reason = str(resp.results[0].reason)
                 self.show_toast(f"Parameter changed failed: {reason}", priority=Adw.ToastPriority.HIGH)
         except Exception as e:
             self.show_toast(f"Error: {e}", priority=Adw.ToastPriority.HIGH)
-        # self.close()

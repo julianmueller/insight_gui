@@ -64,13 +64,19 @@ class TopicSubscriberPage(ContentPage):
                 func=self.on_toggle_stream,
                 labels=("Stop Subscription", "Start Subscription"),
                 visible=False,
+                css_classes=["suggested-action"],
             ),
             position="start",
         )
         self.single_sub_btn = super().add_bottom_left_btn(
-            label="Single Subscription", icon_name="listen-symbolic", func=self.on_single_sub
+            label="Single Subscription",
+            icon_name="listen-symbolic",
+            func=self.on_single_sub,
+            css_classes=["suggested-action"],
         )
-        super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
+        super().add_bottom_right_btn(
+            label="Clear", icon_name="trash-symbolic", func=self.on_clear_text, css_classes=["destructive-action"]
+        )
 
         # select group
         self.select_group: PrefGroup = self.pref_page.add_group(title="Select Topic", filterable=False)

@@ -46,9 +46,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio
+from gi.repository import Gtk, Adw, Gio, Gdk
 
-from insight_gui.ros2_pages.interface_type_dialog import InterfaceTypeDialog
+from insight_gui.ros2_pages.interface_definition_page import InterfaceDefinitionPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
@@ -153,24 +153,43 @@ class InterfaceInfoPage(ContentPage):
             self.populate_group_w_msg_rows(interface_class=interface_class, pref_group=group)
 
             # Btn for opening the raw msg text dialog
-            group.add_suffix_btn(
-                icon_name="notes-app-symbolic",
-                tooltip_text=f"Raw {class_type} Text",
-                func=self.on_open_type_dialog,
-                interface_class=interface_class,
+            subpage_btn = group.add_suffix_widget(
+                Gtk.Button(
+                    icon_name="go-next-symbolic",
+                    tooltip_text=f"Open {class_type} Definition",
+                )
             )
+
+            def _on_pressed(controller: Gtk.GestureClick, n_press: int, x: float, y: float):
+                state = controller.get_current_event_state()
+                subpage = InterfaceDefinitionPage(
+                    interface_full_name=self.interface_full_name, interface_class=interface_class
+                )
+
+                # add CTRL+click functionality to open in detached window
+                if state & Gdk.ModifierType.CONTROL_MASK:
+                    subpage.detach()
+
+                # regular click
+                else:
+                    self.nav_view.push(subpage)
+
+            if hasattr(subpage_btn, "subpage_signal_handler"):
+                subpage_btn.disconnect(self.subpage_signal_handler)
+
+            gesture_click = Gtk.GestureClick(
+                propagation_phase=Gtk.PropagationPhase.CAPTURE, propagation_limit=Gtk.PropagationLimit.NONE
+            )
+            self.subpage_signal_handler = gesture_click.connect("pressed", _on_pressed)
+            subpage_btn.add_controller(gesture_click)
 
     def on_open_interface_file(self, *args):
         interface_file_path = get_interface_path(self.interface_full_name)
         if os.path.exists(interface_file_path):
             file = Gio.File.new_for_path(interface_file_path)
-            Gtk.FileLauncher(file=file, always_ask=True, writable=False).launch(self.window, None)
+            Gtk.FileLauncher(file=file, always_ask=True, writable=False).launch(self.app.main_window, None)
         else:
             super().show_toast(f"Path '{interface_file_path}' does not exist!")
-
-    def on_open_type_dialog(self, *args, interface_class: Type):
-        dialog = InterfaceTypeDialog(interface_full_name=self.interface_full_name, interface_class=interface_class)
-        dialog.present()
 
     def on_open_weblink(self, *args):
         Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/jazzy/p/{self.interface_full_name}.html", None)

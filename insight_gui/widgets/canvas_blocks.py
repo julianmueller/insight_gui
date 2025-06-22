@@ -26,7 +26,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GLib, GObject
+from gi.repository import Gtk, Adw, Gio, GObject
 
 
 from insight_gui.utils.adw_colors import AdwAccentColor
@@ -41,7 +41,7 @@ class BaseBlock(Adw.Bin):
 
     def __init__(self, label: str, accent_color: AdwAccentColor = None, **kwargs):
         super().__init__()
-        GLib.idle_add(self._deferred_init)
+        super().connect("realize", self.on_realize)
 
         builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
@@ -69,9 +69,9 @@ class BaseBlock(Adw.Bin):
         if accent_color is not None and isinstance(accent_color, AdwAccentColor):
             self.main_box.add_css_class(accent_color.as_css_name())
 
-    def _deferred_init(self, *args):
+    def on_realize(self, *args):
         self.nav_view = super().get_ancestor(Adw.NavigationView)
-        self.ros2_connector = super().get_root().ros2_connector
+        self.ros2_connector = Gio.Application.get_default().ros2_connector
 
     @property
     def north_attachment_point(self):

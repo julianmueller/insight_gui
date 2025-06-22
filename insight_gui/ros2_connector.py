@@ -101,6 +101,7 @@ class ROS2Connector:
         self.node = Node(
             node_name=self.app.settings.get_string("gui-node-name"),
             namespace=self.app.settings.get_string("gui-node-namespace"),
+            allow_undeclared_parameters=True,
         )
         self.start_time = self.node.get_clock().now()
         self.thread = GLib.Thread.new("ros2-thread", self.spin, None)
@@ -685,11 +686,13 @@ class ROS2Connector:
             # If cache is empty or use_cache is False, fetch fresh data
             if param_info is None:
                 # Get both type and value in one go for efficiency
-                param_type = get_parameter_type_string(
-                    call_describe_parameters(node=self.node, node_name=node_name, parameter_names=[parameter_name])
-                    .descriptors[0]
-                    .type
-                )
+                # TODO maybe use: self.node.describe_parameter(param_name)
+                param_descriptor = call_describe_parameters(
+                    node=self.node, node_name=node_name, parameter_names=[parameter_name]
+                ).descriptors[0]
+
+                param_type = get_parameter_type_string(param_descriptor.type)
+                param_read_only = param_descriptor.read_only
 
                 param_value = get_value(
                     parameter_value=call_get_parameters(
@@ -697,7 +700,7 @@ class ROS2Connector:
                     ).values[0]
                 )
 
-                param_info = {"type": param_type, "value": param_value}
+                param_info = {"type": param_type, "value": param_value, "read_only": param_read_only}
 
             # Store fresh data in cache
             self._store_in_cache(cache_key, param_info)

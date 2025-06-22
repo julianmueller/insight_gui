@@ -46,13 +46,14 @@ class PreferencesDialog(Adw.PreferencesDialog):
         super().__init__(**kwargs)
         super().set_title("Settings")
         super().set_size_request(400, 600)
+        super().set_presentation_mode(Adw.DialogPresentationMode.AUTO)
+        super().connect("realize", self.on_realize)
         super().connect("close-attempt", self.on_close_attempt)
-        GLib.idle_add(self._deferred_init)
 
         self.app = Gio.Application.get_default()
         self.ros2_connector = ros2_connector
 
-    def _deferred_init(self):
+    def on_realize(self, *args):
         # Create ROS2 connection and environment settings page
         self.ros2_page = PrefPage(title="ROS2 Node", icon_name="preferences-desktop-apps-symbolic")
         super().add(self.ros2_page)
@@ -108,14 +109,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         # Update environment variables from current environment
         self.update_env_vars()
-
-        # self.env_apply_row = env_group.add_row(
-        #     ButtonRow(
-        #         label="Apply Environment Variables",
-        #         tooltip_text="Apply Environment Variables and restart ROS2 node",
-        #         func=self.on_apply_env_vars,
-        #     )
-        # )
 
         # ROS2 Node Control Group
         gui_node_group = self.ros2_page.add_group(title="GUI Node Control")
@@ -448,6 +441,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 label="Clear Cache",
                 tooltip_text="Clear all cached data and refresh the lists",
                 func=self.ros2_connector.clear_cache,
+                css_classes=["destructive-action"],
             )
         )
 
@@ -472,17 +466,18 @@ class PreferencesDialog(Adw.PreferencesDialog):
         # self.max_message_history_row.set_value(100)
 
         # Create application behavior settings page
-        # self.behavior_page = PrefPage(title="Behavior", icon_name="preferences-system-symbolic")
-        # super().add(self.behavior_page)
+        self.behavior_page = PrefPage(title="Behavior", icon_name="preferences-system-symbolic")
+        super().add(self.behavior_page)
 
         # Startup Behavior
-        # startup_group = self.behavior_page.add_group(
-        #     title="Startup Behavior", description="Configure what happens when the application starts"
-        # )
+        startup_group = self.behavior_page.add_group(
+            title="Startup Behavior", description="Configure what happens when the application starts"
+        )
 
-        # self.restore_last_page_row = startup_group.add_row(
-        #     Adw.SwitchRow(title="Restore Last Page", subtitle="Open the last viewed page on startup", active=False)
-        # )
+        self.restore_last_page_row = startup_group.add_row(
+            Adw.SwitchRow(title="Restore Last Page", subtitle="Open the last viewed page on startup", active=True)
+        )
+        self.app.settings.bind("restore-last-page", self.restore_last_page_row, "active", Gio.SettingsBindFlags.DEFAULT)
 
         # Navigation Behavior
         # navigation_group = self.behavior_page.add_group(

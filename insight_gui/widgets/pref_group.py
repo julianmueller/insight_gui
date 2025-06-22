@@ -149,8 +149,16 @@ class PrefGroup(Adw.PreferencesGroup):
         self.rows = []
         self.empty_row.set_visible(True)
 
-    def add_suffix_btn(self, *, icon_name: str, tooltip_text: str, visible: bool = True, func: Callable, **func_kwargs):
-        btn = Gtk.Button(icon_name=icon_name, visible=visible, tooltip_text=tooltip_text)
+    def add_suffix_btn(
+        self,
+        *,
+        icon_name: str,
+        tooltip_text: str,
+        func: Callable,
+        func_kwargs: dict = {},
+        **kwargs,
+    ):
+        btn = Gtk.Button(icon_name=icon_name, tooltip_text=tooltip_text, **kwargs)
         btn.connect("clicked", lambda *_: func(**func_kwargs))
         btn.add_css_class("flat")
         return self.add_suffix_widget(btn)

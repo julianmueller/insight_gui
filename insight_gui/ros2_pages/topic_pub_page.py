@@ -74,6 +74,7 @@ class TopicPublisherPage(ContentPage):
                 labels=("Stop Publishing", "Start Publishing"),
                 visible=False,
                 sensitive=False,
+                css_classes=["suggested-action"],
             ),
             position="start",
         )
@@ -82,8 +83,11 @@ class TopicPublisherPage(ContentPage):
             icon_name="megaphone-symbolic",
             func=self.publish_msg,
             sensitive=False,
+            css_classes=["suggested-action"],
         )
-        super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
+        super().add_bottom_right_btn(
+            label="Clear", icon_name="trash-symbolic", func=self.on_clear_text, css_classes=["destructive-action"]
+        )
 
         # select group
         self.select_group: PrefGroup = self.pref_page.add_group(title="Select Topic", filterable=False)

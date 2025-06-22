@@ -23,17 +23,10 @@
 # =============================================================================
 
 import signal
-from pathlib import Path
-
-from ament_index_python import get_package_share_directory
-
-from insight_gui.application import Ros2GuiApp
+from insight_gui.application import InsightApplication
 
 
 def main(args=None):
-    # Set the global variable for all code to find the shared data directory
-    share_dir = Path(get_package_share_directory("insight_gui")) / "data"
-
     # Enable Ctrl+C handling
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -42,10 +35,12 @@ def main(args=None):
     # debugpy.wait_for_client()
 
     try:
-        gui_app = Ros2GuiApp(share_dir)
+        gui_app = InsightApplication()
         signal.signal(signal.SIGINT, lambda *_: gui_app.shutdown())
         gui_app.run(None)
+
     except Exception as e:
+        print(f"An error occurred: {e}")
         gui_app.shutdown()
 
 

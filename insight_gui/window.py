@@ -39,6 +39,7 @@ from insight_gui.ros2_pages.service_list_page import ServiceListPage
 from insight_gui.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
 from insight_gui.ros2_pages.action_list_page import ActionListPage
+from insight_gui.ros2_pages.launch_list_page import LaunchListPage
 from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
 from insight_gui.ros2_pages.graph_page import GraphPage
 from insight_gui.ros2_pages.param_list_page import ParameterListPage
@@ -61,8 +62,8 @@ class BaseWindow(Adw.ApplicationWindow):
 
     def __init__(self, app: Adw.Application, **kwargs):
         super().__init__(application=app, **kwargs)
-        self.app = app
-        self.ros2_connector = app.ros2_connector
+        self.app: Adw.Application = app
+        self.ros2_connector: ROS2Connector = app.ros2_connector
 
         self._setup_accent_colors()
 
@@ -178,12 +179,13 @@ class MainWindow(BaseWindow):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_default_size(1200, 800)
-        super().set_size_request(480, 500)
+        super().set_size_request(400, 500)
 
         builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
         self.split_view: Adw.NavigationSplitView = builder.get_object("split_view")
         super().set_content(self.split_view)
+
         break_point = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 800sp"))
         break_point.add_setter(self.split_view, "collapsed", True)
         super().add_breakpoint(break_point)
@@ -192,6 +194,7 @@ class MainWindow(BaseWindow):
         self.menu_btn: Gtk.Button = builder.get_object("menu_btn")
         self.content_stack: Gtk.Stack = builder.get_object("content_stack")
         self.content_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
+
         self.stack_sidebar: StackSidebar = builder.get_object("stack_sidebar")
         self.stack_sidebar.set_stack(self.content_stack)
 
@@ -207,7 +210,7 @@ class MainWindow(BaseWindow):
             title="Packages",
             page_name="pkg_list",
             nav_page=PackageListPage(),
-            prefix_icon="package-x-generic-symbolic",
+            prefix_icon="packages-app-symbolic",
             subtitle="Browse all packages",
         )
 
@@ -319,6 +322,17 @@ class MainWindow(BaseWindow):
             subtitle="Send action goals",
         )
 
+        # Launch Files
+        launch_group = self.stack_sidebar.add_group(title="Launch")
+        self.stack_sidebar.add_page_row(
+            group=launch_group,
+            title="Launch Files",
+            page_name="launch_list",
+            nav_page=LaunchListPage(),
+            prefix_icon="media-playback-start-symbolic",
+            subtitle="Browse and execute launch files",
+        )
+
         # Interface
         interface_group = self.stack_sidebar.add_group(title="Interfaces")
         self.stack_sidebar.add_page_row(
@@ -368,6 +382,12 @@ class MainWindow(BaseWindow):
             subtitle="System diagnostics",
         )
 
+        if self.app.settings.get_boolean("restore-last-page"):
+            last_page = self.app.settings.get_string("last-page")
+
+            if last_page and self.content_stack.get_child_by_name(last_page):
+                self.content_stack.set_visible_child_name(last_page)
+
         # ros time
         self.time_box: Gtk.Box = builder.get_object("time_box")
         self.ros_time_lbl: Gtk.Label = builder.get_object("ros_time_lbl")
@@ -400,7 +420,7 @@ class MainWindow(BaseWindow):
     def on_about_dialog(self, *args):
         self.about_dialog = Adw.AboutDialog(
             application_name="Insight",
-            application_icon="insight-logo",
+            application_icon="insight",
             developer_name="Julian Müller",
             # developer_documentation="https://github.com/julianmueller/insight_gui",
             license_type=Gtk.License.APACHE_2_0,
@@ -412,6 +432,11 @@ class MainWindow(BaseWindow):
         self.about_dialog.present(self)
 
     def on_stack_page_changed(self, stack: Gtk.Stack, stack_name: GObject.GParamSpec):
+        # save the last page in settings
+        last_page = self.content_stack.get_visible_child_name()
+        if last_page != "welcome":
+            self.app.settings.set_string("last-page", last_page)
+
         if self.split_view.get_collapsed():
             self.split_view.set_show_content(True)
         else:
@@ -419,6 +444,8 @@ class MainWindow(BaseWindow):
 
     def _update_time_labels(self):
         node_is_running = self.app.lookup_action("ros2-node-is-running").get_state().get_boolean()
+
+        # TODO add some rate limiting
 
         if not node_is_running:
             self.time_box.set_visible(False)
@@ -448,8 +475,8 @@ class DetachedWindow(BaseWindow):
         super().__init__(**kwargs)
 
         super().set_destroy_with_parent(True)
-        super().set_size_request(480, 300)
-        super().set_default_size(480, 600)
+        super().set_size_request(400, 300)
+        super().set_default_size(400, 600)
 
         self.nav_view: Adw.NavigationView = Adw.NavigationView()
         super().set_content(self.nav_view)

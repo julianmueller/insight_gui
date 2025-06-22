@@ -886,6 +886,91 @@ class ColumnViewRow(AdditionalContentRow):
         self.data_model.remove_all()
 
 
+# somewhat based on
+# https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.1/class.ButtonRow.html
+class ButtonRow(Adw.PreferencesRow, PrefRowInterface):
+    __gtype_name__ = "ButtonRow"
+
+    def __init__(
+        self,
+        *,
+        label: str = "",
+        start_icon_name: str = "",
+        end_icon_name: str = "",
+        tooltip_text: str = "",
+        func: Callable,
+        func_kwargs: dict = {},
+        btn_css_classes: list[str] = [],
+        **kwargs,
+    ):
+        Adw.PreferencesRow.__init__(self, **kwargs)
+        PrefRowInterface.__init__(self)
+        super().set_activatable(False)
+
+        self.btn = Gtk.Button(
+            margin_top=8,
+            margin_bottom=8,
+            margin_start=12,
+            margin_end=12,
+            tooltip_text=tooltip_text,
+        )
+        self.btn.connect("clicked", lambda *_: func(**func_kwargs))
+
+        self.content_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6, halign=Gtk.Align.CENTER)
+        self.start_icon = Gtk.Image(icon_name=start_icon_name)
+        self.btn_label = Gtk.Label(label=label)
+        self.end_icon = Gtk.Image(icon_name=end_icon_name)
+
+        self.content_box.append(self.start_icon)
+        self.content_box.append(self.btn_label)
+        self.content_box.append(self.end_icon)
+
+        self.btn.set_child(self.content_box)
+        super().set_child(self.btn)
+
+        for css_class in btn_css_classes:
+            self.btn.add_css_class(css_class)
+
+    @GObject.Property(type=str, default="")
+    def filter_text(self) -> str:
+        return self.btn_label.get_label().lower()
+
+
+class MultiButtonRow(Adw.PreferencesRow, PrefRowInterface):
+    __gtype_name__ = "MultiButtonRow"
+
+    def __init__(self, **kwargs):
+        Adw.PreferencesRow.__init__(self, **kwargs)
+        PrefRowInterface.__init__(self)
+        super().set_activatable(False)
+
+        self.content_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            homogeneous=True,
+            spacing=0,
+            halign=Gtk.Align.FILL,
+            hexpand=True,
+            margin_top=8,
+            margin_bottom=8,
+            margin_start=12,
+            margin_end=12,
+            css_classes=["linked"],
+            **kwargs,
+        )
+        super().set_child(self.content_box)
+
+        self.buttons = []
+
+    def add_button(self, btn: Gtk.Button, prepend: bool = False):
+        if prepend:
+            self.content_box.prepend(btn)
+        else:
+            self.content_box.append(btn)
+
+        self.buttons.append(btn)
+        return btn
+
+
 class MultiToggleButtonRow(AdditionalContentRow):
     __gtype_name__ = "MultiToggleButtonRow"
     __gsignals__ = {"button-toggled": (GObject.SignalFlags.RUN_FIRST, None, (str, bool))}
@@ -945,56 +1030,6 @@ class MultiToggleButtonRow(AdditionalContentRow):
     def toggle_all(self, active: bool):
         for btn in self.buttons.values():
             btn.set_active(active)
-
-
-# somewhat based on
-# https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.1/class.ButtonRow.html
-class ButtonRow(Adw.PreferencesRow, PrefRowInterface):
-    __gtype_name__ = "ButtonRow"
-
-    def __init__(
-        self,
-        *,
-        label: str = "",
-        start_icon_name: str = "",
-        end_icon_name: str = "",
-        tooltip_text: str = "",
-        func: Callable,
-        func_kwargs: dict = {},
-        btn_css_classes: list[str] = [],
-        **kwargs,
-    ):
-        Adw.PreferencesRow.__init__(self, **kwargs)
-        PrefRowInterface.__init__(self)
-        super().set_activatable(False)
-
-        self.btn = Gtk.Button(
-            margin_top=8,
-            margin_bottom=8,
-            margin_start=12,
-            margin_end=12,
-            tooltip_text=tooltip_text,
-        )
-        self.btn.connect("clicked", lambda *_: func(**func_kwargs))
-
-        self.content_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6, halign=Gtk.Align.CENTER)
-        self.start_icon = Gtk.Image(icon_name=start_icon_name)
-        self.btn_label = Gtk.Label(label=label)
-        self.end_icon = Gtk.Image(icon_name=end_icon_name)
-
-        self.content_box.append(self.start_icon)
-        self.content_box.append(self.btn_label)
-        self.content_box.append(self.end_icon)
-
-        self.btn.set_child(self.content_box)
-        super().set_child(self.btn)
-
-        for css_class in btn_css_classes:
-            self.btn.add_css_class(css_class)
-
-    @GObject.Property(type=str, default="")
-    def filter_text(self) -> str:
-        return self.btn_label.get_label().lower()
 
 
 # TODO this is not really tested yet

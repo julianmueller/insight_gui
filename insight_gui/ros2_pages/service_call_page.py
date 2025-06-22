@@ -59,8 +59,11 @@ class ServiceCallPage(ContentPage):
             icon_name="call-start-symbolic",
             func=self.on_call_service,
             tooltip_text="Call the selected service",
+            css_classes=["suggested-action"],
         )
-        super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_text)
+        super().add_bottom_right_btn(
+            label="Clear", icon_name="trash-symbolic", func=self.on_clear_text, css_classes=["destructive-action"]
+        )
 
         # select group
         self.select_group = self.pref_page.add_group(title="Select Service")
@@ -137,7 +140,7 @@ class ServiceCallPage(ContentPage):
             func=self.on_copy_response_to_clipboard,
         )
         # self.response_group.add_suffix_btn(
-        #     icon_name="trash-symbolic", tooltip_text="Clear Response Text", func=self.on_clear_response
+        #     icon_name="trash-symbolic", tooltip_text="Clear Response Text", func=self.on_clear_response, css_classes=["destructive-action"]
         # )
         self.response_text_view_row = self.response_group.add_row(
             TextViewRow(editable=False, wrap_mode=Gtk.WrapMode.NONE)

@@ -62,13 +62,19 @@ class ImageViewerPage(ContentPage):
                 func=self.on_play_pause_stream,
                 labels=("Stop Stream", "Start Stream"),
                 visible=False,
+                css_classes=["suggested-action"],
             ),
             position="start",
         )
         self.single_shot_btn = super().add_bottom_left_btn(
-            label="Single Shot", icon_name="camera-photo-symbolic", func=self.on_single_shot_img
+            label="Single Shot",
+            icon_name="camera-photo-symbolic",
+            func=self.on_single_shot_img,
+            css_classes=["suggested-action"],
         )
-        super().add_bottom_right_btn(label="Clear", icon_name="trash-symbolic", func=self.on_clear_img)
+        super().add_bottom_right_btn(
+            label="Clear", icon_name="trash-symbolic", func=self.on_clear_img, css_classes=["destructive-action"]
+        )
 
         self.img_group = self.pref_page.add_group(title="View Image", filterable=False)
         self.img_topic_row = self.img_group.add_row(

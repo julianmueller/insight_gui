@@ -48,7 +48,6 @@ class ContentPage(Adw.NavigationPage):
         super().connect("unrealize", self.on_unrealize)
         super().connect("map", self.on_map)
         super().connect("unmap", self.on_unmap)
-        GLib.idle_add(self._deferred_init)
 
         self.app = Gio.Application.get_default()
         self.ros2_connector: ROS2Connector = self.app.ros2_connector
@@ -127,14 +126,8 @@ class ContentPage(Adw.NavigationPage):
         self.content_stack.add_child(self.pref_page)
         self.content_stack.set_visible_child(self.pref_page)
 
-    def _deferred_init(self):
-        pass
-
     def on_realize(self, *args):
-        # refresh the gui
-        # if self.refreshable: # TODO check if this is okay, to always refresh
-        GLib.idle_add(self.refresh)
-
+        self.is_realized = True
         self.nav_view: Adw.NavigationView = super().get_ancestor(Adw.NavigationView)
 
         if self.app.settings.get_boolean("show-breadcrumbs-bar"):
@@ -143,14 +136,17 @@ class ContentPage(Adw.NavigationPage):
             self.nav_view.connect("pushed", self.update_breadcrumbs)
             self.nav_view.connect("popped", self.update_breadcrumbs)
 
+        # refresh the gui
+        GLib.idle_add(self.refresh)
+
     def on_unrealize(self, *args):
-        pass
+        self.is_realized = False
 
     def on_map(self, *args):
-        self.page_is_mapped = True
+        self.is_mapped = True
 
     def on_unmap(self, *args):
-        self.page_is_mapped = False
+        self.is_mapped = False
 
     def refresh(self):
         if self.refreshing:
@@ -174,6 +170,11 @@ class ContentPage(Adw.NavigationPage):
             GLib.idle_add(finish_thread, refresh_result)
 
         def finish_thread(refresh_result: bool):
+            if not self.is_realized:
+                # Delay execution until realized
+                GLib.timeout_add(100, finish_thread, refresh_result)
+                return False  # Stop idle_add, let timeout_add retry
+
             if refresh_result:
                 self.hide_banner()
                 self.reset_ui()

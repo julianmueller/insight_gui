@@ -48,6 +48,10 @@ class PackageInfoPage(ContentPage):
         self.pkg_name = pkg_name
         self.detach_kwargs = {"pkg_name": pkg_name}
 
+        package_share_dir = get_package_share_directory(self.pkg_name)
+        package_xml = os.path.join(package_share_dir, "package.xml")
+        self.xml_tree = ET.parse(package_xml).getroot()
+
         self.link_group = self.pref_page.add_group(title="Links")
         self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
             icon_name="folder-symbolic",
@@ -82,13 +86,19 @@ class PackageInfoPage(ContentPage):
 
         for path in sorted(executable_paths):
             executable_name = Path(path).name
-            row = self.executables_group.add_row(PrefRow(title=executable_name))
+            row: PrefRow = self.executables_group.add_row(PrefRow(title=executable_name))
             row.add_suffix(
                 CopyButton(
                     copy_text=f"ros2 run {self.pkg_name} {executable_name}",
                     tooltip_text="Copy 'ros2 run' command",
                     toast_host=self.toast_overlay,
                 )
+            )
+            row.add_suffix_btn(
+                icon_name="terminal-symbolic",
+                tooltip_text="Open command in terminal",
+                func=self.on_open_terminal_command,
+                func_kwargs={"command": f"ros2 run {self.pkg_name} {executable_name}"},
             )
 
         # add the counts as descriptions
@@ -97,19 +107,15 @@ class PackageInfoPage(ContentPage):
         # XML inspection
         self.xml_group = self.pref_page.add_group(title="Content of package.xml")
 
-    def _deferred_init(self):
-        super()._deferred_init()
-
-        package_share_dir = get_package_share_directory(self.pkg_name)
-        package_xml = os.path.join(package_share_dir, "package.xml")
-        xml_tree = ET.parse(package_xml)
+    def on_realize(self, *args):
+        super().on_realize()
 
         # version
-        version = xml_tree.getroot().find("version").text
+        version = self.xml_tree.find("version").text
         self.xml_group.add_row(PrefRow(title="Version", subtitle=str(version), css_classes=["property"]))
 
         # description
-        description = " ".join([line.strip() for line in str(xml_tree.getroot().find("description").text).split()])
+        description = " ".join([line.strip() for line in str(self.xml_tree.find("description").text).split()])
         desc_row = self.xml_group.add_row(
             PrefRow(title="Description", subtitle=str(description), css_classes=["property"])
         )
@@ -117,7 +123,7 @@ class PackageInfoPage(ContentPage):
         desc_row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.NONE)
 
         # maintainer
-        maintainers = xml_tree.getroot().findall("maintainer")
+        maintainers = self.xml_tree.findall("maintainer")
         maintainers_exp = self.xml_group.add_row(Adw.ExpanderRow(title="Maintainers"))
         for m in maintainers:
             email = m.get("email")
@@ -129,11 +135,11 @@ class PackageInfoPage(ContentPage):
             maintainers_exp.add_row(row)
 
         # license
-        license = xml_tree.getroot().find("license").text
+        license = self.xml_tree.find("license").text
         self.xml_group.add_row(PrefRow(title="License", subtitle=str(license), css_classes=["property"]))
 
         # authors
-        authors = xml_tree.getroot().findall("author")
+        authors = self.xml_tree.findall("author")
         if len(authors) == 0:
             self.xml_group.add_row(PrefRow(title="<i>No authors</i>"))
         else:
@@ -148,7 +154,7 @@ class PackageInfoPage(ContentPage):
                 authors_exp.add_row(row)
 
         def _add_depend_expander(depend: str):
-            xml_dep_list = xml_tree.getroot().findall(depend)
+            xml_dep_list = self.xml_tree.findall(depend)
             if len(xml_dep_list) == 0:
                 row = self.xml_group.add_row(PrefRow(title=f"<i>No '{depend}' packages</i>"))
                 row.set_use_markup(True)
@@ -202,3 +208,27 @@ class PackageInfoPage(ContentPage):
             Gio.AppInfo.launch_default_for_uri(folder_uri, None)
         else:
             super().show_toast(f"Path '{path}' does not exist!")
+
+    def on_open_terminal_command(self, *, command: str):
+        """Open a terminal with a specific command."""
+        try:
+            launcher = Gio.SubprocessLauncher()
+            launcher.set_flags(Gio.SubprocessFlags.NONE)
+
+            # Set environment variables for the terminal
+            env_list = [f"{key}={value}" for key, value in os.environ.items()]
+            launcher.set_environ(env_list)
+
+            launcher.spawnv(
+                [
+                    "gnome-terminal",
+                    "--title",
+                    f"Running: {command}",
+                    "--",
+                    "bash",
+                    "-ic",
+                    f"echo -e '\\033[1;32m{command}\\033[0m'; {command}",
+                ]
+            )
+        except Exception as e:
+            self.show_toast(f"Error opening terminal: {e}")

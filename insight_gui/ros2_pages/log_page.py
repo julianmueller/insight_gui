@@ -79,8 +79,8 @@ class LoggerPage(ContentPage):
         super().__init__(refreshable=False, searchable=False, **kwargs)
         super().set_title("Logger")
 
-    def _deferred_init(self):
-        super()._deferred_init()
+    def on_realize(self, *args):
+        super().on_realize()
 
         # self.is_logging = False
         # self.rosout_sub = None
@@ -92,10 +92,13 @@ class LoggerPage(ContentPage):
                 default_active=True,
                 func=self.on_logging_btn_toggled,
                 labels=("Stop logging", "Start logging"),
+                css_classes=["suggested-action"],
             ),
             position="start",
         )
-        super().add_bottom_right_btn(label="Clear Log", icon_name="trash-symbolic", func=self.on_clear_log)
+        super().add_bottom_right_btn(
+            label="Clear Log", icon_name="trash-symbolic", func=self.on_clear_log, css_classes=["destructive-action"]
+        )
 
         # filters to apply to the column view
         filters_group: PrefGroup = self.pref_page.add_group(title="Filters", filterable=False)
