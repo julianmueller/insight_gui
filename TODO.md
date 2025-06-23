@@ -22,6 +22,7 @@
     - add gtk action for all major actions
     - add "experimental" flag/info to not really working pages
     - Add a Link to the latest online tutorial, that explains eg how to subscribe etc
+    - add context menu on right click, eg for all rows to copy, title or subtitle content, or open new window etc
 
 - additional pages:
     - ~~add a `rqt_graph` equivalent page~~
@@ -44,6 +45,7 @@
     - documentation Page, with Links to the ros2 webpages? maybe even a webview renderer?
     - clock page with manipulation options
     - bookmarks page to save links to pages for later
+    - image pub page (load image/video and stream it)
 
 - additional settings:
     - ~~maybe add an option, that all parameter-related services are hidden (/describe_parameters etc)~~
@@ -62,15 +64,22 @@
         - add the ros wiki explainations for packages? like what are all possible subscribed/published topics? or just a btn?
     - Param Page:
         - dump + load + save params
+    - Topic Pub Page:
+        - add hz etc sliders
+    - Topic Sub Page:
+        - add hz etc infos
     - Topic List Page:
         - "Open Echoer" is the wrong name for Subscribing
         - "Add Publisher" and "Add Subscriber" btns to the groups maybe instead?
     - Topic Info Page:
-        - add hz & bw sliders
+        - add hz, bw, qos etc. infos
         - add an "echo" group for topics_info_page (and call for services etc), to listen to current data on the topic
         - maybe just add a row to a subpage to echo/call that topic/service
     - Node Info Page:
         - start nodes with certain cli/ros2 arguments
+    - Logger page:
+        - save the list of log files as eg csv
+        - inspect certain logs closer by double clicking them
 
 - ros2 stuff
     - (optional) add every page of the gui as a ros2 executable, so a window with only this page starts

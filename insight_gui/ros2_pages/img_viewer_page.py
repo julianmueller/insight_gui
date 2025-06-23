@@ -74,7 +74,7 @@ class ImageViewerPage(ContentPage):
             func=self.on_single_shot_img,
             css_classes=["suggested-action"],
         )
-        super().add_bottom_right_btn(
+        self.clear_btn = super().add_bottom_right_btn(
             label="Clear", icon_name="trash-symbolic", func=self.on_clear_img, css_classes=["destructive-action"]
         )
 
@@ -151,7 +151,7 @@ class ImageViewerPage(ContentPage):
             self.img_topic_list_store.append(Gtk.StringObject.new(topic_name))
 
         # set the selected service to the preselected one
-        found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
+        found_index = find_str_in_list_store(self.img_topic_list_store, self.preselect_topic)
         # found, found_index = self.img_topic_list_store.find(Gtk.StringObject.new(self.preselect_service))
         if found_index >= 0:
             self.img_topic_row.set_selected(found_index)

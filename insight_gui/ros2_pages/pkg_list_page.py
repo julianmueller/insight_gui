@@ -45,14 +45,14 @@ class PackageListPage(ContentPage):
 
         self.pkg_list_group = self.pref_page.add_group(empty_group_text="Refresh to show packages")
 
-        super().add_bottom_left_btn(
+        self.new_pkg_btn = super().add_bottom_left_btn(
             label="New Package",
             icon_name="list-add-symbolic",
             tooltip_text="Create a new package",
             func=lambda *_: PackageNewDialog().present(),
         )
 
-        super().add_bottom_right_btn(
+        self.open_ros_index_btn = super().add_bottom_right_btn(
             label="ROS Index",
             icon_name="web-browser-symbolic",
             tooltip_text="Open ROS Index",

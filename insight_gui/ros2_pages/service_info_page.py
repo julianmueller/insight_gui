@@ -49,7 +49,7 @@ class ServiceInfoPage(ContentPage):
         self.service_types = service_types
         self.detach_kwargs = {"service_name": service_name, "service_types": service_types}
 
-        super().add_bottom_left_btn(
+        self.call_btn = super().add_bottom_left_btn(
             label="Open Caller",
             icon_name="call-start-symbolic",
             func=self.on_goto_caller_page,

@@ -20,8 +20,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import subprocess
-
 from rosidl_runtime_py import (
     get_message_interfaces,
     get_service_interfaces,

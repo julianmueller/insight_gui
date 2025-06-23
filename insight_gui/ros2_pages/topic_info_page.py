@@ -50,14 +50,14 @@ class TopicInfoPage(ContentPage):
         self.topic_types = topic_types
         self.detach_kwargs = {"topic_name": topic_name, "topic_types": topic_types}
 
-        # super().add_bottom_left_btn(
-        #     label="Publish to topic",
-        #     icon_name="megaphone-symbolic",
-        #     func=self.on_goto_publisher_page,
-        #     tooltip_text="Go to the topic publisher",
-        # )
+        self.open_pub_btn = super().add_bottom_left_btn(
+            label="Publish to topic",
+            icon_name="megaphone-symbolic",
+            func=self.on_goto_publisher_page,
+            tooltip_text="Go to the topic publisher",
+        )
 
-        super().add_bottom_left_btn(
+        self.open_sub_btn = super().add_bottom_right_btn(
             label="Subscribe to Topic",
             icon_name="listen-symbolic",
             func=self.on_goto_subscriber_page,

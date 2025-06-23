@@ -95,7 +95,7 @@ class InterfaceInfoPage(ContentPage):
         self.detach_kwargs = {"interface_full_name": interface_full_name, "interface_type": interface_type}
 
         # Btn for opening the definition file
-        super().add_bottom_left_btn(
+        self.open_file_btn = super().add_bottom_left_btn(
             label="Open Definition File",
             icon_name="folder-documents-symbolic",
             tooltip_text="Open file that defines the interface",
@@ -103,7 +103,7 @@ class InterfaceInfoPage(ContentPage):
         )
 
         # Btn for opening the online link to msg definition
-        super().add_bottom_right_btn(
+        self.open_link_btn = super().add_bottom_right_btn(
             label="Online Definition",
             icon_name="web-browser-symbolic",
             tooltip_text="Open definition online",

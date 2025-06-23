@@ -96,8 +96,8 @@ class LoggerPage(ContentPage):
             ),
             position="start",
         )
-        super().add_bottom_right_btn(
-            label="Clear Log", icon_name="trash-symbolic", func=self.on_clear_log, css_classes=["destructive-action"]
+        self.clear_btn = super().add_bottom_right_btn(
+            label="Clear", icon_name="trash-symbolic", func=self.on_clear_log, css_classes=["destructive-action"]
         )
 
         # filters to apply to the column view

@@ -24,6 +24,7 @@
 
 import sys
 import signal
+
 from insight_gui.application import InsightApplication
 
 

@@ -20,10 +20,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-import numpy as np
 
 
 class DummyPublisher(Node):

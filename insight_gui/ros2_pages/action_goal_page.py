@@ -25,7 +25,6 @@ import json
 import threading
 import time
 
-
 import rclpy
 from rosidl_runtime_py import set_message_fields
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
@@ -36,7 +35,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
-from insight_gui.ros2_pages.action_info_page import ActionInfoPage
+from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 from insight_gui.utils.gtk_utils import find_str_in_list_store
@@ -74,7 +73,7 @@ class ActionGoalPage(ContentPage):
             tooltip_text="Send the action goal",
             css_classes=["suggested-action"],
         )
-        super().add_bottom_right_btn(
+        self.clear_btn = super().add_bottom_right_btn(
             label="Clear", icon_name="trash-symbolic", func=self.on_clear_text, css_classes=["destructive-action"]
         )
 
@@ -326,8 +325,8 @@ class ActionGoalPage(ContentPage):
 
         self.action_type_row.set_subpage_link(
             nav_view=self.nav_view,
-            subpage_class=ActionInfoPage,
-            subpage_kwargs={"action_name": self.selected_action_name, "action_types": action_types or []},
+            subpage_class=InterfaceInfoPage,
+            subpage_kwargs={"interface_full_name": action_types[0]},
         )
 
         self.goal_class = self.action_class.Goal

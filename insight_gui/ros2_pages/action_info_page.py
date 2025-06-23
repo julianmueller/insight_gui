@@ -32,6 +32,7 @@ from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
+from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.constants import HIDDEN_OBJ_ICON
@@ -51,6 +52,13 @@ class ActionInfoPage(ContentPage):
             "action_name": action_name,
             "action_types": action_types,
         }
+
+        self.open_goal_page = super().add_bottom_left_btn(
+            label="Open Action Goal",
+            icon_name="emoji-flags-symbolic",
+            func=self.on_goto_action_goal_page,
+            tooltip_text="Go to action goal page",
+        )
 
         # Action Type
         self.action_type_group = self.pref_page.add_group(title="Action Type")
@@ -127,3 +135,6 @@ class ActionInfoPage(ContentPage):
         self.action_type_group.clear()
         self.action_servers_group.clear()
         self.action_clients_group.clear()
+
+    def on_goto_action_goal_page(self):
+        self.nav_view.push(ActionGoalPage(preselect_action=self.action_name))

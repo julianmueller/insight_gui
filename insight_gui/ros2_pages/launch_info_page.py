@@ -99,7 +99,7 @@ class LaunchInfoPage(ContentPage):
         )
 
         # Add launch button in bottom left corner
-        super().add_bottom_left_btn(
+        self.launch_btn = super().add_bottom_left_btn(
             label="Launch",
             icon_name="media-playback-start-symbolic",
             tooltip_text="Execute launch file with current arguments",
@@ -151,6 +151,8 @@ class LaunchInfoPage(ContentPage):
                         css_classes=["property"],
                     )
                 )
+
+        self.show_banner("The Launch Info page is still experimental")  # DEBUG
 
     def reset_ui(self):
         pass

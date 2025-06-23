@@ -20,11 +20,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+from pathlib import Path
+import cv2
+from urllib.request import urlopen
+import numpy as np
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-import numpy as np
+from ament_index_python import get_package_share_directory
 
 
 class DummyImagePublisher(Node):
@@ -39,14 +44,30 @@ class DummyImagePublisher(Node):
         self.timer = self.create_timer(0.05, self.timer_callback)  # ~10 Hz
         self.bridge = CvBridge()
         self.frame_count = 0
+        self.share_dir = Path(get_package_share_directory("insight_gui")) / "data"
 
     def timer_callback(self):
         # Generate a random 640x480 BGR8 image (uint8)
-        height, width = 480, 640
-        random_image = np.random.randint(low=0, high=256, size=(height, width, 3), dtype=np.uint8)
+        # height, width = 480, 640
+        # random_image = np.random.randint(low=0, high=256, size=(height, width, 3), dtype=np.uint8)
+        # Load an image from file using OpenCV
+
+        url_response = urlopen(
+            "https://github.com/ros-infrastructure/artwork/blob/master/distributions/jazzy/JazzyJalisco-noborder.png?raw=true"
+        )
+        image = np.asarray(bytearray(url_response.read()), dtype=np.uint8)
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)  # The image object
+
+        # Check if the image was loaded successfully
+        if image is None:
+            self.get_logger().error("Failed to load image. Please check the file path.")
+            return
+
+        # Resize the image to 640x480 if necessary
+        image = cv2.resize(image, (640, 480))
 
         # Convert to a ROS2 Image message (BGR8 encoding)
-        msg = self.bridge.cv2_to_imgmsg(random_image, encoding="bgr8")
+        msg = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "dummy_frame"
 

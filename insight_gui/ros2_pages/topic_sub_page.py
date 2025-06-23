@@ -76,7 +76,7 @@ class TopicSubscriberPage(ContentPage):
             func=self.on_single_sub,
             css_classes=["suggested-action"],
         )
-        super().add_bottom_right_btn(
+        self.clear_btn = super().add_bottom_right_btn(
             label="Clear", icon_name="trash-symbolic", func=self.on_clear_text, css_classes=["destructive-action"]
         )
 
