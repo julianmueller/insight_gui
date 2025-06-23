@@ -1,37 +1,52 @@
 #!/usr/bin/env python
 
-# standard imports
-import os
+# =============================================================================
+# main.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
+
 import sys
-import threading
 import signal
-
-# import queue
-from pathlib import Path
-
-# ros2 specific imports
-import rclpy
-from ament_index_python import get_package_share_directory
-
-# custom imports
-from insight_gui.application import Ros2GuiApp
+from insight_gui.application import InsightApplication
 
 
 def main(args=None):
-    # Set the global variable for all code to find the shared data directory
-    share_dir = Path(get_package_share_directory("insight_gui")) / "data"
-
-    # Create a queue to share data between the ROS2 and GUI threads
-    # data_queue = queue.Queue()
-
-    # Create instances of the ROS node and GTK application
+    # Enable Ctrl+C handling
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+    # Make sure to install debugpy with pip if not already installed
+    if "--debugpy" in sys.argv[1:]:
+        import debugpy
+
+        print("Starting debugpy... Waiting for debugger to attach.")
+        debugpy.listen(("0.0.0.0", 5678))
+        debugpy.wait_for_client()
+        sys.argv.remove("--debugpy")
+
     try:
-        gui_app = Ros2GuiApp(share_dir, start_ros2_node=True)
-        signal.signal(signal.SIGINT, lambda *_: gui_app.shutdown())
+        gui_app = InsightApplication()
+        signal.signal(signal.SIGINT, gui_app.shutdown)
         gui_app.run(None)
-    except:
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
         gui_app.shutdown()
 
 

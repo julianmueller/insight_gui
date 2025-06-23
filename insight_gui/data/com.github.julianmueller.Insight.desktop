@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Insight
+Type=Application
+Icon=Insight
+Exec=ros2 run insight_gui main
+Comment=My GTK4 + ROS2 app
+Terminal=false
+StartupNotify=true
+Categories=Network;GTK;
+Keywords=ROS2;

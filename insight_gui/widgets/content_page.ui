@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    content_page.ui
+
+    This file is part of https://github.com/julianmueller/insight_gui
+    Copyright (C) 2025 Julian Müller
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<interface>
+    <requires lib="gtk" version="4.0" />
+    <requires lib="adw" version="1.0" />
+
+
+    <object class="AdwToolbarView" id="toolbar_view">
+
+        <child type="top">
+            <object class="AdwHeaderBar" id="header_bar">
+                <child type="start">
+                    <object class="GtkToggleButton" id="search_btn">
+                        <property name="icon-name">search-symbolic</property>
+                        <property name="tooltip-text">Search</property>
+                        <property name="sensitive">true</property>
+                    </object>
+                </child>
+                <child type="start">
+                    <object class="GtkButton" id="refresh_btn">
+                        <property name="tooltip-text">Refresh</property>
+                        <property name="sensitive">true</property>
+                        <child>
+                            <object class="GtkBox">
+                                <child>
+                                    <object class="GtkImage" id="refresh_icon">
+                                        <property name="visible">true</property>
+                                        <property name="icon-name">update-symbolic</property>
+                                    </object>
+                                </child>
+                                <child>
+                                    <object class="GtkSpinner" id="refresh_spinner">
+                                        <property name="visible">false</property>
+                                        <property name="spinning">false</property>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <style>
+                            <class name="flat" />
+                        </style>
+                    </object>
+                </child>
+
+                <child type="end">
+                    <object class="GtkButton" id="detach_btn">
+                        <property name="icon-name">external-link-symbolic</property>
+                        <property name="tooltip-text">Open in separate window</property>
+                        <property name="sensitive">true</property>
+                    </object>
+                </child>
+
+            </object>
+        </child>
+
+        <child type="top">
+            <object class="GtkSearchBar" id="search_bar">
+                <property name="search-mode-enabled">False</property>
+                <property name="show-close-button">True</property>
+                <child>
+                    <object class="GtkSearchEntry" id="search_entry">
+                        <property name="placeholder-text">Search</property>
+                        <property name="search-delay">100</property>
+                        <property name="hexpand">true</property>
+                    </object>
+                </child>
+            </object>
+        </child>
+
+        <child>
+            <object class="AdwToastOverlay" id="toast_overlay">
+                <child>
+                    <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <child>
+                            <object class="AdwBanner" id="banner">
+                                <property name="revealed">false</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkStack" id="content_stack">
+                                <property name="vexpand">True</property>
+                                <property name="hhomogeneous">False</property>
+                                <property name="vhomogeneous">False</property>
+
+                                <!-- <child>
+                                    <object class="AdwStatusPage" id="refresh_page">
+                                        <property name="title">No Content</property>
+                                        <property name="description">Refresh to show content. This may take a second.</property>
+                                        <property name="icon-name">update-symbolic</property>
+                                        <child>
+                                            <object class="GtkButton">
+                                                <property name="halign">center</property>
+                                                <property name="child">
+                                                    <object class="AdwButtonContent">
+                                                        <property name="label">Refresh</property>
+                                                        <property name="icon-name">update-symbolic</property>
+                                                    </object>
+                                                </property>
+                                                <style>
+                                                    <class name="pill" />
+                                                </style>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+                                <child>
+                                    <object class="AdwStatusPage" id="empty_search_page">
+                                        <property name="title">No Search Results</property>
+                                        <property name="description">Search found no results.</property>
+                                        <property name="icon-name">search-symbolic</property>
+                                    </object>
+                                </child> -->
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+
+        <child type="bottom">
+            <object class="GtkActionBar" id="bottom_bar">
+                <property name="revealed">false</property>
+                <!-- <property name="valign">2</property> -->
+                <!-- <child type="start">
+                            <object class="GtkButton" id="start_widget">
+                                <property name="icon-name">call-start-symbolic</property>
+                            </object>
+                        </child>
+                        <child type="center">
+                            <object class="GtkLabel">
+                                <property name="label" translatable="yes">Action Bar</property>
+                            </object>
+                        </child>
+                        <child type="end">
+                            <object class="GtkButton" id="end_widget">
+                                <property name="icon-name">view-more-symbolic</property>
+                            </object>
+                        </child> -->
+            </object>
+        </child>
+    </object>
+</interface>

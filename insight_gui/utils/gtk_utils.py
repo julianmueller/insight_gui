@@ -1,7 +1,29 @@
+# =============================================================================
+# gtk_utils.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
+
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, Gio
 
 
 # same order as with css margins
@@ -69,6 +91,22 @@ def add_css_classes(widget: Gtk.Widget, classes: list):
 
     for _class in classes:
         widget.add_css_class(_class)
+
+
+# rather use: success, pos = list_store.find(Gtk.StringObject.new(string)
+def find_str_in_list_store(list_store: Gio.ListStore, string: str) -> int:
+    """Find a string in a Gio.ListStore and return its index (-1 when not found)."""
+    for i, item in enumerate(list_store):
+        if item.get_string() == string:
+            return i
+    else:
+        return -1
+
+
+# TODO test and adopt this
+def copy_text_to_clipboard(text: str):
+    clip = Gtk.Clipboard.get(Gio.Application.get_default())
+    clip.set_text(text)
 
 
 def get_child_by_name(parent_widget, name):

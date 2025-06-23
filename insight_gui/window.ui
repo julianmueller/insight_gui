@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    window.ui
+
+    This file is part of https://github.com/julianmueller/insight_gui
+    Copyright (C) 2025 Julian Müller
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<interface>
+    <requires lib="gtk" version="4.0" />
+    <requires lib="adw" version="1.0" />
+
+    <object class="AdwNavigationSplitView" id="split_view">
+        <property name="min-sidebar-width">100</property>
+        <property name="max-sidebar-width">250</property>
+        <property name="sidebar-width-fraction">0.3</property>
+        <property name="show-content">true</property>
+
+        <property name="sidebar">
+            <object class="AdwNavigationPage">
+                <property name="title">Navigation</property>
+                <property name="child">
+                    <object class="AdwToolbarView">
+
+                        <child type="top">
+                            <object class="AdwHeaderBar" id="nav_header_bar">
+                                <child type="start">
+                                    <!-- TODO maybe turn this into a toggle to show/hide the sidebar navigation? -->
+                                    <!-- <object class="GtkButton" id="refresh_btn">
+                                                <property name="icon-name">update-symbolic</property>
+                                                <property name="tooltip-text">Refresh all Lists</property>
+                                                <signal name="clicked" handler="on_refresh_btn_clicked" />
+                                            </object> -->
+                                </child>
+                                <child type="end">
+                                    <object class="GtkMenuButton" id="menu_btn">
+                                        <property name="icon-name">open-menu-symbolic</property>
+                                        <property name="menu-model">menu</property>
+                                        <property name="primary">true</property>
+                                        <!-- <property name="tooltip-text">Open Preferences Dialog</property> -->
+                                        <!-- <signal name="clicked" handler="on_menu_btn_clicked" /> -->
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <property name="content">
+                            <object class="StackSidebar" id="stack_sidebar" />
+                        </property>
+
+                        <child type="bottom">
+                            <object class="GtkBox" id="time_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">12</property>
+                                <property name="margin-top">12</property>
+                                <property name="margin-bottom">12</property>
+                                <property name="margin-start">12</property>
+                                <property name="margin-end">12</property>
+
+                                <child>
+                                    <object class="GtkBox" id="ros_time_box">
+                                        <property name="orientation">horizontal</property>
+                                        <property name="spacing">12</property>
+                                        <property name="tooltip-text">ROS2 Time</property>
+                                        <child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">preferences-system-time-symbolic</property>
+                                            </object>
+                                        </child>
+                                        <child>
+                                            <object class="GtkLabel" id="ros_time_lbl">
+                                                <property name="label">ROS2 Time</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="xalign">1.0</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+
+                                <child>
+                                    <object class="GtkBox" id="ros_elapsed_time_box">
+                                        <property name="orientation">horizontal</property>
+                                        <property name="spacing">12</property>
+                                        <property name="tooltip-text">ROS2 Elapsed Time</property>
+                                        <child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">timer-symbolic</property>
+                                            </object>
+                                        </child>
+
+                                        <child>
+                                            <object class="GtkLabel" id="ros_elapsed_time_lbl">
+                                                <property name="label">Elapsed Time</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="xalign">1.0</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+
+                                <child>
+                                    <object class="GtkBox" id="wall_time_box">
+                                        <property name="orientation">horizontal</property>
+                                        <property name="spacing">12</property>
+                                        <property name="tooltip-text">Wall Time</property>
+                                        <property name="visible">False</property>
+                                        <child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">preferences-system-time-symbolic</property>
+                                            </object>
+                                        </child>
+                                        <child>
+                                            <object class="GtkLabel" id="wall_time_lbl">
+                                                <property name="label">Wall Time</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="xalign">1.0</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+
+                                <child>
+                                    <object class="GtkBox" id="wall_elapsed_time_box">
+                                        <property name="orientation">horizontal</property>
+                                        <property name="spacing">12</property>
+                                        <property name="tooltip-text">Wall Elapsed Time</property>
+                                        <property name="visible">False</property>
+                                        <child>
+                                            <object class="GtkImage">
+                                                <property name="icon-name">timer-symbolic</property>
+                                            </object>
+                                        </child>
+
+                                        <child>
+                                            <object class="GtkLabel" id="wall_elapsed_time_lbl">
+                                                <property name="label">Wall Elapsed Time</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="xalign">1.0</property>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+
+                    </object>
+                </property>
+            </object>
+        </property>
+
+        <property name="content">
+            <object class="AdwNavigationPage">
+                <property name="title">Content</property>
+
+                <property name="child">
+                    <object class="GtkStack" id="content_stack">
+                        <property name="hhomogeneous">False</property>
+                        <property name="vhomogeneous">False</property>
+                    </object>
+                </property>
+
+            </object>
+        </property>
+    </object>
+
+    <menu id="menu">
+        <section>
+            <item>
+                <attribute name="label">Preferences</attribute>
+                <attribute name="action">app.preferences</attribute>
+            </item>
+        </section>
+        <section>
+            <item>
+                <attribute name="label">Keyboard Shortcuts</attribute>
+                <attribute name="action">app.shortcuts</attribute>
+            </item>
+            <item>
+                <attribute name="label">Close all detached windows</attribute>
+                <attribute name="action">app.close-all-detached-windows</attribute>
+            </item>
+            <item>
+                <attribute name="label">About Insight</attribute>
+                <attribute name="action">app.about</attribute>
+            </item>
+        </section>
+        <!-- <section>
+            <item>
+                <attribute name="label">New Terminal</attribute>
+            </item>
+            <item>
+                <attribute name="label">New Build Terminal</attribute>
+            </item>
+            <item>
+                <attribute name="label" translatable="yes">New Runtime Terminal</attribute>
+            </item>
+        </section>
+        <section>
+            <attribute name="label" translatable="yes">Settings</attribute>
+            <submenu>
+                <attribute name="label" translatable="yes">Appearance</attribute>
+                <item>
+                    <attribute name="label" translatable="yes">System Default</attribute>
+                </item>
+                <item>
+                    <attribute name="label" translatable="yes">Force Light Mode</attribute>
+                </item>
+                <item>
+                    <attribute name="label" translatable="yes">Force Dark Mode</attribute>
+                </item>
+            </submenu>
+            <submenu>
+                <attribute name="label" translatable="yes">Accessibility</attribute>
+                <item>
+                    <attribute name="label" translatable="yes">High Contrast</attribute>
+                </item>
+                <section>
+                    <attribute name="label" translatable="yes">Text Direction</attribute>
+                    <item>
+                        <attribute name="label" translatable="yes">Left-to-Right</attribute>
+                    </item>
+                    <item>
+                        <attribute name="label" translatable="yes">Right-to-Left</attribute>
+                    </item>
+                </section>
+            </submenu>
+        </section> -->
+    </menu>
+</interface>

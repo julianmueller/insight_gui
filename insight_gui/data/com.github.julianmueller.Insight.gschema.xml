@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <schema id="com.github.julianmueller.Insight" path="/com/github/julianmueller/Insight/">
+
+        <!-- ROS2 Settings -->
+        <key name="auto-start-gui-node" type="b">
+            <default>true</default>
+            <summary>Auto-start GUI Node</summary>
+            <description>Automatically start the ROS2 node for the GUI when its started</description>
+        </key>
+
+        <key name="gui-node-name" type="s">
+            <default>"insight_gui"</default>
+            <summary>GUI-Node Name</summary>
+            <description>Name of the ROS2 node created by Insight GUI</description>
+        </key>
+
+        <key name="gui-node-namespace" type="s">
+            <default>""</default>
+            <summary>GUI-Node Namespace</summary>
+            <description>Namespace for the ROS2 GUI-Node (leave empty for root namespace)</description>
+        </key>
+
+        <!-- Filter Settings -->
+
+        <!-- Node Filter Settings -->
+
+        <key name="show-hidden-nodes" type="b">
+            <default>false</default>
+            <summary>Show Hidden Nodes</summary>
+            <description>Display nodes with names starting with underscore</description>
+        </key>
+
+        <!-- Topic Display Settings -->
+
+        <key name="show-hidden-topics" type="b">
+            <default>false</default>
+            <summary>Show Hidden Topics</summary>
+            <description>Display topics with names starting with underscore</description>
+        </key>
+
+        <key name="show-action-topics" type="b">
+            <default>false</default>
+            <summary>Show Action-Related Topics</summary>
+            <description>Display topics created by ROS2 actions (_action/feedback, _action/status)</description>
+        </key>
+
+        <key name="show-parameter-topics" type="b">
+            <default>false</default>
+            <summary>Show Parameter Events</summary>
+            <description>Display /parameter_events topics</description>
+        </key>
+
+        <key name="show-tf-topics" type="b">
+            <default>true</default>
+            <summary>Show TF Topics</summary>
+            <description>Display /tf and /tf_static topics</description>
+        </key>
+
+        <!-- Service Display Settings -->
+        <key name="show-hidden-services" type="b">
+            <default>false</default>
+            <summary>Show Hidden Services</summary>
+            <description>Display services with names starting with underscore</description>
+        </key>
+
+        <key name="show-parameter-services" type="b">
+            <default>false</default>
+            <summary>Show Parameter Services</summary>
+            <description>Display parameter-related services (.../get_parameters, .../set_parameters, etc.)</description>
+        </key>
+
+        <key name="show-action-services" type="b">
+            <default>false</default>
+            <summary>Show Action-Related Services</summary>
+            <description>Display services created by ROS2 actions (_action/send_goal, etc.)</description>
+        </key>
+
+        <!-- Action Display Settings -->
+        <key name="show-hidden-actions" type="b">
+            <default>false</default>
+            <summary>Show Hidden Actions</summary>
+            <description>Display actions with names starting with underscore</description>
+        </key>
+
+        <!-- Parameter Display Settings -->
+
+        <!-- <key name="show-hidden-parameters" type="b">
+            <default>false</default>
+            <summary>Show Hidden Parameters</summary>
+            <description>Display parameters with names starting with underscore</description>
+        </key> -->
+
+        <key name="show-qos-parameters" type="b">
+            <default>false</default>
+            <summary>Show QoS-Related Parameters</summary>
+            <description>Display parameters related to Quality of Service settings</description>
+        </key>
+
+        <!-- Appearance Page -->
+
+        <key name="group-nodes-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Nodes by Namespace</summary>
+            <description>Organize nodes by their namespace</description>
+        </key>
+
+        <key name="group-topics-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Topics by Namespace</summary>
+            <description>Organize topics by their namespace</description>
+        </key>
+
+        <key name="group-services-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Services by Namespace</summary>
+            <description>Organize services by their namespace</description>
+        </key>
+
+        <key name="group-actions-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Actions by Namespace</summary>
+            <description>Organize actions by their namespace</description>
+        </key>
+
+        <!-- <key name="group-parameters-by-namespace" type="b">
+            <default>true</default>
+            <summary>Group Parameters by Namespace</summary>
+            <description>Organize parameters by their namespace</description>
+        </key> -->
+
+        <!--  Misc Appearance Settings -->
+
+        <key name="show-breadcrumbs-bar" type="b">
+            <default>true</default>
+            <summary>Show Breadcrumbs</summary>
+            <description>Display top breadcrumbs bar (a &gt; b &gt; ...) for navigation</description>
+        </key>
+
+        <!-- CACHING SETTING -->
+
+        <key name="enable-caching" type="b">
+            <default>true</default>
+            <summary>Enable Caching</summary>
+            <description>Cache node, topic, etc. information for faster access</description>
+        </key>
+
+        <key name="cache-expiration-time" type="d">
+            <default>5</default>
+            <range min="0" max="60" />
+            <summary>Cache Expiration Time</summary>
+            <description>Time in seconds after which the cache expires and new data is fetched</description>
+        </key>
+
+        <!-- <key name="auto-refresh" type="b">
+            <default>false</default>
+            <summary>Auto Refresh</summary>
+            <description>Automatically refresh lists periodically</description>
+        </key>
+
+        <key name="refresh-interval" type="i">
+            <default>5</default>
+            <range min="1" max="60" />
+            <summary>Refresh Interval</summary>
+            <description>Refresh interval in seconds</description>
+        </key> -->
+
+        <!-- Behavior Settings -->
+
+        <key name="restore-last-page" type="b">
+            <default>true</default>
+            <summary>Restore Last Page</summary>
+            <description>Open the last viewed page on startup</description>
+        </key>
+
+        <key name="last-page" type="s">
+            <default>""</default>
+            <summary>Last Page</summary>
+            <description>The last viewed page when the application was closed</description>
+        </key>
+
+        <!-- <key name="confirm-page-close" type="b">
+            <default>true</default>
+            <summary>Confirm Page Close</summary>
+            <description>Ask for confirmation before closing pages with unsaved changes</description>
+        </key> -->
+
+        <!-- <key name="remember-window-size" type="b">
+            <default>true</default>
+            <summary>Remember Window Size</summary>
+            <description>Restore window size and position on startup</description>
+        </key> -->
+
+        <!-- <key name="max-concurrent-calls" type="i">
+            <default>5</default>
+            <range min="1" max="20" />
+            <summary>Max Concurrent Service Calls</summary>
+            <description>Maximum number of concurrent service calls</description>
+        </key> -->
+
+    </schema>
+</schemalist>

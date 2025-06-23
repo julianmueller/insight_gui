@@ -1,17 +1,43 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!--
+    package.xml
+
+    This file is part of https://github.com/julianmueller/insight_gui
+    Copyright (C) 2025 Julian Müller
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    SPDX-License-Identifier: GPL-3.0-or-later
+-->
 <package format="3">
     <name>insight_gui</name>
     <version>0.0.1</version>
     <description>Insight is a minimalist GUI alternative to rqt. It is a GTK4-based tool for exploring ROS2 topics, services, and messages, featuring the GNOME Adwaita style.</description>
     <maintainer email="julian.mueller@iwb.tum.de">Julian Müller</maintainer>
-    <license>Apache-2.0</license>
+    <license>GPL-3.0-only</license>
+    <author email="julian.mueller@iwb.tum.de">Julian Müller</author>
 
     <exec_depend>rclpy</exec_depend>
-    <exec_depend>std_msgs</exec_depend>
-    <!-- <exec_depend>python-gi</exec_depend> -->
-    <!-- <exec_depend>python-gi-cairo</exec_depend> -->
+    <!-- <exec_depend>python3-gi</exec_depend> -->
+    <!-- <exec_depend>python3-gi-cairo</exec_depend> -->
     <!-- <exec_depend>libadwaita</exec_depend> -->
+    <!-- <exec_depend>gir1.2-gtk-4.0</exec_depend> -->
+    <!-- <exec_depend>gir1.2-adw-1</exec_depend> -->
+
+    <exec_depend>python3-networkx</exec_depend>
+    <exec_depend>python3-pygraphviz</exec_depend>
 
     <test_depend>ament_copyright</test_depend>
     <test_depend>ament_flake8</test_depend>

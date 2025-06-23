@@ -1,3 +1,25 @@
+# =============================================================================
+# adw_colors.py
+#
+# This file is part of https://github.com/julianmueller/insight_gui
+# Copyright (C) 2025 Julian Müller
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
+
 from __future__ import annotations
 
 # Adw supports accent colors with version 1.6, which is not available in ubuntu yet
@@ -48,14 +70,14 @@ def hex_to_rgba(color: AdwAccentColor) -> Gdk.RGBA:
         return None
 
 
-def get_luminance(hex_color):
-    color = hex_color[1:]
+# def get_luminance(hex_color):
+#     color = hex_color[1:]
 
-    hex_red = int(color[0:2], base=16)
-    hex_green = int(color[2:4], base=16)
-    hex_blue = int(color[4:6], base=16)
+#     hex_red = int(color[0:2], base=16)
+#     hex_green = int(color[2:4], base=16)
+#     hex_blue = int(color[4:6], base=16)
 
-    return hex_red * 0.2126 + hex_green * 0.7152 + hex_blue * 0.0722
+#     return hex_red * 0.2126 + hex_green * 0.7152 + hex_blue * 0.0722
 
 
 # see https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef

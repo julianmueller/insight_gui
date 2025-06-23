@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    canvas_blocks.ui
+
+    This file is part of https://github.com/julianmueller/insight_gui
+    Copyright (C) 2025 Julian Müller
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<interface>
+    <requires lib="gtk" version="4.0" />
+    <requires lib="adw" version="1.0" />
+
+    <object class="GtkBox" id="main_box">
+        <property name="orientation">vertical</property>
+        <property name="spacing">0</property>
+        <property name="width-request">100</property>
+
+        <style>
+            <class name="card" />
+            <!-- <class name="activatable" /> -->
+        </style>
+
+        <child>
+            <object class="GtkBox" id="header_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">0</property>
+                <property name="margin-start">4</property>
+                <property name="margin-end">4</property>
+                <property name="margin-top">4</property>
+                <property name="margin-bottom">4</property>
+
+                <child>
+                    <object class="GtkLabel" id="header_lbl">
+                        <property name="label">BaseSkill</property>
+                        <property name="hexpand">true</property>
+                        <property name="xalign">0</property>
+                        <property name="margin-start">12</property>
+                        <property name="margin-end">4</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+
+                        <style>
+                            <class name="heading" />
+                        </style>
+                    </object>
+                </child>
+
+                <child>
+                    <object class="GtkButton" id="subpage_btn">
+                        <property name="icon-name">pan-end-symbolic</property>
+                        <property name="tooltip-text">Open as subpage</property>
+                        <property name="vexpand">false</property>
+                        <property name="hexpand">false</property>
+
+                        <style>
+                            <class name="flat" />
+                        </style>
+                    </object>
+
+                </child>
+            </object>
+        </child>
+
+        <child>
+            <object class="GtkRevealer" id="revealer">
+                <!-- <property name="transition-type">slide-down</property> -->
+                <property name="reveal-child">false</property>
+
+                <child>
+
+                    <object class="GtkSeparator">
+                        <property name="orientation">horizontal</property>
+                    </object>
+                </child>
+
+                <child>
+                    <object class="GtkBox" id="content_box">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">10</property>
+                        <property name="valign">center</property>
+                        <property name="margin-start">10</property>
+                        <property name="margin-end">10</property>
+                        <property name="margin-top">10</property>
+                        <property name="margin-bottom">10</property>
+                        <property name="height-request">100</property>
+
+                        <child>
+                            <object class="GtkBox" id="left_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">10</property>
+                                <property name="vexpand">true</property>
+                                <property name="hexpand">true</property>
+                                <property name="halign">start</property>
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="GtkBox" id="right_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">10</property>
+                                <property name="vexpand">true</property>
+                                <property name="hexpand">true</property>
+                                <property name="halign">end</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+
+    </object>
+</interface>

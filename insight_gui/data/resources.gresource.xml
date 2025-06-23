@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<gresources>
-    <gresource prefix="/org/gtk/example/icons/scalable/actions/">
-        <file preprocess="xml-stripblanks">start-here-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">background-app-ghost-symbolic.svg</file>
-    </gresource>
-</gresources>
