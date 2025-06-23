@@ -211,7 +211,7 @@ class ImageViewerPage(ContentPage):
             self.img_row.reset_image_to_default_icon()
 
     def img_topic_callback(self, msg: Image, *args):
-        if not self.page_is_mapped:
+        if not self.is_mapped:
             return
 
         # apply rate limiting

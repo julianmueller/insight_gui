@@ -265,7 +265,7 @@ class TopicSubscriberPage(ContentPage):
         self.show_toast("Text copied!")
 
     def topic_callback(self, msg):
-        if not self.page_is_mapped:
+        if not self.is_mapped:
             return
 
         # apply rate limiting

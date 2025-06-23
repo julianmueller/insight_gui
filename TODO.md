@@ -43,7 +43,7 @@
     - remap page, where topics and be remapped to another name?
     - documentation Page, with Links to the ros2 webpages? maybe even a webview renderer?
     - clock page with manipulation options
-
+    - bookmarks page to save links to pages for later
 
 - additional settings:
     - ~~maybe add an option, that all parameter-related services are hidden (/describe_parameters etc)~~
@@ -99,6 +99,7 @@
 - replace all ros2cli commands with rclpy/rosidl etc commands
 - be strict/consistent about private ("_") instance variables and method names!
 - move expensive imports into methods/classes only where needed
+- use CustomFilter in filter_func to ignore emptry_row etc
 
 
 ## Bugs

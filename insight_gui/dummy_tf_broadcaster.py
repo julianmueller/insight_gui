@@ -41,16 +41,21 @@ class DummyTFBroadcaster(Node):
 
     def publish_transform(self):
         # Create a TransformStamped message
-        t = TransformStamped()
+        t1 = TransformStamped()
+        t2 = TransformStamped()
 
-        t.header.stamp = self.get_clock().now().to_msg()
-        t.header.frame_id = "world"  # Parent frame
-        t.child_frame_id = "dummy_link"  # Child frame
+        t1.header.stamp = self.get_clock().now().to_msg()
+        t1.header.frame_id = "world"  # Parent frame
+        t1.child_frame_id = "dummy_link1"  # Child frame
+
+        t2.header.stamp = t1.header.stamp
+        t2.header.frame_id = t1.child_frame_id
+        t2.child_frame_id = "dummy_link2"  # Child frame
 
         # Set translation (x, y, z)
-        t.transform.translation.x = 1.0
-        t.transform.translation.y = 0.5
-        t.transform.translation.z = 0.0
+        t1.transform.translation.x = 1.0
+        t1.transform.translation.y = 0.5
+        t1.transform.translation.z = 0.0
 
         # Set rotation (as a quaternion)
         angle = self.get_clock().now().nanoseconds * 1e-9  # Rotate over time
@@ -59,13 +64,16 @@ class DummyTFBroadcaster(Node):
         qz = math.sin(angle / 2.0)
         qw = math.cos(angle / 2.0)
 
-        t.transform.rotation.x = qx
-        t.transform.rotation.y = qy
-        t.transform.rotation.z = qz
-        t.transform.rotation.w = qw
+        t1.transform.rotation.x = qx
+        t1.transform.rotation.y = qy
+        t1.transform.rotation.z = qz
+        t1.transform.rotation.w = qw
+
+        t2.transform = t1.transform
 
         # Publish the transform
-        self.tf_broadcaster.sendTransform(t)
+        self.tf_broadcaster.sendTransform(t1)
+        self.tf_broadcaster.sendTransform(t2)
 
 
 def main():
