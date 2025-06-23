@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="insight_gui/data/icons/scalable/actions/insight.svg.svg" alt="Insight" height="170"/>
+  <img src="insight_gui/data/icons/scalable/actions/insight.svg" alt="Insight" height="170"/>
   <br>
   Insight - a minimalist GUI for ROS2
 </h1>
@@ -7,9 +7,6 @@
 Insight is a minimalist GUI alternative to rqt. It is a GTK4-based tool for exploring ROS2 topics, services, and messages, featuring the GNOME Adwaita style.
 
 ## Features
-
-<details>
-<summary>Show all Features</summary>
 
 <details>
 <summary>Nodes</summary>
@@ -334,7 +331,6 @@ Insight is a minimalist GUI alternative to rqt. It is a GTK4-based tool for expl
 - DARK THEME! (depending on the current system theme)
 </details>
 
-</details>
 
 ## Prerequisites
 
