@@ -39,20 +39,17 @@
                         <child type="top">
                             <object class="AdwHeaderBar" id="nav_header_bar">
                                 <child type="start">
-                                    <!-- TODO maybe turn this into a toggle to show/hide the sidebar navigation? -->
-                                    <!-- <object class="GtkButton" id="refresh_btn">
-                                                <property name="icon-name">update-symbolic</property>
-                                                <property name="tooltip-text">Refresh all Lists</property>
-                                                <signal name="clicked" handler="on_refresh_btn_clicked" />
-                                            </object> -->
+                                    <object class="GtkButton" id="overview_btn">
+                                        <property name="icon-name">view-grid-symbolic</property>
+                                        <property name="tooltip-text">Show Overview Page</property>
+                                    </object>
                                 </child>
                                 <child type="end">
                                     <object class="GtkMenuButton" id="menu_btn">
                                         <property name="icon-name">open-menu-symbolic</property>
                                         <property name="menu-model">menu</property>
                                         <property name="primary">true</property>
-                                        <!-- <property name="tooltip-text">Open Preferences Dialog</property> -->
-                                        <!-- <signal name="clicked" handler="on_menu_btn_clicked" /> -->
+                                        <property name="tooltip-text">Open Preferences</property>
                                     </object>
                                 </child>
                             </object>
@@ -154,9 +151,9 @@
                                         </child>
                                     </object>
                                 </child>
+
                             </object>
                         </child>
-
                     </object>
                 </property>
             </object>

@@ -1,5 +1,7 @@
+# =============================================================================
 # content_page.py
 #
+# This file is part of https://github.com/julianmueller/insight_gui
 # Copyright (C) 2025 Julian Müller
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,6 +18,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
 
 from pathlib import Path
 from typing import Callable
@@ -266,13 +269,6 @@ class ContentPage(Adw.NavigationPage):
         self.banner.set_title(str(banner_text))
         self.banner.set_button_label(str(btn_label))
         self.banner.set_revealed(True)
-
-        # TODO this causes problems! this gets executed multiple times, and
-        # if hasattr(self, "banner_signal_handler") and self.banner_signal_handler is not None:
-        #     self.disconnect(self.banner_signal_handler)
-
-        # self.banner_signal_handler = self.banner.connect("button-clicked", func, func_kwargs)
-        # print(self.banner_signal_handler)
 
     def hide_banner(self):
         self.banner.set_revealed(False)

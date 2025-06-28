@@ -20,7 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from typing import Dict, Optional, Callable
+from typing import Optional
 
 import gi
 
@@ -43,6 +43,20 @@ class StackSidebar(Adw.PreferencesPage):
     def set_stack(self, stack: Gtk.Stack):
         self.stack = stack
 
+    def update_from_page_groups(self, page_groups: list):
+        # Create sidebar groups and pages from the pages structure
+        for page_group in page_groups:
+            group = self.add_group(title=page_group.title)
+            for page in page_group.pages:
+                self.add_page_row(
+                    group=group,
+                    title=page.title,
+                    page_name=page.page_id,
+                    nav_page=page.nav_page_class(),
+                    prefix_icon=page.icon_name,
+                    subtitle=page.subtitle,
+                )
+
     def add_group(self, title: str = "", description: str = ""):
         group = Adw.PreferencesGroup(title=title, description=description)
         self.groups.append(group)
@@ -51,7 +65,7 @@ class StackSidebar(Adw.PreferencesPage):
 
     def add_page_row(
         self,
-        group: str,
+        group: Adw.PreferencesGroup,
         title: str,
         page_name: str,
         nav_page: Adw.NavigationPage,

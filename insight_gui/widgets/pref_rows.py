@@ -19,6 +19,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
+
 from typing import Callable, Type
 import re
 
@@ -237,8 +238,8 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
             else:
                 nav_view.push(subpage)
 
-        if hasattr(self, "subpage_signal_handler"):
-            super().disconnect(self.subpage_signal_handler)
+        # if hasattr(self, "subpage_signal_handler"):
+        #     super().disconnect(self.subpage_signal_handler)
 
         self.gesture_click = Gtk.GestureClick()
         self.subpage_signal_handler = self.gesture_click.connect("pressed", _on_pressed)

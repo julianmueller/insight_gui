@@ -29,26 +29,10 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gdk, Gio, GLib, GObject
 
+from insight_gui.pages import create_pages
+
 from insight_gui.ros2_pages.welcome_page import WelcomePage
-from insight_gui.ros2_pages.pkg_list_page import PackageListPage
-from insight_gui.ros2_pages.node_list_page import NodeListPage
-from insight_gui.ros2_pages.topic_list_page import TopicListPage
-from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
-from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
-from insight_gui.ros2_pages.service_list_page import ServiceListPage
-from insight_gui.ros2_pages.service_call_page import ServiceCallPage
-from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
-from insight_gui.ros2_pages.action_list_page import ActionListPage
-from insight_gui.ros2_pages.launch_list_page import LaunchListPage
-from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
-from insight_gui.ros2_pages.graph_page import GraphPage
-from insight_gui.ros2_pages.param_list_page import ParameterListPage
-from insight_gui.ros2_pages.tf_page import TransformsPage
-from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
-from insight_gui.ros2_pages.joint_states_page import JointStatesPage
-from insight_gui.ros2_pages.teleop_page import TeleoperatorPage
-from insight_gui.ros2_pages.log_page import LoggerPage
-from insight_gui.ros2_pages.doctor_page import DoctorPage
+from insight_gui.ros2_pages.overview_page import OverviewPage
 
 from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
 
@@ -62,6 +46,7 @@ class BaseWindow(Adw.ApplicationWindow):
 
     def __init__(self, app: Adw.Application, **kwargs):
         super().__init__(application=app, **kwargs)
+
         self.app: Adw.Application = app
         self.ros2_connector: ROS2Connector = app.ros2_connector
 
@@ -166,7 +151,9 @@ class BaseWindow(Adw.ApplicationWindow):
         css_provider = Gtk.CssProvider()
         css_provider.load_from_string(css_string)
         Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            Gdk.Display.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
 
     def get_dark(self):
@@ -191,200 +178,35 @@ class MainWindow(BaseWindow):
         super().add_breakpoint(break_point)
 
         self.nav_header_bar: Adw.HeaderBar = builder.get_object("nav_header_bar")
+        self.overview_btn: Gtk.Button = builder.get_object("overview_btn")
+        self.overview_btn.connect("clicked", self.on_overview_btn_clicked)
+
         self.menu_btn: Gtk.Button = builder.get_object("menu_btn")
         self.content_stack: Gtk.Stack = builder.get_object("content_stack")
-        self.content_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
 
+        self.page_groups = create_pages()
         self.stack_sidebar: StackSidebar = builder.get_object("stack_sidebar")
         self.stack_sidebar.set_stack(self.content_stack)
+        self.stack_sidebar.update_from_page_groups(self.page_groups)
 
-        welcome_view = Adw.NavigationView()
-        welcome_view.add(WelcomePage())
-        self.content_stack.add_named(welcome_view, "welcome")
-        self.content_stack.set_visible_child_name("welcome")
+        overview_nav_view = Adw.NavigationView()
+        overview_nav_view.add(OverviewPage(page_groups=self.page_groups))
+        self.content_stack.add_named(overview_nav_view, "overview")
 
-        # Package Management
-        pkg_group = self.stack_sidebar.add_group(title="Packages")
-        self.stack_sidebar.add_page_row(
-            group=pkg_group,
-            title="Packages",
-            page_name="pkg_list",
-            nav_page=PackageListPage(),
-            prefix_icon="packages-app-symbolic",
-            subtitle="Browse all packages",
-        )
-
-        # Nodes
-        node_group = self.stack_sidebar.add_group(title="Nodes")
-        self.stack_sidebar.add_page_row(
-            group=node_group,
-            title="Node List",
-            page_name="node_list",
-            nav_page=NodeListPage(),
-            prefix_icon="center-symbolic",
-            subtitle="Browse all active nodes",
-        )
-        self.stack_sidebar.add_page_row(
-            group=node_group,
-            title="Launch Files",
-            page_name="launch_list",
-            nav_page=LaunchListPage(),
-            # prefix_icon="rocket-symbolic",
-            prefix_icon="media-playback-start-symbolic",
-            subtitle="Browse launch files",
-        )
-        self.stack_sidebar.add_page_row(
-            group=node_group,
-            title="Parameters",
-            page_name="param_list",
-            nav_page=ParameterListPage(),
-            prefix_icon="function-third-order-symbolic",
-            subtitle="Manage node parameters",
-        )
-        self.stack_sidebar.add_page_row(
-            group=node_group,
-            title="Graph",
-            page_name="graph_page",
-            nav_page=GraphPage(),
-            prefix_icon="network-proxy-symbolic",
-            subtitle="ROS2 computational graph",
-        )
-
-        # Topics
-        topic_group = self.stack_sidebar.add_group(title="Topics")
-        self.stack_sidebar.add_page_row(
-            group=topic_group,
-            title="Topic List",
-            page_name="topic_list",
-            nav_page=TopicListPage(),
-            prefix_icon="list-compact-symbolic",
-            subtitle="Browse topics",
-        )
-        self.stack_sidebar.add_page_row(
-            group=topic_group,
-            title="Publisher",
-            page_name="topic_pub",
-            nav_page=TopicPublisherPage(),
-            prefix_icon="megaphone-symbolic",
-            subtitle="Publish to topics",
-        )
-        self.stack_sidebar.add_page_row(
-            group=topic_group,
-            title="Subscriber",
-            page_name="topic_sub",
-            nav_page=TopicSubscriberPage(),
-            prefix_icon="listen-symbolic",
-            subtitle="Subscribe to topics",
-        )
-        self.stack_sidebar.add_page_row(
-            group=topic_group,
-            title="Image Viewer",
-            page_name="img_viewer",
-            nav_page=ImageViewerPage(),
-            prefix_icon="image-x-generic-symbolic",
-            subtitle="View image topics",
-        )
-        self.stack_sidebar.add_page_row(
-            group=topic_group,
-            title="Transforms",
-            page_name="tf",
-            nav_page=TransformsPage(),
-            prefix_icon="vertical-arrows-symbolic",
-            subtitle="Inspect transformations",
-        )
-
-        # Services
-        service_group = self.stack_sidebar.add_group(title="Services")
-        self.stack_sidebar.add_page_row(
-            group=service_group,
-            title="Service List",
-            page_name="service_list",
-            nav_page=ServiceListPage(),
-            prefix_icon="list-compact-symbolic",
-            subtitle="Browse services",
-        )
-        self.stack_sidebar.add_page_row(
-            group=service_group,
-            title="Service Caller",
-            page_name="srv_caller",
-            nav_page=ServiceCallPage(),
-            prefix_icon="call-start-symbolic",
-            subtitle="Call services",
-        )
-
-        # Actions
-        action_group = self.stack_sidebar.add_group(title="Actions")
-        self.stack_sidebar.add_page_row(
-            group=action_group,
-            title="Action List",
-            page_name="action_list",
-            nav_page=ActionListPage(),
-            prefix_icon="list-compact-symbolic",
-            subtitle="Browse actions",
-        )
-        self.stack_sidebar.add_page_row(
-            group=action_group,
-            title="Action Goal",
-            page_name="action_goal",
-            nav_page=ActionGoalPage(),
-            prefix_icon="emoji-flags-symbolic",
-            subtitle="Send action goals",
-        )
-
-        # Interface
-        interface_group = self.stack_sidebar.add_group(title="Interfaces")
-        self.stack_sidebar.add_page_row(
-            group=interface_group,
-            title="Interfaces",
-            page_name="interface_browser",
-            nav_page=InterfaceBrowserPage(),
-            prefix_icon="shapes-symbolic",
-            subtitle="Browse interface definitions",
-        )
-
-        # Visualization & Control
-        control_group = self.stack_sidebar.add_group(title="Control")
-        self.stack_sidebar.add_page_row(
-            group=control_group,
-            title="Joint States",
-            page_name="joint_states",
-            nav_page=JointStatesPage(),
-            prefix_icon="sliders-horizontal-symbolic",
-            subtitle="Manipulate joints",
-        )
-        self.stack_sidebar.add_page_row(
-            group=control_group,
-            title="Teleoperator",
-            page_name="teleop",
-            nav_page=TeleoperatorPage(),
-            prefix_icon="gamepad-symbolic",
-            subtitle="Teleoperate a robot",
-        )
-
-        # Diagnostics
-        diagnostics_group = self.stack_sidebar.add_group(title="Diagnostics")
-        self.stack_sidebar.add_page_row(
-            group=diagnostics_group,
-            title="Logger",
-            page_name="logger",
-            nav_page=LoggerPage(),
-            prefix_icon="logviewer-symbolic",
-            subtitle="System logs",
-        )
-        self.stack_sidebar.add_page_row(
-            group=diagnostics_group,
-            title="Doctor",
-            page_name="doctor",
-            nav_page=DoctorPage(),
-            prefix_icon="doctor-symbolic",
-            subtitle="System diagnostics",
-        )
+        welcome_nav_view = Adw.NavigationView()
+        welcome_nav_view.add(WelcomePage())
+        self.content_stack.add_named(welcome_nav_view, "welcome")
 
         if self.app.settings.get_boolean("restore-last-page"):
             last_page = self.app.settings.get_string("last-page")
 
             if last_page and self.content_stack.get_child_by_name(last_page):
                 self.content_stack.set_visible_child_name(last_page)
+        else:
+            self.content_stack.set_visible_child_name("welcome")
+
+        # connect so late, to not trigger when the stack is assembled
+        self.content_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
 
         # ros time
         self.time_box: Gtk.Box = builder.get_object("time_box")
@@ -429,7 +251,11 @@ class MainWindow(BaseWindow):
         self.about_dialog.add_credit_section("Inspiration", ["rqt", "ros2cli"])
         self.about_dialog.present(self)
 
-    def on_stack_page_changed(self, stack: Gtk.Stack, stack_name: GObject.GParamSpec):
+    def on_overview_btn_clicked(self, *args):
+        self.split_view.set_show_content(True)
+        self.content_stack.set_visible_child_name("overview")
+
+    def on_stack_page_changed(self, *args):
         # save the last page in settings
         last_page = self.content_stack.get_visible_child_name()
         if last_page != "welcome":

@@ -32,6 +32,7 @@
     - ~~add topic publisher (+once)~~
     - ~~add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open~~
     - ~~a launch page to directly launch nodes with a set of arguments~~
+    - ~~add an overview page, where all pages are shown as cards (and are maybe grouped? and ofc searchable)~~
     - static/dynamic tf2 broadcaster
     - tf inspection subpage (show the stuff that rviz shows)
     - service echo (listener)
