@@ -40,7 +40,7 @@ from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
 from insight_gui.ros2_pages.graph_page import GraphPage
 from insight_gui.ros2_pages.param_list_page import ParameterListPage
 from insight_gui.ros2_pages.tf_page import TransformsPage
-from insight_gui.ros2_pages.tf_broadcaster_page import TransformBroadcasterPage
+from insight_gui.ros2_pages.tf_static_broadcaster_page import StaticTransformBroadcasterPage
 from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
 from insight_gui.ros2_pages.joint_states_page import JointStatesPage
 from insight_gui.ros2_pages.teleop_page import TeleoperatorPage
@@ -162,7 +162,7 @@ def create_pages():
                 Page(
                     title="Packages",
                     subtitle="Browse all packages",
-                    icon_name="packages-app-symbolic",
+                    icon_name="package-symbolic",
                     page_id="pkg_list",
                     nav_page_class=PackageListPage,
                 ),
@@ -174,28 +174,28 @@ def create_pages():
                 Page(
                     title="Node List",
                     subtitle="Browse all active nodes",
-                    icon_name="center-symbolic",
+                    icon_name="token-symbolic",
                     page_id="node_list",
                     nav_page_class=NodeListPage,
                 ),
                 Page(
                     title="Launch Files",
                     subtitle="Browse launch files",
-                    icon_name="media-playback-start-symbolic",
+                    icon_name="rocket-launch-symbolic",
                     page_id="launch_list",
                     nav_page_class=LaunchListPage,
                 ),
                 Page(
                     title="Parameters",
                     subtitle="Manage node parameters",
-                    icon_name="function-third-order-symbolic",
+                    icon_name="instant-mix-symbolic",
                     page_id="param_list",
                     nav_page_class=ParameterListPage,
                 ),
                 Page(
                     title="Graph",
                     subtitle="ROS2 computational graph",
-                    icon_name="network-proxy-symbolic",
+                    icon_name="graph3-symbolic",
                     page_id="graph_page",
                     nav_page_class=GraphPage,
                 ),
@@ -207,21 +207,21 @@ def create_pages():
                 Page(
                     title="Topic List",
                     subtitle="Browse topics",
-                    icon_name="list-compact-symbolic",
+                    icon_name="list-t-symbolic",
                     page_id="topic_list",
                     nav_page_class=TopicListPage,
                 ),
                 Page(
                     title="Publisher",
                     subtitle="Publish to topics",
-                    icon_name="megaphone-symbolic",
+                    icon_name="rss-feed-symbolic",
                     page_id="topic_pub",
                     nav_page_class=TopicPublisherPage,
                 ),
                 Page(
                     title="Subscriber",
                     subtitle="Subscribe to topics",
-                    icon_name="listen-symbolic",
+                    icon_name="subscriptions-symbolic",
                     page_id="topic_sub",
                     nav_page_class=TopicSubscriberPage,
                 ),
@@ -232,6 +232,13 @@ def create_pages():
                     page_id="img_viewer",
                     nav_page_class=ImageViewerPage,
                 ),
+                # Page(
+                #     title="Remap",
+                #     subtitle="Remap topics",
+                #     icon_name="tactic-symbolic",
+                #     page_id="remap",
+                #     nav_page_class=RemapPage,
+                # ),
             ],
         ),
         PageGroup(
@@ -240,7 +247,7 @@ def create_pages():
                 Page(
                     title="Service List",
                     subtitle="Browse services",
-                    icon_name="list-compact-symbolic",
+                    icon_name="list-s-symbolic",
                     page_id="service_list",
                     nav_page_class=ServiceListPage,
                 ),
@@ -259,7 +266,7 @@ def create_pages():
                 Page(
                     title="Action List",
                     subtitle="Browse actions",
-                    icon_name="list-compact-symbolic",
+                    icon_name="list-a-symbolic",
                     page_id="action_list",
                     nav_page_class=ActionListPage,
                 ),
@@ -290,22 +297,36 @@ def create_pages():
                 Page(
                     title="Transforms",
                     subtitle="Inspect transformations",
-                    icon_name="vertical-arrows-symbolic",
+                    icon_name="coordinates-symbolic",
                     page_id="tf",
                     nav_page_class=TransformsPage,
                 ),
+                Page(
+                    title="Static Transform Broadcaster",
+                    subtitle="Broadcast to /tf_static",
+                    icon_name="bigtop-updates-symbolic",
+                    page_id="tf_static_broadcaster",
+                    nav_page_class=StaticTransformBroadcasterPage,
+                ),
                 # Page(
-                #     title="Transform Broadcaster",
-                #     subtitle="Broadcast to /tf_static",
-                #     icon_name="vertical-arrows-symbolic",
-                #     page_id="tf_broadcaster",
-                #     nav_page_class=TransformBroadcasterPage,
+                #     title="TF-Tree",
+                #     subtitle="Inspect all TFs as a tree",
+                #     icon_name="graph3-symbolic",
+                #     page_id="tf_tree",
+                #     nav_page_class=TFTreePage,
                 # ),
             ],
         ),
         PageGroup(
             title="Control",
             pages=[
+                # Page(
+                #     title="Controllers",
+                #     subtitle="Toggle ros2control controllers",
+                #     icon_name="memory-symbolic",
+                #     page_id="controllers",
+                #     nav_page_class=ControllerTogglePage,
+                # ),
                 Page(
                     title="Joint States",
                     subtitle="Manipulate joints",
@@ -322,6 +343,25 @@ def create_pages():
                 ),
             ],
         ),
+        # PageGroup(
+        #     title="ROS Bags",
+        #     pages=[
+        #         Page(
+        #             title="Recorder",
+        #             subtitle="Record a ros2 bag",
+        #             icon_name="money-bag-symbolic",
+        #             page_id="bag_recorder",
+        #             nav_page_class=BagRecorderPage,
+        #         ),
+        #         Page(
+        #             title="Playback",
+        #             subtitle="Play a ros2 bag",
+        #             icon_name="money-bag-symbolic",
+        #             page_id="bag_player",
+        #             nav_page_class=BagPlayerPage,
+        #         )
+        #     ],
+        # ),
         PageGroup(
             title="Diagnostics",
             pages=[
@@ -332,6 +372,20 @@ def create_pages():
                     page_id="logger",
                     nav_page_class=LoggerPage,
                 ),
+                # Page(
+                #     title="Documentation",
+                #     subtitle="Look at the ros2 docs",
+                #     icon_name="docs-symbolic",
+                #     page_id="docs",
+                #     nav_page_class=DocumentationPage,
+                # ),
+                # Page(
+                #     title="Quality of Service",
+                #     subtitle="Inspect QoS statistics",
+                #     icon_name="editor-choice-symbolic",
+                #     page_id="qos",
+                #     nav_page_class=QualityOfServicePage,
+                # ),
                 Page(
                     title="Doctor",
                     subtitle="System diagnostics",

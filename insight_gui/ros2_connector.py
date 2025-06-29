@@ -29,6 +29,7 @@ from operator import itemgetter
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from rclpy.publisher import Publisher, MsgType
 from rclpy.subscription import Subscription
 from rclpy.service import Service, SrvType, SrvTypeRequest, SrvTypeResponse
@@ -145,8 +146,12 @@ class ROS2Connector:
     def on_node_state_changed(self, action: Gio.Action, value: GLib.Variant):
         action.set_state(GLib.Variant.new_boolean(self.is_running))
 
-    def add_publisher(self, msg_type: MsgType, topic_name: str, queue_size: int = 10) -> Publisher:
-        return self.node.create_publisher(msg_type, topic_name, queue_size)
+    def add_publisher(
+        self, msg_type: MsgType, topic_name: str, qos_profile: QoSProfile | int = 10, **kwargs
+    ) -> Publisher:
+        if isinstance(qos_profile, int):
+            qos_profile = QoSProfile(depth=qos_profile)
+        return self.node.create_publisher(msg_type, topic_name, qos_profile=qos_profile)
 
     def destroy_publisher(self, pub: Publisher) -> bool:
         if not self.node:

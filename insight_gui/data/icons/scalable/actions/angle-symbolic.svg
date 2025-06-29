@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 479.9952 479.9952"
+   fill="#000000"
+   version="1.1"
+   id="svg2"
+   sodipodi:docname="angle-symbolic.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="namedview2"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showguides="true"
+     inkscape:zoom="19.489631"
+     inkscape:cx="33.094521"
+     inkscape:cy="23.833186"
+     inkscape:window-width="2494"
+     inkscape:window-height="1371"
+     inkscape:window-x="2626"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2">
+    <sodipodi:guide
+       position="47.600907,48.17136"
+       orientation="0,-1"
+       id="guide3"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <!-- Vertical Line -->
+  <!-- Horizontal Line -->
+  <!-- Arc (Angle) -->
+  <!-- Circle -->
+  <g
+     id="g4"
+     transform="matrix(0.99825498,0,0,0.99825498,-14.396889,-40.355323)">
+    <path
+       d="m 172.61691,228.67803 c 98.36842,47.10811 148.9387,132.67511 144.82681,235.15061"
+       fill="none"
+       stroke="#000000"
+       stroke-width="32"
+       stroke-dasharray="40, 40"
+       id="path2"
+       style="stroke-width:50.0869;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:50.0869;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0"
+       d="M 47.600907,463.82864 242.1667,97.85736"
+       id="path5"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:50.0869;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0"
+       d="M 47.600907,463.82864 H 462.07747"
+       id="path3"
+       sodipodi:nodetypes="cc" />
+    <circle
+       style="fill:none;stroke:#000000;stroke-width:30.0521;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0"
+       id="path4"
+       cx="380.33841"
+       cy="209.6416"
+       r="32.296074" />
+  </g>
+</svg>

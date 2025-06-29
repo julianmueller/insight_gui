@@ -34,7 +34,6 @@ from gi.repository import Gtk, Adw, Pango
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 class TopicListPage(ContentPage):
@@ -88,7 +87,7 @@ class TopicListPage(ContentPage):
             row.subtitle_lbl.set_tooltip_text(topic_name)
 
             if topic_or_service_is_hidden(topic_name):
-                row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+                row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,

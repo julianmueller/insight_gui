@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="48px"
+   viewBox="0 -960 960 960"
+   width="48px"
+   fill="#1f1f1f"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="tactic-symbolic.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="18.375"
+     inkscape:cx="23.972789"
+     inkscape:cy="23.972789"
+     inkscape:window-width="2494"
+     inkscape:window-height="1371"
+     inkscape:window-x="2626"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <path
+     d="m 709.364,-38.224 -57.288,-57.288 75.6,-76.8 -75.6,-75.6 57.288,-58.776 76.8,76.8 75.6,-76.8 58.776,58.776 -76.8,75.6 76.8,76.8 -58.776,57.288 -75.6,-75.6 z m -531.996,-79.752 q 24.396,0 40.872,-16.26 16.476,-16.26 16.476,-40.656 0,-24.396 -16.26,-40.872 -16.272,-16.476 -40.668,-16.476 -24.396,0 -40.872,16.26 -16.464,16.272 -16.464,40.668 0,24.396 16.26,40.872 16.26,16.464 40.656,16.464 z m 0.672,79.752 q -57.84,0 -97.584,-39.9 Q 40.7,-118.012 40.7,-175.24 q 0,-56.952 39.852,-96.852 39.852,-39.888 97.032,-39.888 45.312,0 80.4,26.28 35.088,26.28 48.516,68.616 55.308,-1.824 93.9,-41.772 38.592,-39.948 38.592,-95.34 v -221.496 q 0,-95.772 67.416,-163.176 67.404,-67.416 163.464,-67.416 h 91.32 L 678.188,-889 736.964,-947.776 919.34,-765.4 736.964,-583.312 678.188,-640.6 l 83.004,-83.916 h -91.32 q -62.496,0 -105.804,43.308 -43.308,43.308 -43.308,105.516 v 221.496 q 0,88.752 -61.464,152.328 -61.464,63.576 -149.928,66.264 -13.776,43.428 -50.148,70.404 -36.372,26.976 -81.18,26.976 z M 97.988,-648.4 40.7,-705.688 l 75.6,-76.8 -75.6,-75.6 57.288,-58.776 76.8,76.8 75.6,-76.8 58.488,58.776 -76.8,75.6 76.8,76.8 -58.488,57.288 -75.6,-75.6 z"
+     id="path1"
+     style="stroke-width:1.2;fill:#000000" />
+</svg>

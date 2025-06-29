@@ -72,7 +72,7 @@ class TopicSubscriberPage(ContentPage):
         )
         self.single_sub_btn = super().add_bottom_left_btn(
             label="Single Subscription",
-            icon_name="listen-symbolic",
+            icon_name="subscriptions-symbolic",
             func=self.on_single_sub,
             css_classes=["suggested-action"],
         )

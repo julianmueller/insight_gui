@@ -33,7 +33,7 @@
     - ~~add a refresh to all "static" pages, e.g. TopicInfoPage, as this might also change while it is open~~
     - ~~a launch page to directly launch nodes with a set of arguments~~
     - ~~add an overview page, where all pages are shown as cards (and are maybe grouped? and ofc searchable)~~
-    - static/dynamic tf2 broadcaster
+    - ~~static~~/dynamic tf2 broadcaster
     - tf inspection subpage (show the stuff that rviz shows)
     - service echo (listener)
     - qos info page
@@ -46,7 +46,10 @@
     - documentation Page, with Links to the ros2 webpages? maybe even a webview renderer?
     - clock page with manipulation options
     - bookmarks page to save links to pages for later
+        - use `book-ribbon-symbolic` and `bookmark-add-symbolic`
     - image pub page (load image/video and stream it)
+        - use `linked-camera-symbolic` and 
+        - also move the image pages then to its own group
 
 - additional settings:
     - ~~maybe add an option, that all parameter-related services are hidden (/describe_parameters etc)~~

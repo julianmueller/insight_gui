@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="24px"
+   viewBox="0 -960 960 960"
+   width="24px"
+   fill="#1f1f1f"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="rotation-3d-symbolic.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="36.75"
+     inkscape:cx="11.986395"
+     inkscape:cy="11.986395"
+     inkscape:window-width="2494"
+     inkscape:window-height="1371"
+     inkscape:window-x="2626"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <path
+     style="stroke-width:1.15;fill:#000000"
+     d="M 848,-480 Q 848,-612.25 764.625,-713.45 681.25,-814.65 551.3,-841.1 l 66.7,66.7 -64.4,64.4 -209.3,-209.3 q 33.35,-11.5 67.275,-16.1 33.925,-4.6 68.425,-4.6 95.45,0 179.4,36.225 83.95,36.225 146.05,98.325 62.1,62.1 98.325,146.05 Q 940,-575.45 940,-480 Z"
+     id="path4" />
+  <path
+     style="stroke-width:1.52087;fill:#000000"
+     d="m 219.32,-297.495 v -91.2525 h 152.0875 v -60.835 H 280.155 v -60.835 h 91.2525 v -60.835 H 219.32 v -91.2525 h 182.505 q 25.85487,0 43.34494,17.49006 Q 462.66,-627.52487 462.66,-601.67 v 243.34 q 0,25.85488 -17.49006,43.34494 -17.49007,17.49006 -43.34494,17.49006 z"
+     id="path3" />
+  <path
+     style="stroke-width:1.52087;fill:#000000"
+     d="m 497.32,-297.495 v -365.01 h 182.505 q 25.85488,0 43.34494,17.49006 Q 740.66,-627.52488 740.66,-601.67 v 243.34 q 0,25.85488 -17.49006,43.34494 -17.49006,17.49006 -43.34494,17.49006 z m 91.2525,-91.2525 h 60.835 v -182.505 h -60.835 z"
+     id="path2" />
+  <path
+     style="stroke-width:1.15;fill:#000000"
+     d="M 480,-20 Q 384.55,-20 300.6,-56.225 216.65,-92.45 154.55,-154.55 92.45,-216.65 56.225,-300.6 20,-384.55 20,-480 h 92 q 0,132.25 83.375,233.45 83.375,101.2 213.325,127.65 L 342,-185.6 406.4,-250 615.7,-40.7 Q 582.35,-29.2 548.425,-24.6 514.5,-20 480,-20 Z"
+     id="path1" />
+</svg>

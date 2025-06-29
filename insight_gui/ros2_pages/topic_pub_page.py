@@ -82,7 +82,7 @@ class TopicPublisherPage(ContentPage):
         )
         self.single_pub_btn = super().add_bottom_left_btn(
             label="Single Publish",
-            icon_name="megaphone-symbolic",
+            icon_name="rss-feed-symbolic",
             func=self.publish_msg,
             sensitive=False,
             css_classes=["suggested-action"],

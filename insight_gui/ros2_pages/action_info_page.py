@@ -35,7 +35,6 @@ from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 # TODO test this class, because i havent had an action in the list to look at its info
@@ -102,7 +101,7 @@ class ActionInfoPage(ContentPage):
             if any(self.action_name in server for server in action_servers_list):
                 row = PrefRow(title=node_name, subtitle=node_full_name)
                 if _is_hidden_name(node_name):
-                    row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+                    row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
 
                 row.set_subpage_link(
                     nav_view=self.nav_view,
@@ -118,7 +117,7 @@ class ActionInfoPage(ContentPage):
             if any(self.action_name in client for client in action_clients_list):
                 row = PrefRow(title=node_name, subtitle=node_full_name)
                 if _is_hidden_name(node_name):
-                    row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+                    row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
 
                 row.set_subpage_link(
                     nav_view=self.nav_view,

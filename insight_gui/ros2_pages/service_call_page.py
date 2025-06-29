@@ -111,6 +111,7 @@ class ServiceCallPage(ContentPage):
                 title="Message Format",
                 use_subtitle=True,
                 css_classes=["property"],
+                # model=Gtk.StringList.new(["YAML", "Euler JSON"]),
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )

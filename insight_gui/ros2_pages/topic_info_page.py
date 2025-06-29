@@ -36,7 +36,6 @@ from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 class TopicInfoPage(ContentPage):
@@ -52,14 +51,14 @@ class TopicInfoPage(ContentPage):
 
         self.open_pub_btn = super().add_bottom_left_btn(
             label="Publish to topic",
-            icon_name="megaphone-symbolic",
+            icon_name="rss-feed-symbolic",
             func=self.on_goto_publisher_page,
             tooltip_text="Go to the topic publisher",
         )
 
         self.open_sub_btn = super().add_bottom_right_btn(
             label="Subscribe to Topic",
-            icon_name="listen-symbolic",
+            icon_name="subscriptions-symbolic",
             func=self.on_goto_subscriber_page,
             tooltip_text="Go to the topic subscriber",
         )
@@ -106,7 +105,7 @@ class TopicInfoPage(ContentPage):
             if any(self.topic_name in pub for pub in publishers_list):
                 row = PrefRow(title=node_name, subtitle=node_full_name)
                 if _is_hidden_name(node_name):
-                    row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
+                    row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden node")
 
                 row.set_subpage_link(
                     nav_view=self.nav_view,
@@ -123,7 +122,7 @@ class TopicInfoPage(ContentPage):
             if any(self.topic_name in sub for sub in subscribers_list):
                 row = PrefRow(title=node_name, subtitle=node_full_name)
                 if _is_hidden_name(node_name):
-                    row.add_prefix_icon(HIDDEN_OBJ_ICON, tooltip_text="Hidden node")
+                    row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden node")
 
                 row.set_subpage_link(
                     nav_view=self.nav_view,

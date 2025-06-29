@@ -27,17 +27,45 @@
 
         <file preprocess="xml-stripblanks">icons/scalable/actions/git-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/bug-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/scalable/actions/network-proxy-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/scalable/actions/center-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/scalable/actions/megaphone-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/graph2-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/graph3-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/token-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/rss-feed-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/sliders-horizontal-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/scalable/actions/listen-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/subscriptions-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/gamepad-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/scalable/actions/list-compact-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/shapes-symbolic.svg</file>
-        <file preprocess="xml-stripblanks">icons/scalable/actions/function-third-order-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/doctor-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/funnel-outline-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/normalize-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/rotation-3d-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/orbit-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/rocket-launch-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/widgets-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/angle-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/package-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/instant-mix-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/bigtop-updates-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/tactic-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/editor-choice-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/coordinates-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/calculate-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/psychology-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/money-bag-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/lock-alt-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/terminal-alt-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/memory-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/book-ribbon-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/bookmark-add-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/alarm-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/linked-camera-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/scalable/actions/light-mode-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/dark-mode-symbolic.svg</file>
+
+        <file preprocess="xml-stripblanks">icons/scalable/actions/list-t-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/list-s-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/list-a-symbolic.svg</file>
 
         <file preprocess="xml-stripblanks">icons/scalable/actions/padlock2-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/padlock2-open-symbolic.svg</file>

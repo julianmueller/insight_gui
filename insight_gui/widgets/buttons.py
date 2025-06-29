@@ -28,8 +28,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import GObject, Gtk, Adw
 
-from insight_gui.utils.constants import ON_ICON, OFF_ICON
-
 
 class ToggleButton(Gtk.ToggleButton):
     __gtype_name__ = "MyToggleButton"
@@ -87,7 +85,7 @@ class ToggleButton(Gtk.ToggleButton):
             self.css_classes = None
 
         if show_default_icons and self.icon_names is None:
-            self.icon_names = (ON_ICON, OFF_ICON)
+            self.icon_names = ("check-round-outline-symbolic", "cross-small-circle-outline-symbolic")
 
         self.func = func
         self.func_kwargs = func_kwargs

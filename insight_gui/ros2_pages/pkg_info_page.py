@@ -95,7 +95,7 @@ class PackageInfoPage(ContentPage):
                 )
             )
             row.add_suffix_btn(
-                icon_name="terminal-symbolic",
+                icon_name="terminal-alt-symbolic",
                 tooltip_text="Open command in terminal",
                 func=self.on_open_terminal_command,
                 func_kwargs={"command": f"ros2 run {self.pkg_name} {executable_name}"},

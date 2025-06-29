@@ -30,7 +30,6 @@ gi.require_version("Adw", "1")
 from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango
 
 from insight_gui.widgets.buttons import ToggleButton, CopyButton
-from insight_gui.utils.constants import ON_ICON, OFF_ICON
 
 
 class PrefRowInterface(GObject.GObject):
@@ -989,10 +988,16 @@ class MultiToggleButtonRow(AdditionalContentRow):
         )
 
         self.activate_all_btn = self.add_suffix_btn(
-            icon_name=ON_ICON, tooltip_text="Activate all", func=self.toggle_all, func_kwargs={"active": True}
+            icon_name="check-round-outline-symbolic",
+            tooltip_text="Activate all",
+            func=self.toggle_all,
+            func_kwargs={"active": True},
         )
         self.deactivate_all_btn = self.add_suffix_btn(
-            icon_name=OFF_ICON, tooltip_text="Deactivate all", func=self.toggle_all, func_kwargs={"active": False}
+            icon_name="cross-small-circle-outline-symbolic",
+            tooltip_text="Deactivate all",
+            func=self.toggle_all,
+            func_kwargs={"active": False},
         )
         self.suffixes_box.add_css_class("linked")
 

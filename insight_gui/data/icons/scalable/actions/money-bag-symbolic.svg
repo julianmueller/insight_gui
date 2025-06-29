@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="48px"
+   viewBox="0 -960 960 960"
+   width="48px"
+   fill="#1f1f1f"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="money-bag-symbolic.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="18.375"
+     inkscape:cx="23.972789"
+     inkscape:cy="23.972789"
+     inkscape:window-width="2494"
+     inkscape:window-height="1371"
+     inkscape:window-x="2626"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <path
+     d="m 479.287,-313.8135 q -29.578,0 -49.68,-20.654 -20.0905,-20.6425 -20.0905,-50.5425 0,-29.578 20.0905,-50.255 20.102,-20.677 49.68,-20.677 30.728,0 51.543,20.6195 20.8035,20.608 20.8035,50.4505 0,29.8425 -20.8035,50.4505 -20.815,20.608 -51.543,20.608 z M 276.3005,-705.492 H 684.562 l 96.7725,-195.523 h -603.221 z m 31.6825,646.507 h 343.758 q 103.7185,0 176.778,-72.9675 73.071,-72.9675 73.071,-176.5825 -1.15,-44.8155 -15.939,-85.4565 -14.789,-40.641 -43.217,-74.819 L 703.238,-636.492 H 256.486 l -140.622,167.6815 q -27.2895,33.925 -42.366,74.635 -15.088,40.6985 -15.088,85.491 0,103.799 72.9675,176.7435 72.979,72.956 176.6055,72.956 z"
+     id="path1"
+     style="fill:#000000;stroke-width:1.15" />
+</svg>

@@ -34,7 +34,6 @@ from gi.repository import Gtk, Adw
 from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.utils.constants import HIDDEN_OBJ_ICON
 
 
 class NodeInfoPage(ContentPage):
@@ -139,7 +138,7 @@ class NodeInfoPage(ContentPage):
         for topic_name, topic_types in sorted(self.publisher_list, key=itemgetter(0)):
             row = PrefRow(title=topic_name, subtitle=", ".join(topic_types))
             if topic_or_service_is_hidden(topic_name):
-                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -153,7 +152,7 @@ class NodeInfoPage(ContentPage):
         for topic_name, topic_types in sorted(self.subscriber_list, key=itemgetter(0)):
             row = PrefRow(title=topic_name, subtitle=", ".join(topic_types))
             if topic_or_service_is_hidden(topic_name):
-                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -167,7 +166,7 @@ class NodeInfoPage(ContentPage):
         for service_name, service_types in sorted(self.service_server_list, key=itemgetter(0)):
             row = PrefRow(title=service_name, subtitle=", ".join(service_types))
             if topic_or_service_is_hidden(service_name):
-                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -181,7 +180,7 @@ class NodeInfoPage(ContentPage):
         for service_name, service_types in sorted(self.service_client_list, key=itemgetter(0)):
             row = PrefRow(title=service_name, subtitle=", ".join(service_types))
             if topic_or_service_is_hidden(service_name):
-                row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden service")
+                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -195,7 +194,7 @@ class NodeInfoPage(ContentPage):
         for action_name, action_types in sorted(self.action_servers_list, key=itemgetter(0)):
             row = PrefRow(title=action_name, subtitle=", ".join(action_types))
             # if topic_or_service_is_hidden(action_name): # TODO is_hidden possible for actions?
-            #     row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+            #     row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -209,7 +208,7 @@ class NodeInfoPage(ContentPage):
         for action_name, action_types in sorted(self.action_clients_list, key=itemgetter(0)):
             row = PrefRow(title=action_name, subtitle=", ".join(action_types))
             # if topic_or_service_is_hidden(action_name): # TODO is_hidden possible for actions?
-            #     row.add_prefix_icon(icon_name=HIDDEN_OBJ_ICON, tooltip_text="Hidden topic")
+            #     row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -233,7 +232,7 @@ class NodeInfoPage(ContentPage):
                 subpage_kwargs={"node_name": self.node_name, "param_name": param_name},
             )
             if param_read_only:
-                row.add_prefix_icon(icon_name="lock-symbolic", tooltip_text="Read-only parameter")
+                row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
 
             self.parameters_group.add_row(row)
         self.parameters_group.set_description_to_row_count()

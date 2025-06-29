@@ -76,15 +76,20 @@ class TransformsPage(ContentPage):
             )
         )
 
-        self.calc_button: ButtonRow = self.calc_group.add_row(
-            ButtonRow(
-                label="Calculate transform",
-                start_icon_name="gnome-calculator-symbolic",
+        self.calc_button: Gtk.Button = self.calc_group.add_row(
+            Gtk.Button(
+                child=Adw.ButtonContent(
+                    label="Calculate transform",
+                    icon_name="calculate-symbolic",
+                ),
                 tooltip_text="Calculate transformation from source to target",
-                func=self.on_calc_transform,
                 sensitive=False,
+                margin_top=12,
+                halign=Gtk.Align.CENTER,
+                css_classes=["suggested-action", "pill"],
             )
         )
+        self.calc_button.connect("clicked", self.on_calc_transform)
 
         # result row that displays the result of the calculation
         # TODO maybe make this into individual rows for each tf component (position xyz, orientation xyzw, etc) that

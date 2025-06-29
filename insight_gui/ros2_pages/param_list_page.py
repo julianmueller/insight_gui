@@ -90,7 +90,7 @@ class ParameterListPage(ContentPage):
 
                 # if the parameter is read-only, a prefix icon is added to the row
                 if param_read_only:
-                    row.add_prefix_icon(icon_name="lock-symbolic", tooltip_text="Read-only parameter")
+                    row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
 
                 group.add_row(row)
 

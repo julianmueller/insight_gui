@@ -40,7 +40,7 @@
                             <object class="AdwHeaderBar" id="nav_header_bar">
                                 <child type="start">
                                     <object class="GtkButton" id="overview_btn">
-                                        <property name="icon-name">view-grid-symbolic</property>
+                                        <property name="icon-name">widgets-symbolic</property>
                                         <property name="tooltip-text">Show Overview Page</property>
                                     </object>
                                 </child>

@@ -466,7 +466,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         # self.max_message_history_row.set_value(100)
 
         # Create application behavior settings page
-        self.behavior_page = PrefPage(title="Behavior", icon_name="preferences-system-symbolic")
+        self.behavior_page = PrefPage(title="Behavior", icon_name="psychology-symbolic")
         super().add(self.behavior_page)
 
         # Startup Behavior
