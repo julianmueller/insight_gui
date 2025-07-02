@@ -84,6 +84,13 @@
     - Logger page:
         - save the list of log files as eg csv
         - inspect certain logs closer by double clicking them
+    - graph page:
+        - add a setting, that opens flap to the right
+        - add services/actions/parameters
+        - allow to toggle all these blocks
+        - add blacklists
+        - for topics/services/actions show the type as a subtitle?
+        - instead of opening the blocks as their (node/topic/etc) page, a graph_local_page is opened, which shows only this block with its connections
 
 - ros2 stuff
     - (optional) add every page of the gui as a ros2 executable, so a window with only this page starts

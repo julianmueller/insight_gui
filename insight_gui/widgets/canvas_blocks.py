@@ -33,6 +33,9 @@ from insight_gui.utils.adw_colors import AdwAccentColor
 from insight_gui.widgets.buttons import RevealButton
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
+from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
+from insight_gui.ros2_pages.action_info_page import ActionInfoPage
+from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 
 
 class BaseBlock(Adw.Bin):
@@ -43,6 +46,10 @@ class BaseBlock(Adw.Bin):
         super().__init__()
         super().connect("realize", self.on_realize)
 
+        self.name: str = label
+        self.pos = (0, 0)
+        self.connected_blocks = []  # TODO fill these
+
         builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
         self.main_box: Gtk.Box = builder.get_object("main_box")
@@ -51,11 +58,13 @@ class BaseBlock(Adw.Bin):
         self.header_box: Gtk.Box = builder.get_object("header_box")
         self.header_lbl: Gtk.Label = builder.get_object("header_lbl")
         self.header_lbl.set_label(label)
+
+        # TODO add options for more btns here, eg for topic pub/sub, service call etc
         self.subpage_btn: Gtk.Button = builder.get_object("subpage_btn")
         self.subpage_btn.connect("clicked", self.on_subpage_btn_clicked)
 
         self.revealer: Gtk.Revealer = builder.get_object("revealer")
-        self.revealer.set_visible(False)
+        self.revealer.set_visible(False)  # DEBUG
         # self.revealer.connect("notify::reveal-child", self._on_revealer_toggled)
 
         self.content_box: Gtk.Box = builder.get_object("content_box")
@@ -74,34 +83,38 @@ class BaseBlock(Adw.Bin):
         self.ros2_connector = Gio.Application.get_default().ros2_connector
 
     @property
-    def north_attachment_point(self):
-        return (self.width / 2, 0)
+    def center_point(self) -> tuple[float, float]:
+        return (self.width / 2.0, self.height / 2.0)
 
     @property
-    def east_attachment_point(self):
-        return (self.width, self.height / 2)
+    def top_attachment_point(self) -> tuple[float, float]:
+        return (self.width / 2.0, 0.0)
 
     @property
-    def south_attachment_point(self):
-        return (self.width / 2, self.height)
+    def right_attachment_point(self) -> tuple[float, float]:
+        return (self.width, self.height / 2.0)
 
     @property
-    def west_attachment_point(self):
-        return (0, self.height / 2)
+    def bottom_attachment_point(self) -> tuple[float, float]:
+        return (self.width / 2.0, self.height)
 
     @property
-    def width(self):
-        return super().get_width()
+    def left_attachment_point(self) -> tuple[float, float]:
+        return (0.0, self.height / 2.0)
 
     @property
-    def height(self):
-        return super().get_height()
+    def width(self) -> float:
+        return float(super().get_width())
 
-    def _on_revealer_toggled(self, revealer, _param):
-        self.emit("revealer-toggled", not revealer.get_child_revealed())
+    @property
+    def height(self) -> float:
+        return float(super().get_height())
 
-    def on_subpage_btn_clicked(self, button, *args):
-        """Child class should override this with blocking, long-running computation."""
+    def on_revealer_toggled(self, *args):
+        self.emit("revealer-toggled", not self.revealer.get_child_revealed())
+
+    def on_subpage_btn_clicked(self, *args):
+        """Child class should override this."""
         pass
 
 
@@ -112,16 +125,8 @@ class NodeBlock(BaseBlock):
         super().__init__(label=node_full_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE, **kwargs)
         self.node_full_name = node_full_name
 
-    def on_subpage_btn_clicked(self, button, *args):
+    def on_subpage_btn_clicked(self, *args):
         self.nav_view.push(NodeInfoPage(self.node_full_name))
-
-
-class InterfaceBlock(BaseBlock):
-    __gtype_name__ = "InterfaceBlock"
-
-    def __init__(self, interface_name: str, **kwargs):
-        super().__init__(label=interface_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_GREEN, **kwargs)
-        self.interface_name = interface_name
 
 
 class TopicBlock(BaseBlock):
@@ -131,29 +136,45 @@ class TopicBlock(BaseBlock):
         super().__init__(label=topic_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_ORANGE, **kwargs)
         self.topic_name = topic_name
         self.topic_types = topic_types
+        # TODO add subtitle etc
 
-    def on_subpage_btn_clicked(self, button, *args):
+    def on_subpage_btn_clicked(self, *args):
         self.nav_view.push(TopicInfoPage(self.topic_name, self.topic_types))
 
 
 class ServiceBlock(BaseBlock):
     __gtype_name__ = "ServiceBlock"
 
-    def __init__(self, service_name: str, **kwargs):
-        super().__init__(label=service_name, **kwargs)
+    def __init__(self, service_name: str, service_types: str | list[str], **kwargs):
+        super().__init__(label=service_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_GREEN, **kwargs)
         self.service_name = service_name
+        self.service_types = service_types
+        # TODO add subtitle etc
+
+    def on_subpage_btn_clicked(self, *args):
+        self.nav_view.push(ServiceInfoPage(self.service_name, self.service_types))
 
 
 class ActionBlock(BaseBlock):
     __gtype_name__ = "ActionBlock"
 
-    def __init__(self, action_name: str, **kwargs):
-        super().__init__(label=action_name, **kwargs)
+    def __init__(self, action_name: str, action_types: str | list[str], **kwargs):
+        super().__init__(label=action_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_RED, **kwargs)
         self.action_name = action_name
+        self.action_types = action_types
+        # TODO add subtitle etc
+
+    def on_subpage_btn_clicked(self, *args):
+        self.nav_view.push(ActionInfoPage(self.action_name, self.topic_types))
 
 
-# class ParameterBlock(BaseBlock):
-#     __gtype_name__ = "ParameterBlock"
-#
-#     def __init__(self, label: str, **kwargs):
-#         super().__init__(label, **kwargs)
+class ParameterBlock(BaseBlock):
+    __gtype_name__ = "ParameterBlock"
+
+    def __init__(self, node_name: str, parameter_name: str, **kwargs):
+        super().__init__(label=parameter_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_PURPLE, **kwargs)
+        self.node_name = node_name
+        self.parameter_name = parameter_name
+
+    def on_subpage_btn_clicked(self, *args):
+        self.nav_view.push(ParamEditPage(self.node_name, self.parameter_name))
