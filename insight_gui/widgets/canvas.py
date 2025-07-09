@@ -22,14 +22,23 @@
 
 import math
 import networkx as nx
+from networkx.drawing.nx_agraph import to_agraph, graphviz_layout
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
-from gi.repository import Gtk, Adw, Gdk, Gsk, Graphene, GObject
+from gi.repository import Gtk, Adw, Gdk, Gsk, Graphene, GObject, GLib
 
-from insight_gui.widgets.canvas_blocks import BaseBlock
+from insight_gui.widgets.canvas_blocks import (
+    BaseBlock,
+    NodeBlock,
+    TopicBlock,
+    ServiceBlock,
+    ActionBlock,
+    ParameterBlock,
+    TransformBlock,
+)
 
 
 class Canvas(Adw.Bin):
@@ -101,7 +110,10 @@ class Canvas(Adw.Bin):
 
         # Separator
         separator = Gtk.Separator(
-            orientation=Gtk.Orientation.VERTICAL, margin_start=6, margin_end=6, css_classes=["spacer"]
+            orientation=Gtk.Orientation.VERTICAL,
+            margin_start=6,
+            margin_end=6,
+            css_classes=["spacer"],
         )
         self.toolbar.append(separator)
 
@@ -133,11 +145,15 @@ class Canvas(Adw.Bin):
 
         # drawing area which shows/draws the connections etc in the background
         self.drawing_area = Gtk.DrawingArea(
-            hexpand=True, vexpand=True, content_width=self.custom_width, content_height=self.custom_height
+            hexpand=True,
+            vexpand=True,
+            content_width=self.custom_width,
+            content_height=self.custom_height,
         )
         self.drawing_area.set_draw_func(self._on_draw)
         self.fixed.put(self.drawing_area, 0, 0)
 
+        self._nx_graph = nx.DiGraph()
         self._blocks = set()
         self._connections = set()
         self._highlighted_blocks = set()  # Highlighted blocks
@@ -211,8 +227,6 @@ class Canvas(Adw.Bin):
                 return False
 
             # Delay scroll adjustment until after zoom is applied
-            from gi.repository import GLib
-
             GLib.idle_add(adjust_scroll)
 
     def _on_zoom_fit(self, *args):
@@ -282,15 +296,19 @@ class Canvas(Adw.Bin):
         self.get_root().get_surface().set_cursor(Gdk.Cursor.new_from_name("default", None))
 
     def _on_draw(self, drawing_area, cr, width, height):
+        if not self.get_realized():
+            return
+
         for connection in self._connections:
             block1, block2 = connection
-            self._draw_smart_connection(cr, block1, block2, connection)
+            self._draw_connection(cr, block1, block2, connection)
 
     def clear(self):
         for block in self._blocks:
             self.fixed.remove(block)
         self._blocks.clear()
         self._connections.clear()
+        self._nx_graph.clear()
 
         # Reset zoom to 1.0 when clearing
         self.zoom_factor = 1.0
@@ -302,7 +320,20 @@ class Canvas(Adw.Bin):
         self.drawing_area.set_content_width(int(width))
         self.drawing_area.set_content_height(int(height))
 
-    def add_block(self, block: BaseBlock):
+    def add_block(self, block_class: BaseBlock, block_args: dict) -> str:
+        # Create the block instance with the unique ID
+        block = block_class(**block_args)
+        block_type = block_class.__name__.lower()  # Use class name as type
+
+        # check if the block already exists
+        for b in self._blocks:
+            if b.uuid == block.uuid:
+                return block.uuid
+
+        # Add to nx_graph
+        self._nx_graph.add_node(block.uuid, label=block.label, type=block_type, args=block_args)
+
+        # Set up block event handlers
         block.connect("revealer-toggled", self._block_revealed)
 
         # Add hover event controllers for highlighting
@@ -311,23 +342,31 @@ class Canvas(Adw.Bin):
         hover_controller.connect("leave", self._on_block_hover_leave, block)
         block.add_controller(hover_controller)
 
+        # Add to canvas
         self._blocks.add(block)
-        self.fixed.put(block, 0, 0)
+        self.fixed.put(block, block.pos[0], block.pos[1])
 
-        # Store original position for this block if zoom tracking is active
-        pos = self.fixed.get_child_position(block)
-        block.pos = (pos.x, pos.y)
+        # # Apply current zoom if not at 1.0
+        # if self.zoom_factor != 1.0:
+        #     self._on_zoom_factor_changed()
 
-        # Apply current zoom if not at 1.0
-        if self.zoom_factor != 1.0:
-            self._on_zoom_changed()
+        return block.uuid
 
-    def get_block(self, name: str):
+    def get_block(self, uuid: str) -> BaseBlock:
         for block in self._blocks:
-            if block.name == name:
+            if block.uuid == uuid:
                 return block
         else:
             return None
+
+    def get_block_by_label(self, label: str, type_filter: str = None) -> BaseBlock:
+        for block in self._blocks:
+            if block.label == label and (type_filter is None or block.__class__.__name__.lower() == type_filter):
+                return block
+        return None
+
+    def has_block_with_label(self, label: str, type_filter: str = None) -> bool:
+        return self.get_block_by_label(label, type_filter) is not None
 
     def move_block(self, block: BaseBlock, x: float, y: float, update_block_pos: bool = True):
         if block not in self._blocks:
@@ -343,135 +382,122 @@ class Canvas(Adw.Bin):
             return
         self.fixed.remove(block)
 
-    def add_connection(self, block1: BaseBlock, block2: BaseBlock):
-        if block1 not in self._blocks or block2 not in self._blocks:
+    def connect_blocks(self, source_uuid: str, target_uuid: str, label: str = ""):
+        source_block = self.get_block(source_uuid)
+        target_block = self.get_block(target_uuid)
+
+        if (
+            source_block is None
+            or source_block not in self._blocks
+            or target_block is None
+            or target_block not in self._blocks
+        ):
             return
-        self._connections.add((block1, block2))
 
-    def layout_from_graph(self, graph: nx.DiGraph):
-        try:
-            from networkx.drawing.nx_agraph import graphviz_layout
+        # Add edge to graph
+        self._nx_graph.add_edge(source_uuid, target_uuid, label=label)
 
-            # Create a copy of the graph with Graphviz attributes
-            dot_graph = graph.copy()
+        # Add visual connection between blocks
+        self._connections.add((source_block, target_block))
 
-            # Apply graph-level attributes for better layout
-            dot_graph.graph.update(
+    def get_graph_nodes(self, node_type: str = None):
+        """Get nodes from the graph, optionally filtered by type."""
+        if node_type:
+            return [
+                (node_id, data) for node_id, data in self._nx_graph.nodes(data=True) if data.get("type") == node_type
+            ]
+        return list(self._nx_graph.nodes(data=True))
+
+    def get_graph_edges(self):
+        """Get edges from the graph, optionally filtered by type."""
+        return list(self._nx_graph.edges(data=True))
+
+    def set_node_layout_attributes(self, node_id: str, node_type: str):
+        """Set node attributes based on type for better Graphviz layout."""
+        if node_type == NodeBlock.__name__.lower():
+            self._nx_graph.nodes[node_id].update(
                 {
-                    "rankdir": "LR",  # Left to right layout
-                    "ranksep": "2.0",  # Spacing between ranks considering block widths
-                    "nodesep": "0.8",  # Spacing between nodes considering block heights
-                    "splines": "curved",  # Orthogonal edge routing
-                    "overlap": "false",  # Prevent overlaps
-                    "concentrate": "true",  # Merge multi-edges
-                    "newrank": "true",  # Better ranking algorithm
-                    "pack": "true",  # Pack components
-                    "packmode": "graph",
-                    "sep": "+20,20",  # Component separation
+                    "shape": "box",
+                    "style": "rounded,filled",
+                    "fillcolor": "#E3F2FD",
+                    "color": "#1976D2",
+                    "fontname": "Arial",
+                    "fontsize": "10",
+                    "width": "2.0",
+                    "height": "1.0",
+                    "fixedsize": "true",
                 }
             )
-
-            # Use dot layout for hierarchical arrangement
-            pos = graphviz_layout(dot_graph, prog="dot", args="-Grankdir=LR -Granksep=2.0 -Gnodesep=0.5")
-
-        except (ImportError, Exception) as e:
-            print(f"Graphviz layout failed: {e}, falling back to hierarchical layout")
-            pos = self._hierarchical_layout(graph)
-
-        if not pos:
-            print("No layout generated, using spring layout")
-            pos = nx.spring_layout(graph, seed=42, k=3, iterations=50)
-
-        # Calculate bounds and scale
-        if pos:
-            xs, ys = zip(*pos.values())
-            min_x, max_x = min(xs), max(xs)
-            min_y, max_y = min(ys), max(ys)
-            graph_width, graph_height = max_x - min_x, max_y - min_y
-
-            # Get the available viewport size
-            viewport_width = self.scrolled_window.get_allocated_width()
-            viewport_height = self.scrolled_window.get_allocated_height()
-
-            # Use viewport size if available, otherwise use minimum defaults
-            if viewport_width > 0 and viewport_height > 0:
-                canvas_width = max(viewport_width, graph_width + 200)
-                canvas_height = max(viewport_height, graph_height + 200)
-            else:
-                # Fallback to larger defaults
-                canvas_width = max(1200, graph_width + 400)
-                canvas_height = max(800, graph_height + 300)
-
-            self.set_size(canvas_width, canvas_height)
-
-            # Center the graph in the available space
-            padding_x = max(100, (canvas_width - graph_width) / 2)
-            padding_y = max(100, (canvas_height - graph_height) / 2)
-
-            # Position blocks with better spacing
-            for name, (x, y) in pos.items():
-                canvas_x = (x - min_x) + padding_x  # No extra scaling, use natural positions
-                canvas_y = (y - min_y) + padding_y
-
-                block = self.get_block(name)
-                if block:
-                    # Wait for block to be realized to get accurate size
-                    block.realize()
-                    block_size = block.get_preferred_size().minimum_size
-                    final_x = max(0, canvas_x - block_size.width / 2)
-                    final_y = max(0, canvas_y - block_size.height / 2)
-                    self.move_block(block, final_x, final_y)
-
-        self.drawing_area.queue_draw()
-
-    def _hierarchical_layout(self, graph: nx.DiGraph):
-        """Create a hierarchical layout manually when Graphviz is not available."""
-        pos = {}
-
-        # Separate nodes by type
-        nodes = [n for n, d in graph.nodes(data=True) if d.get("type") == "node"]
-        topics = [n for n, d in graph.nodes(data=True) if d.get("type") == "topic"]
-
-        # Create layers: publishers -> topics -> subscribers
-        layers = [[], [], []]  # [publishers, topics, subscribers]
-
-        # Find publisher nodes (nodes with outgoing edges to topics)
-        publishers = set()
-        subscribers = set()
-
-        for node in nodes:
-            has_pub = any(graph.nodes[target].get("type") == "topic" for target in graph.successors(node))
-            has_sub = any(graph.nodes[source].get("type") == "topic" for source in graph.predecessors(node))
-
-            if has_pub and not has_sub:
-                publishers.add(node)
-            elif has_sub and not has_pub:
-                subscribers.add(node)
-            else:
-                # Node is both publisher and subscriber, put in middle
-                publishers.add(node)
-
-        # Arrange in layers
-        layers[0] = list(publishers)
-        layers[1] = topics
-        layers[2] = list(subscribers)
-
-        # Position nodes in layers
-        layer_width = 200  # Reduced from 300
-        y_spacing = 60  # Reduced from 80
-
-        for layer_idx, layer_nodes in enumerate(layers):
-            if not layer_nodes:
-                continue
-
-            x = layer_idx * layer_width
-            start_y = -(len(layer_nodes) - 1) * y_spacing / 2
-
-            for i, node in enumerate(layer_nodes):
-                y = start_y + i * y_spacing
-                pos[node] = (x, y)
-
-        return pos
+        elif node_type == TopicBlock.__name__.lower():
+            self._nx_graph.nodes[node_id].update(
+                {
+                    "shape": "ellipse",
+                    "style": "filled",
+                    "fillcolor": "#FFF3E0",
+                    "color": "#F57C00",
+                    "fontname": "Arial",
+                    "fontsize": "9",
+                    "width": "1.8",
+                    "height": "0.8",
+                    "fixedsize": "true",
+                }
+            )
+        elif node_type == ServiceBlock.__name__.lower():
+            self._nx_graph.nodes[node_id].update(
+                {
+                    "shape": "box",
+                    "style": "rounded,filled",
+                    "fillcolor": "#E8F5E8",
+                    "color": "#4CAF50",
+                    "fontname": "Arial",
+                    "fontsize": "8",
+                    "width": "3.0",
+                    "height": "1.2",
+                    "fixedsize": "true",
+                }
+            )
+        elif node_type == ActionBlock.__name__.lower():
+            self._nx_graph.nodes[node_id].update(
+                {
+                    "shape": "box",
+                    "style": "rounded,filled",
+                    "fillcolor": "#FFEBEE",
+                    "color": "#F44336",
+                    "fontname": "Arial",
+                    "fontsize": "8",
+                    "width": "3.0",
+                    "height": "1.2",
+                    "fixedsize": "true",
+                }
+            )
+        elif node_type == ParameterBlock.__name__.lower():
+            self._nx_graph.nodes[node_id].update(
+                {
+                    "shape": "box",
+                    "style": "rounded,filled",
+                    "fillcolor": "#F3E5F5",
+                    "color": "#9C27B0",
+                    "fontname": "Arial",
+                    "fontsize": "8",
+                    "width": "1.0",
+                    "height": "0.5",
+                    "fixedsize": "true",
+                }
+            )
+        elif node_type == TransformBlock.__name__.lower():
+            self._nx_graph.nodes[node_id].update(
+                {
+                    "shape": "box",
+                    "style": "rounded,filled",
+                    "fillcolor": "#E0F7FA",
+                    "color": "#00ACC1",
+                    "fontname": "Arial",
+                    "fontsize": "8",
+                    "width": "2.5",
+                    "height": "1.0",
+                    "fixedsize": "true",
+                }
+            )
 
     def _block_revealed(self, block: BaseBlock, revealed: bool):
         if not revealed:
@@ -532,26 +558,249 @@ class Canvas(Adw.Bin):
             # Reset opacity to normal
             block.set_opacity(1.0)
 
-    def _calc_block_attachment_position(self, block: BaseBlock, direction: str = "north"):
-        pos_on_canvas = self.fixed.get_child_position(block)
+    # def set_edge_layout_attributes(self):
+    #     """Set edge attributes for better routing."""
+    #     for source, target, data in self._nx_graph.edges(data=True):
+    #         self._nx_graph.edges[source, target].update(
+    #             {
+    #                 "color": "#666666",
+    #                 "penwidth": "1.5",
+    #                 "arrowsize": "0.8",
+    #                 "arrowhead": "normal",
+    #             }
+    #         )
 
-        def _add_pos(p1: tuple, p2: tuple):
-            return (p1[0] + p2[0], p1[1] + p2[1])
+    # def parse_edge_pos(self, pos_str):
+    #     """Parse Graphviz edge position string to extract path points."""
+    #     if not pos_str:
+    #         return []
 
-        if direction == "north":
-            pos_on_canvas = _add_pos(pos_on_canvas, block.top_attachment_point)
-        elif direction == "east":
-            pos_on_canvas = _add_pos(pos_on_canvas, block.right_attachment_point)
-        elif direction == "west":
-            pos_on_canvas = _add_pos(pos_on_canvas, block.left_attachment_point)
-        elif direction == "south":
-            pos_on_canvas = _add_pos(pos_on_canvas, block.bottom_attachment_point)
+    #     # Remove all "e," prefixes (can appear at start or middle)
+    #     cleaned_str = pos_str.replace("e,", "")
 
-        return pos_on_canvas
+    #     # Split into coordinate pairs
+    #     coord_pairs = cleaned_str.split()
+    #     points = []
 
-    def _draw_smart_connection(self, cr, block1: BaseBlock, block2: BaseBlock, connection=None):
+    #     for pair in coord_pairs:
+    #         try:
+    #             # Handle mixed separators - try comma first, then semicolon
+    #             if "," in pair:
+    #                 x, y = map(float, pair.split(","))
+    #             elif ";" in pair:
+    #                 x, y = map(float, pair.split(";"))
+    #             else:
+    #                 # Skip invalid pairs
+    #                 continue
+    #             points.append((x, y))
+    #         except (ValueError, IndexError):
+    #             # Skip malformed coordinate pairs
+    #             continue
+
+    #     return points
+
+    def _transform_graph_point_to_canvas(self, point: tuple) -> tuple:
+        # """Transform a point from graph coordinates to canvas coordinates."""
+        # if not self._graph_node_positions:
+        #     return point
+        # TODO unify all the calculations in this method
+        # to do so, use the layout to calculate the bounds and scale etc and save them into self
+        pass
+
+    def calculate_layout(self):
+        # Check if we have any nodes to layout
+        if not self._nx_graph.nodes():
+            print("No nodes in graph, cannot calculate layout.")
+            return
+
+        try:
+            self._nx_graph.graph.update(
+                {
+                    "rankdir": "LR",  # Left to right layout
+                    "ranksep": "2.0",  # Spacing between ranks considering block widths
+                    "nodesep": "0.3",  # Spacing between nodes considering block heights
+                    "splines": "curved",
+                    "overlap": "false",  # Prevent overlaps
+                    "concentrate": "true",  # Merge multi-edges
+                    "newrank": "true",  # Better ranking algorithm
+                    "sep": "+20,20",  # Component separation
+                }
+            )
+
+            # Use dot layout for hierarchical arrangement
+            self._graph_node_positions = graphviz_layout(
+                self._nx_graph,
+                prog="dot",
+                args="-Grankdir=LR -Granksep=2.0 -Gnodesep=0.5",
+            )
+
+        except (ImportError, Exception) as e:
+            print(f"Graphviz layout failed: {e}, falling back to spring layout")
+            self._graph_node_positions = nx.spring_layout(self._nx_graph, seed=42, k=3, iterations=50)
+
+        # Get the bounds of the graph layout
+        xs, ys = zip(*self._graph_node_positions.values())
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        graph_width, graph_height = max_x - min_x, max_y - min_y
+
+        # Get the available viewport size
+        viewport_width = self.scrolled_window.get_allocated_width()
+        viewport_height = self.scrolled_window.get_allocated_height()
+
+        # Use viewport size if available, otherwise use minimum defaults
+        padding = 200
+        if viewport_width > 0 and viewport_height > 0:
+            canvas_width = max(viewport_width, graph_width + padding)
+            canvas_height = max(viewport_height, graph_height + padding)
+        else:
+            # Fallback to larger defaults # TODO are these reasonable?
+            canvas_width = max(1200, graph_width + 400)
+            canvas_height = max(800, graph_height + 300)
+
+        # Set the canvas size
+        self.set_size(canvas_width, canvas_height)
+
+        # Center the graph in the available space # TODO why 100?
+        padding_x = max(100, (canvas_width - graph_width) / 2)
+        padding_y = max(100, (canvas_height - graph_height) / 2)
+
+        # Position blocks with better spacing
+        for uuid, (x, y) in self._graph_node_positions.items():
+            canvas_x = (x - min_x) + padding_x  # No extra scaling, use natural positions
+            canvas_y = (y - min_y) + padding_y
+
+            block = self.get_block(uuid)
+            if block:
+                # Wait for block to be realized to get accurate size
+                block.realize()
+                block_size = block.get_preferred_size().minimum_size
+                final_x = max(0, canvas_x - block_size.width / 2)
+                final_y = max(0, canvas_y - block_size.height / 2)
+                self.move_block(block, final_x, final_y)
+
+        self.drawing_area.queue_draw()
+
+    def export_graph_as_pdf(self, filename: str):
+        import matplotlib.pyplot as plt
+
+        nx.draw(
+            self._nx_graph,
+            self._graph_node_positions,
+            labels={n: d["label"] for n, d in self._nx_graph.nodes(data=True)},
+            with_labels=True,
+            arrows=True,
+            node_size=2000,
+            node_color="lightblue",
+            font_size=10,
+        )
+        # plt.savefig("graph_output.pdf")  # or use "graph_output.png"
+        plt.show(block=False)
+
+    # def _calc_block_attachment_position(self, block: BaseBlock, direction: str = "north"):
+    #     pos_on_canvas = self.fixed.get_child_position(block)
+
+    #     def _add_pos(p1: tuple, p2: tuple):
+    #         return (p1[0] + p2[0], p1[1] + p2[1])
+
+    #     if direction == "north":
+    #         pos_on_canvas = _add_pos(pos_on_canvas, block.top_attachment_point)
+    #     elif direction == "east":
+    #         pos_on_canvas = _add_pos(pos_on_canvas, block.right_attachment_point)
+    #     elif direction == "west":
+    #         pos_on_canvas = _add_pos(pos_on_canvas, block.left_attachment_point)
+    #     elif direction == "south":
+    #         pos_on_canvas = _add_pos(pos_on_canvas, block.bottom_attachment_point)
+
+    #     return pos_on_canvas
+
+    def _draw_connection(self, cr, block1: BaseBlock, block2: BaseBlock, connection=None):
         """Draw a connection between two blocks with smart routing to avoid overlaps."""
-        # Get block positions and sizes
+
+        # # helper function to parse Graphviz edge positions
+        # def parse_edge_pos(pos_str: str):
+        #     # Parse pos string into list of points
+        #     # Example: "e,81,50 98,50 115,50"
+        #     if not pos_str or not pos_str.startswith("e,"):
+        #         return []
+
+        #     coords_pair = pos_str[2:].split()  # remove 'e,' and split by spaces
+        #     return [tuple(map(float, pair.split(","))) for pair in coords_pair]
+
+        # A = to_agraph(self._nx_graph)
+        # A.layout(prog="dot")  # or "neato", "fdp", etc.
+
+        # splines = []
+
+        # # Extract edge positions
+        # for e in A.edges():
+        #     pos_str = e.attr.get("pos")
+
+        #     if pos_str:
+        #         splines.append(parse_edge_pos(pos_str))
+
+        # Determine if this connection is highlighted
+        is_highlighted = connection in self._highlighted_connections if connection else False
+        is_dimmed = self._highlighted_connections and not is_highlighted
+
+        # Set line style based on highlighting state
+        if is_highlighted:
+            # Highlighted connections are brighter and thicker
+            if Adw.StyleManager.get_default().get_dark():
+                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0)  # Bright white for dark theme
+            else:
+                cr.set_source_rgba(0.0, 0.0, 0.0, 1.0)  # Bright black for light theme
+            cr.set_line_width(3.5)
+        elif is_dimmed:
+            # Dimmed connections are more transparent
+            if Adw.StyleManager.get_default().get_dark():
+                cr.set_source_rgba(0.5, 0.5, 0.5, 0.5)  # Very dim for dark theme
+            else:
+                cr.set_source_rgba(0.6, 0.6, 0.6, 0.5)  # Very dim for light theme
+            cr.set_line_width(1.5)
+        else:
+            # Normal connections
+            if Adw.StyleManager.get_default().get_dark():
+                cr.set_source_rgba(0.8, 0.8, 0.8, 0.9)  # Light gray for dark theme
+            else:
+                cr.set_source_rgba(0.3, 0.3, 0.3, 0.9)  # Dark gray for light theme
+            cr.set_line_width(2.5)
+
+        cr.set_line_cap(1)  # Round line caps
+
+        # Get the layout bounds for coordinate transformation
+        # xs, ys = zip(*self._graph_node_positions.values())
+        # min_x, max_x = min(xs), max(xs)
+        # min_y, max_y = min(ys), max(ys)
+        # graph_width, graph_height = max_x - min_x, max_y - min_y
+
+        # # Calculate the same padding used in calculate_layout
+        # viewport_width = self.scrolled_window.get_allocated_width()
+        # viewport_height = self.scrolled_window.get_allocated_height()
+
+        # if viewport_width > 0 and viewport_height > 0:
+        #     canvas_width = max(viewport_width, graph_width + 200)
+        #     canvas_height = max(viewport_height, graph_height + 200)
+        # else:
+        #     canvas_width = max(1200, graph_width + 400)
+        #     canvas_height = max(800, graph_height + 300)
+
+        # padding_x = max(100, (canvas_width - graph_width) / 2)
+        # padding_y = max(100, (canvas_height - graph_height) / 2)
+
+        # def quadratic_curve_to(x1, y1, x2, y2):
+        #     cr.curve_to(x1, y1, x1, y1, x2, y2)
+
+        # # draw all the splines
+        # for spline in splines:
+        #     canvas_points = []
+
+        # transform spline points to canvas coordinates
+        # for spline_point in spline:
+        #     canvas_x = (spline_point[0] - min_x) + padding_x
+        #     canvas_y = (spline_point[1] - min_y) + padding_y
+        #     canvas_points.append((canvas_x, canvas_y))
+
         pos1 = self.fixed.get_child_position(block1)
         pos2 = self.fixed.get_child_position(block2)
 
@@ -591,7 +840,7 @@ class Canvas(Adw.Bin):
         if vertical_distance > 100:  # If blocks are far apart vertically
             control_offset = min(base_offset, horizontal_distance * 0.6)
         else:  # If blocks are close vertically, use larger offset to route around
-            control_offset = max(base_offset, 80)
+            control_offset = max(base_offset, 50)
 
         # Create control points for smooth orthogonal routing
         if start_dir > 0:  # going right
@@ -603,35 +852,6 @@ class Canvas(Adw.Bin):
             cx2 = x2 + control_offset
         else:  # coming from right
             cx2 = x2 - control_offset
-
-        # Determine if this connection is highlighted
-        is_highlighted = connection in self._highlighted_connections if connection else False
-        is_dimmed = self._highlighted_connections and not is_highlighted
-
-        # Set line style based on highlighting state
-        if is_highlighted:
-            # Highlighted connections are brighter and thicker
-            if Adw.StyleManager.get_default().get_dark():
-                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0)  # Bright white for dark theme
-            else:
-                cr.set_source_rgba(0.0, 0.0, 0.0, 1.0)  # Bright black for light theme
-            cr.set_line_width(3.5)
-        elif is_dimmed:
-            # Dimmed connections are more transparent
-            if Adw.StyleManager.get_default().get_dark():
-                cr.set_source_rgba(0.5, 0.5, 0.5, 0.5)  # Very dim for dark theme
-            else:
-                cr.set_source_rgba(0.6, 0.6, 0.6, 0.5)  # Very dim for light theme
-            cr.set_line_width(1.5)
-        else:
-            # Normal connections
-            if Adw.StyleManager.get_default().get_dark():
-                cr.set_source_rgba(0.8, 0.8, 0.8, 0.9)  # Light gray for dark theme
-            else:
-                cr.set_source_rgba(0.3, 0.3, 0.3, 0.9)  # Dark gray for light theme
-            cr.set_line_width(2.5)
-
-        cr.set_line_cap(1)  # Round line caps
 
         # Draw the path with improved routing
         cr.move_to(x1, y1)
@@ -670,44 +890,44 @@ class Canvas(Adw.Bin):
         cr.close_path()
         cr.fill()
 
-    def _draw_bezier(self, cr, x1: float, y1: float, dir1: int, x2: float, y2: float, dir2: int):
-        """Legacy bezier drawing method - kept for compatibility."""
-        # Compute control points
-        control_point_offset = min(100, ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5)
+    # def _draw_bezier(self, cr, x1: float, y1: float, dir1: int, x2: float, y2: float, dir2: int):
+    #     """Legacy bezier drawing method - kept for compatibility."""
+    #     # Compute control points
+    #     control_point_offset = min(100, ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5)
 
-        def sign(_dir):  # check if plus or minus
-            return 1 if _dir > 0 else -1
+    #     def sign(_dir):  # check if plus or minus
+    #         return 1 if _dir > 0 else -1
 
-        # control point next to the start point
-        cx1, cy1 = (x1 + control_point_offset * sign(dir1), y1)
-        cx2, cy2 = (x2 + control_point_offset * sign(dir2), y2)
-        cx3, cy3 = None, None
-        cx4, cy4 = None, None
+    #     # control point next to the start point
+    #     cx1, cy1 = (x1 + control_point_offset * sign(dir1), y1)
+    #     cx2, cy2 = (x2 + control_point_offset * sign(dir2), y2)
+    #     cx3, cy3 = None, None
+    #     cx4, cy4 = None, None
 
-        if dir1 < 0 and dir2 < 0 and abs(cx1 - cx2) < control_point_offset:
-            cx3, cy3 = (cx1 if cx1 < cx2 else cx2, cy2 if cx1 < cx2 else cy1)
+    #     if dir1 < 0 and dir2 < 0 and abs(cx1 - cx2) < control_point_offset:
+    #         cx3, cy3 = (cx1 if cx1 < cx2 else cx2, cy2 if cx1 < cx2 else cy1)
 
-        elif dir1 > 0 and dir2 > 0 and abs(cx1 - cx2) < control_point_offset:
-            cx3, cy3 = (cx2 if cx1 < cx2 else cx1, cy1 if cx1 < cx2 else cy2)
+    #     elif dir1 > 0 and dir2 > 0 and abs(cx1 - cx2) < control_point_offset:
+    #         cx3, cy3 = (cx2 if cx1 < cx2 else cx1, cy1 if cx1 < cx2 else cy2)
 
-        # Draw the bezier curve
-        if Adw.StyleManager.get_default().get_dark():
-            cr.set_source_rgb(1, 1, 1)  # Set color to white
-        else:
-            cr.set_source_rgb(0, 0, 0)  # Set color to black
+    #     # Draw the bezier curve
+    #     if Adw.StyleManager.get_default().get_dark():
+    #         cr.set_source_rgb(1, 1, 1)  # Set color to white
+    #     else:
+    #         cr.set_source_rgb(0, 0, 0)  # Set color to black
 
-        cr.set_line_width(2)
-        cr.move_to(x1, y1)  # Move to the start point
+    #     cr.set_line_width(2)
+    #     cr.move_to(x1, y1)  # Move to the start point
 
-        if cx4 is not None:
-            cr.curve_to(cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4, x2, y2)  # Bezier curve
-        elif cx3 is not None:
-            cr.curve_to(cx1, cy1, cx2, cy2, cx3, cy3, x2, y2)
-        else:
-            cr.curve_to(cx1, cy1, cx2, cy2, x2, y2)
+    #     if cx4 is not None:
+    #         cr.curve_to(cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4, x2, y2)  # Bezier curve
+    #     elif cx3 is not None:
+    #         cr.curve_to(cx1, cy1, cx2, cy2, cx3, cy3, x2, y2)
+    #     else:
+    #         cr.curve_to(cx1, cy1, cx2, cy2, x2, y2)
 
-        # draw circles at the ends
-        cr.stroke()
-        cr.arc(x1, y1, 5, 0.0, 2 * math.pi)
-        cr.arc(x2, y2, 5, 0.0, 2 * math.pi)
-        cr.fill()
+    #     # draw circles at the ends
+    #     cr.stroke()
+    #     cr.arc(x1, y1, 5, 0.0, 2 * math.pi)
+    #     cr.arc(x2, y2, 5, 0.0, 2 * math.pi)
+    #     cr.fill()

@@ -21,6 +21,9 @@
 # =============================================================================
 
 from pathlib import Path
+from uuid import uuid4
+
+from geometry_msgs.msg import TransformStamped
 
 import gi
 
@@ -31,6 +34,8 @@ from gi.repository import Gtk, Adw, Gio, GObject
 
 from insight_gui.utils.adw_colors import AdwAccentColor
 from insight_gui.widgets.buttons import RevealButton
+from insight_gui.widgets.pref_group import PrefGroup
+from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
 from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
@@ -42,11 +47,12 @@ class BaseBlock(Adw.Bin):
     __gtype_name__ = "BaseBlock"
     __gsignals__ = {"revealer-toggled": (GObject.SignalFlags.RUN_FIRST, None, (bool,))}
 
-    def __init__(self, label: str, accent_color: AdwAccentColor = None, **kwargs):
+    def __init__(self, label: str, uuid: str = None, accent_color: AdwAccentColor = None, **kwargs):
         super().__init__()
         super().connect("realize", self.on_realize)
 
-        self.name: str = label
+        self.uuid: str = uuid if uuid is not None else uuid4().hex
+        self.label: str = label
         self.pos = (0, 0)
         self.connected_blocks = []  # TODO fill these
 
@@ -64,19 +70,20 @@ class BaseBlock(Adw.Bin):
         self.subpage_btn.connect("clicked", self.on_subpage_btn_clicked)
 
         self.revealer: Gtk.Revealer = builder.get_object("revealer")
-        self.revealer.set_visible(False)  # DEBUG
+        self.revealer.set_reveal_child(False)
+        # self.revealer.set_visible(False)  # DEBUG
         # self.revealer.connect("notify::reveal-child", self._on_revealer_toggled)
 
-        self.content_box: Gtk.Box = builder.get_object("content_box")
-        self.left_box: Gtk.Box = builder.get_object("left_box")
-        self.right_box: Gtk.Box = builder.get_object("right_box")
+        self.group: PrefGroup = builder.get_object("group")
 
         self.reveal_btn: RevealButton = RevealButton(self.revealer)
-        # self.header_box.prepend(self.reveal_btn)
-        # self.label.set_cursor(Gdk.Cursor.new_from_name("grab"))
+        self.header_box.prepend(self.reveal_btn)
 
         if accent_color is not None and isinstance(accent_color, AdwAccentColor):
             self.main_box.add_css_class(accent_color.as_css_name())
+
+    def __hash__(self):
+        return hash(self.uuid)  # used by networkx
 
     def on_realize(self, *args):
         self.nav_view = super().get_ancestor(Adw.NavigationView)
@@ -104,14 +111,16 @@ class BaseBlock(Adw.Bin):
 
     @property
     def width(self) -> float:
-        return float(super().get_width())
+        return self.get_allocated_width()
+        # return float(super().get_width())
 
     @property
     def height(self) -> float:
-        return float(super().get_height())
+        return self.get_allocated_height()
+        # return float(super().get_height())
 
-    def on_revealer_toggled(self, *args):
-        self.emit("revealer-toggled", not self.revealer.get_child_revealed())
+    # def on_revealer_toggled(self, *args):
+    #     self.emit("revealer-toggled", not self.revealer.get_child_revealed())
 
     def on_subpage_btn_clicked(self, *args):
         """Child class should override this."""
@@ -122,7 +131,12 @@ class NodeBlock(BaseBlock):
     __gtype_name__ = "NodeBlock"
 
     def __init__(self, node_full_name: str, **kwargs):
-        super().__init__(label=node_full_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE, **kwargs)
+        super().__init__(
+            label=node_full_name,
+            uuid=f"node:{node_full_name}",
+            accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE,
+            **kwargs,
+        )
         self.node_full_name = node_full_name
 
     def on_subpage_btn_clicked(self, *args):
@@ -133,7 +147,9 @@ class TopicBlock(BaseBlock):
     __gtype_name__ = "TopicBlock"
 
     def __init__(self, topic_name: str, topic_types: str | list[str], **kwargs):
-        super().__init__(label=topic_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_ORANGE, **kwargs)
+        super().__init__(
+            label=topic_name, uuid=f"topic:{topic_name}", accent_color=AdwAccentColor.ADW_ACCENT_COLOR_ORANGE, **kwargs
+        )
         self.topic_name = topic_name
         self.topic_types = topic_types
         # TODO add subtitle etc
@@ -146,7 +162,12 @@ class ServiceBlock(BaseBlock):
     __gtype_name__ = "ServiceBlock"
 
     def __init__(self, service_name: str, service_types: str | list[str], **kwargs):
-        super().__init__(label=service_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_GREEN, **kwargs)
+        super().__init__(
+            label=service_name,
+            uuid=f"service:{service_name}",
+            accent_color=AdwAccentColor.ADW_ACCENT_COLOR_GREEN,
+            **kwargs,
+        )
         self.service_name = service_name
         self.service_types = service_types
         # TODO add subtitle etc
@@ -159,7 +180,9 @@ class ActionBlock(BaseBlock):
     __gtype_name__ = "ActionBlock"
 
     def __init__(self, action_name: str, action_types: str | list[str], **kwargs):
-        super().__init__(label=action_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_RED, **kwargs)
+        super().__init__(
+            label=action_name, uuid=f"action:{action_name}", accent_color=AdwAccentColor.ADW_ACCENT_COLOR_RED, **kwargs
+        )
         self.action_name = action_name
         self.action_types = action_types
         # TODO add subtitle etc
@@ -172,9 +195,71 @@ class ParameterBlock(BaseBlock):
     __gtype_name__ = "ParameterBlock"
 
     def __init__(self, node_name: str, parameter_name: str, **kwargs):
-        super().__init__(label=parameter_name, accent_color=AdwAccentColor.ADW_ACCENT_COLOR_PURPLE, **kwargs)
+        super().__init__(
+            label=parameter_name,
+            uuid=f"param:{node_name}:{parameter_name}",
+            accent_color=AdwAccentColor.ADW_ACCENT_COLOR_PURPLE,
+            **kwargs,
+        )
         self.node_name = node_name
         self.parameter_name = parameter_name
 
     def on_subpage_btn_clicked(self, *args):
         self.nav_view.push(ParamEditPage(self.node_name, self.parameter_name))
+
+
+class TransformBlock(BaseBlock):
+    __gtype_name__ = "TransformBlock"
+
+    def __init__(
+        self,
+        frame_name: str,
+        parent: str = "",
+        transform: TransformStamped | None = None,
+        broadcaster: str = "",
+        rate: float = 0.0,
+        most_recent_transform: str = "",
+        oldest_transform: str = "",
+        buffer_length: float = 0.0,
+        **kwargs,
+    ):
+        super().__init__(
+            label=frame_name, uuid=f"tf:{frame_name}", accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE, **kwargs
+        )
+
+        # TODO add no wrap and no ellipsize to labels, and 20 width-cards
+        if parent:
+            self.group.add_row(PrefRow(title="parent", subtitle=parent, css_classes=["property"]))
+
+        # TODO add an update method, to refresh the transform data
+        if transform:
+            tf_row = self.group.add_row(Adw.ExpanderRow(title="transform", css_classes=["property"]))
+
+            trans = transform.transform.translation
+            tf_row.add_row(PrefRow(title="tx", subtitle=str(trans.x), css_classes=["property"]))
+            tf_row.add_row(PrefRow(title="ty", subtitle=str(trans.y), css_classes=["property"]))
+            tf_row.add_row(PrefRow(title="tz", subtitle=str(trans.z), css_classes=["property"]))
+
+            rot = transform.transform.rotation
+            tf_row.add_row(PrefRow(title="qx", subtitle=str(rot.x), css_classes=["property"]))
+            tf_row.add_row(PrefRow(title="qy", subtitle=str(rot.y), css_classes=["property"]))
+            tf_row.add_row(PrefRow(title="qz", subtitle=str(rot.z), css_classes=["property"]))
+            tf_row.add_row(PrefRow(title="qw", subtitle=str(rot.w), css_classes=["property"]))
+
+        if broadcaster:
+            self.group.add_row(PrefRow(title="broadcaster", subtitle=broadcaster, css_classes=["property"]))
+
+        if rate:
+            self.group.add_row(PrefRow(title="rate", subtitle=rate, css_classes=["property"]))
+
+        if most_recent_transform:
+            self.group.add_row(
+                PrefRow(title="most_recent_transform", subtitle=most_recent_transform, css_classes=["property"])
+            )
+
+        if buffer_length:
+            self.group.add_row(PrefRow(title="buffer_length", subtitle=buffer_length, css_classes=["property"]))
+
+    def on_subpage_btn_clicked(self, *args):
+        # self.nav_view.push(ParamEditPage(self.node_name, self.parameter_name))
+        print("not implemented yet")

@@ -120,6 +120,7 @@
 - be strict/consistent about private ("_") instance variables and method names!
 - move expensive imports into methods/classes only where needed
 - use CustomFilter in filter_func to ignore emptry_row etc
+- change all "prints" into ros2_connector.logs
 
 
 ## Bugs
@@ -137,4 +138,4 @@
 - "Failed to realize renderer of type 'GskNglRenderer' for surface 'GdkX11Toplevel': GL-Kontext kann nicht erstellt werden"
 - in pub:
     - when an exisiting topic is selected, then the topic name changed, the type changed and the name back to the suggested, an exisiting topic name will get a different type, which results in an error (RCLError)
-
+- in topics with multiple message type, only one row is shown with the msg type (separated by comma), which leads to a nonexisting interface_info page, make this into multiple rows

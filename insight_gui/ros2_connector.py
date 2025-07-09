@@ -38,6 +38,7 @@ from rclpy.action import ActionClient
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from rclpy.action import get_action_names_and_types
 from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
+from rclpy.logging import LoggingSeverity
 
 # from rosidl_runtime_py.utilities import get_action
 
@@ -940,3 +941,19 @@ class ROS2Connector:
         self.get_available_topics(use_cache=True)
         self.get_available_services(use_cache=True)
         self.get_available_actions(use_cache=True)
+
+    def log(self, message: str, level: str = "info") -> None:
+        """Log a message with the specified severity level (debug, [info], warning, error, fatal)."""
+        if level == "info":
+            self.node.get_logger().info(message)
+        elif level == "warning":
+            self.node.get_logger().warning(message)
+        elif level == "error":
+            self.node.get_logger().error(message)
+        elif level == "fatal":
+            self.node.get_logger().fatal(message)
+        elif level == "debug":
+            self.node.get_logger().debug(message)
+        else:
+            self.node.get_logger().info(f"{level} is not a valid logging level. Defaulting to info.")
+            self.node.get_logger().info(message)

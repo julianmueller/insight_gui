@@ -21,60 +21,52 @@
 # =============================================================================
 
 import math
+import numpy as np
+import random
 
 import rclpy
 from rclpy.node import Node
-import tf2_ros
 from geometry_msgs.msg import TransformStamped
+from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
+# import tf2_ros
 
 
 class DummyTFBroadcaster(Node):
     def __init__(self):
         super().__init__("dummy_tf_broadcaster")
 
-        # Create a TransformBroadcaster
-        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
+        # # Create a TransformBroadcaster
+        # self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
-        # Timer to publish transforms at 10Hz
-        self.timer = self.create_timer(0.1, self.publish_transform)
+        # # Timer to publish transforms at 10Hz
+        # self.timer = self.create_timer(0.1, self.publish_transform)
+
+        self.tf_static_broadcaster = StaticTransformBroadcaster(self)
+        self.publish_transform()
 
         self.get_logger().info("Dummy TF Publisher is running...")
 
     def publish_transform(self):
-        # Create a TransformStamped message
-        t1 = TransformStamped()
-        t2 = TransformStamped()
+        for tf_i in range(20):
+            # Create a TransformStamped message
+            t = TransformStamped()
 
-        t1.header.stamp = self.get_clock().now().to_msg()
-        t1.header.frame_id = "world"  # Parent frame
-        t1.child_frame_id = "dummy_link1"  # Child frame
+            t.header.stamp = self.get_clock().now().to_msg()
+            t.header.frame_id = random.choices(["world", *[f"child{tf}" for tf in range(tf_i)]])[0]
+            t.child_frame_id = f"child{tf_i}"
 
-        t2.header.stamp = t1.header.stamp
-        t2.header.frame_id = t1.child_frame_id
-        t2.child_frame_id = "dummy_link2"  # Child frame
+            t.transform.translation.x = np.random.uniform(-1.0, 1.0)
+            t.transform.translation.y = np.random.uniform(-1.0, 1.0)
+            t.transform.translation.z = np.random.uniform(-1.0, 1.0)
 
-        # Set translation (x, y, z)
-        t1.transform.translation.x = 1.0
-        t1.transform.translation.y = 0.5
-        t1.transform.translation.z = 0.0
+            t.transform.rotation.x = np.random.uniform(-1.0, 1.0)
+            t.transform.rotation.y = np.random.uniform(-1.0, 1.0)
+            t.transform.rotation.z = np.random.uniform(-1.0, 1.0)
+            t.transform.rotation.w = np.random.uniform(-1.0, 1.0)
 
-        # Set rotation (as a quaternion)
-        angle = self.get_clock().now().nanoseconds * 1e-9  # Rotate over time
-        qx = 0.0
-        qy = 0.0
-        qz = math.sin(angle / 2.0)
-        qw = math.cos(angle / 2.0)
-
-        t1.transform.rotation.x = qx
-        t1.transform.rotation.y = qy
-        t1.transform.rotation.z = qz
-        t1.transform.rotation.w = qw
-
-        t2.transform = t1.transform
-
-        # Publish the transform
-        self.tf_broadcaster.sendTransform(t1)
-        self.tf_broadcaster.sendTransform(t2)
+            # Publish the transform
+            # self.tf_broadcaster.sendTransform(t)
+            self.tf_static_broadcaster.sendTransform(t)
 
 
 def main():

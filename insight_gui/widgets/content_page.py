@@ -171,6 +171,7 @@ class ContentPage(Adw.NavigationPage):
                 refresh_result = self.refresh_bg()
             except Exception as e:
                 self.show_toast(f"Refresh failed! Error: {e}")
+                self.ros2_connector.node.get_logger().error(f"Refresh failed! Error: {e}")
                 refresh_result = False
 
             GLib.idle_add(finish_thread, refresh_result)

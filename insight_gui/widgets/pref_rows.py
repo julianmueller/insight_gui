@@ -936,6 +936,90 @@ class ButtonRow(Adw.PreferencesRow, PrefRowInterface):
         return self.btn_label.get_label().lower()
 
 
+# TODO make the multibtn and mutlitogglebtn rows inherit from the multiwidget row
+class MultiWidgetRow(Adw.PreferencesRow, PrefRowInterface):
+    __gtype_name__ = "MultiWidgetRow"
+
+    def __init__(self, **kwargs):
+        Adw.PreferencesRow.__init__(self, **kwargs)
+        PrefRowInterface.__init__(self)
+        super().set_activatable(False)
+
+        self.content_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=6,
+            halign=Gtk.Align.FILL,
+            hexpand=True,
+            margin_top=8,
+            margin_bottom=8,
+            margin_start=12,
+            margin_end=12,
+            css_classes=["linked"],
+            **kwargs,
+        )
+        super().set_child(self.content_box)
+        self.widgets = []
+
+    def add_widget(self, widget: Gtk.Widget, prepend: bool = False) -> Gtk.Widget:
+        if prepend:
+            self.content_box.prepend(widget)
+        else:
+            self.content_box.append(widget)
+
+        self.widgets.append(widget)
+        return widget
+
+    def add_widgets(self, widgets: list[Gtk.Widget], prepend: bool = False):
+        for widget in widgets:
+            self.add_widget(widget, prepend=prepend)
+
+        return self.widgets
+
+
+class MultiBoxRow(Adw.PreferencesRow, PrefRowInterface):
+    __gtype_name__ = "MultiBoxRow"
+
+    def __init__(self, **kwargs):
+        Adw.PreferencesRow.__init__(self, **kwargs)
+        PrefRowInterface.__init__(self)
+        super().set_activatable(False)
+
+        self.content_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=6,
+            halign=Gtk.Align.FILL,
+            hexpand=True,
+            margin_top=8,
+            margin_bottom=8,
+            margin_start=12,
+            margin_end=12,
+            css_classes=["linked"],
+            **kwargs,
+        )
+        super().set_child(self.content_box)
+
+        self.boxes = []
+
+    def add_label_pair(self, title: str, subtitle: str, property: bool = False, **kwargs) -> Gtk.Widget:
+        box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=6,
+            halign=Gtk.Align.FILL,
+            hexpand=True,
+            # margin_top=8,
+            # margin_bottom=8,
+            # margin_start=12,
+            # margin_end=12,
+            css_classes=["title"],
+        )
+        box.append(Gtk.Label(label=title, xalign=0.0, css_classes=["title"]))
+        box.append(Gtk.Label(label=subtitle, xalign=0.0, css_classes=["subtitle"]))
+
+        self.content_box.append(box)
+        self.boxes.append(box)
+        return box
+
+
 class MultiButtonRow(Adw.PreferencesRow, PrefRowInterface):
     __gtype_name__ = "MultiButtonRow"
 

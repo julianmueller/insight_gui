@@ -120,6 +120,7 @@ class TransformsPage(ContentPage):
             # get all the infos from the collected frames
             for frame_name, frame_info in self.frames_dict.items():
                 parent_frame = frame_info["parent"]
+                print(frame_info)
                 trans: TransformStamped = self.tf_buffer.lookup_transform(parent_frame, frame_name, rclpy.time.Time())
                 self.frames_dict[frame_name]["transform"] = trans
 

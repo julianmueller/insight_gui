@@ -58,7 +58,9 @@
         <file preprocess="xml-stripblanks">icons/scalable/actions/book-ribbon-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/bookmark-add-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/alarm-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/forest-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/linked-camera-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/cards-symbolic.svg</file>
 
         <file preprocess="xml-stripblanks">icons/scalable/actions/light-mode-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/dark-mode-symbolic.svg</file>

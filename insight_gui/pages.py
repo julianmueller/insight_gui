@@ -41,6 +41,7 @@ from insight_gui.ros2_pages.graph_page import GraphPage
 from insight_gui.ros2_pages.param_list_page import ParameterListPage
 from insight_gui.ros2_pages.tf_page import TransformsPage
 from insight_gui.ros2_pages.tf_static_broadcaster_page import StaticTransformBroadcasterPage
+from insight_gui.ros2_pages.tf_tree_page import TFTreePage
 from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
 from insight_gui.ros2_pages.joint_states_page import JointStatesPage
 from insight_gui.ros2_pages.teleop_page import TeleoperatorPage
@@ -308,13 +309,13 @@ def create_pages():
                     page_id="tf_static_broadcaster",
                     nav_page_class=StaticTransformBroadcasterPage,
                 ),
-                # Page(
-                #     title="TF-Tree",
-                #     subtitle="Inspect all TFs as a tree",
-                #     icon_name="graph3-symbolic",
-                #     page_id="tf_tree",
-                #     nav_page_class=TFTreePage,
-                # ),
+                Page(
+                    title="TF-Tree",
+                    subtitle="Inspect all TFs as a tree",
+                    icon_name="forest-symbolic",
+                    page_id="tf_tree",
+                    nav_page_class=TFTreePage,
+                ),
             ],
         ),
         PageGroup(
