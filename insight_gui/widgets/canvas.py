@@ -39,6 +39,10 @@ from insight_gui.widgets.canvas_blocks import (
     ParameterBlock,
     TransformBlock,
 )
+from insight_gui.widgets.pref_page import PrefPage
+from insight_gui.widgets.pref_group import PrefGroup
+from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.canvas_sidebar import CanvasSidebar
 
 
 class Canvas(Adw.Bin):
@@ -56,9 +60,20 @@ class Canvas(Adw.Bin):
         self.custom_width = 1000.0
         self.custom_height = 1000.0
 
-        # overlay to show the toolbar over the canvas
+        # Create the main split view with sidebar on the right
+        self.split_view = Adw.OverlaySplitView(
+            sidebar_position=Gtk.PackType.END,  # Right side
+            collapsed=False,  # Start collapsed
+            show_sidebar=False,
+            pin_sidebar=True,
+            max_sidebar_width=500,
+            min_sidebar_width=300,
+        )
+        super().set_child(self.split_view)
+
+        # Create the main content area with overlay for toolbar
         self.overlay = Gtk.Overlay()
-        super().set_child(self.overlay)
+        self.split_view.set_content(self.overlay)
 
         # the toolbar with the zoom btns etc
         self.toolbar = Gtk.Box(
@@ -77,6 +92,15 @@ class Canvas(Adw.Bin):
         # scrolled window for all the canvas content
         self.scrolled_window = Gtk.ScrolledWindow(overflow=Gtk.Overflow.HIDDEN, hexpand=True, vexpand=True)
         self.overlay.set_child(self.scrolled_window)
+
+        # Create sidebar content
+        # TODO add an "ESC" action to close the sidebar
+        self.sidebar = CanvasSidebar()
+        self.sidebar.connect("close", self._on_sidebar_close)
+        self.split_view.set_sidebar(self.sidebar)
+
+        # Track the currently selected block for highlighting
+        self._selected_block = None  # TODO
 
         # canvas where the blocks are places
         self.fixed = Gtk.Fixed(
@@ -335,6 +359,7 @@ class Canvas(Adw.Bin):
 
         # Set up block event handlers
         block.connect("revealer-toggled", self._block_revealed)
+        block.connect("info-clicked", self._on_block_info_clicked)
 
         # Add hover event controllers for highlighting
         hover_controller = Gtk.EventControllerMotion()
@@ -558,6 +583,34 @@ class Canvas(Adw.Bin):
             # Reset opacity to normal
             block.set_opacity(1.0)
 
+    def _on_sidebar_toggle(self, *args):
+        """Toggle the sidebar visibility."""
+        self.split_view.set_show_sidebar(not self.split_view.get_show_sidebar())
+
+    def _on_sidebar_close(self, *args):
+        """Close the sidebar."""
+        self.split_view.set_show_sidebar(False)
+
+        if self._selected_block:
+            self._selected_block.toggle_highlight(False)
+
+    def _on_block_info_clicked(self, block: BaseBlock):
+        """Handle when a block's info button is clicked."""
+        # Remove previous selection highlighting
+        if self._selected_block:
+            self._selected_block.toggle_highlight(False)
+
+        # Set new selection
+        self._selected_block = block
+        block.toggle_highlight(True)
+
+        # Update sidebar content
+        self.sidebar.update_content(block)
+
+        # Show sidebar if hidden
+        if not self.split_view.get_show_sidebar():
+            self.split_view.set_show_sidebar(True)
+
     # def set_edge_layout_attributes(self):
     #     """Set edge attributes for better routing."""
     #     for source, target, data in self._nx_graph.edges(data=True):
@@ -754,9 +807,9 @@ class Canvas(Adw.Bin):
         elif is_dimmed:
             # Dimmed connections are more transparent
             if Adw.StyleManager.get_default().get_dark():
-                cr.set_source_rgba(0.5, 0.5, 0.5, 0.5)  # Very dim for dark theme
+                cr.set_source_rgba(0.5, 0.5, 0.5, 0.7)  # Very dim for dark theme
             else:
-                cr.set_source_rgba(0.6, 0.6, 0.6, 0.5)  # Very dim for light theme
+                cr.set_source_rgba(0.6, 0.6, 0.6, 0.7)  # Very dim for light theme
             cr.set_line_width(1.5)
         else:
             # Normal connections

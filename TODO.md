@@ -121,6 +121,8 @@
 - move expensive imports into methods/classes only where needed
 - use CustomFilter in filter_func to ignore emptry_row etc
 - change all "prints" into ros2_connector.logs
+- add groups for common ros2 interfaces formats (Pose/Quaternion/Transform etc) where exisiting rows that are implemented (like tf calc page normalize quat etc) can be reused
+    - maybe even for images??
 
 
 ## Bugs

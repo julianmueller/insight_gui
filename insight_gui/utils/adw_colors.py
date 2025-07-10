@@ -47,11 +47,11 @@ class AdwAccentColor(StrEnum):
     ADW_ACCENT_COLOR_SLATE = "#6f8396"
 
     def as_css_name(self) -> str:
-        return self.name.lower()
+        return self.name.lower().replace("_", "-")
 
     def as_css_style(self) -> str:
         return f"""
-        .{self.name.lower()} {{
+        .{self.as_css_name()} {{
             color: {get_contrast_text_color(self.value)};
             background-color: {self.value};
         }}

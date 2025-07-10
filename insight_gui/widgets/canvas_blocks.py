@@ -45,7 +45,10 @@ from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 
 class BaseBlock(Adw.Bin):
     __gtype_name__ = "BaseBlock"
-    __gsignals__ = {"revealer-toggled": (GObject.SignalFlags.RUN_FIRST, None, (bool,))}
+    __gsignals__ = {
+        "revealer-toggled": (GObject.SignalFlags.RUN_FIRST, None, (bool,)),
+        "info-clicked": (GObject.SignalFlags.RUN_FIRST, None, ()),
+    }
 
     def __init__(self, title: str, subtitle: str = "", uuid: str = None, accent_color: AdwAccentColor = None, **kwargs):
         super().__init__()
@@ -59,12 +62,12 @@ class BaseBlock(Adw.Bin):
 
         # builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
-        self.main_box: Gtk.Box = Gtk.Box(
+        self.main_box = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=0, width_request=100, css_classes=["card"]
         )
         self.set_child(self.main_box)
 
-        self.header_box: Gtk.Box = Gtk.Box(
+        self.header_box = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             spacing=6,
             margin_start=6,
@@ -74,7 +77,7 @@ class BaseBlock(Adw.Bin):
         )
         self.main_box.append(self.header_box)
 
-        self.prefix_box: Gtk.Box = Gtk.Box(
+        self.prefix_box = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             spacing=4,
             # margin_start=4,
@@ -87,14 +90,14 @@ class BaseBlock(Adw.Bin):
         )
         self.header_box.append(self.prefix_box)
 
-        self.title_box: Gtk.Box = Gtk.Box(
+        self.title_box = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=2,
             valign=Gtk.Align.CENTER,
         )
         self.header_box.append(self.title_box)
 
-        self.title_lbl: Gtk.Label = Gtk.Label(
+        self.title_lbl = Gtk.Label(
             label=title,
             hexpand=True,
             # margin_start=4,
@@ -105,7 +108,7 @@ class BaseBlock(Adw.Bin):
         )
         self.title_box.append(self.title_lbl)
 
-        self.subtitle_lbl: Gtk.Label = Gtk.Label(
+        self.subtitle_lbl = Gtk.Label(
             label=subtitle,
             hexpand=True,
             # margin_start=4,
@@ -117,7 +120,7 @@ class BaseBlock(Adw.Bin):
         )
         self.title_box.append(self.subtitle_lbl)
 
-        self.suffix_box: Gtk.Box = Gtk.Box(
+        self.suffix_box = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             spacing=4,
             # margin_start=4,
@@ -130,27 +133,23 @@ class BaseBlock(Adw.Bin):
         )
         self.header_box.append(self.suffix_box)
 
-        # prefix buttons
-        # ...
-
-        # suffix buttons
-        self.subpage_btn: Gtk.Button = Gtk.Button(
-            icon_name="external-link-symbolic", tooltip_text="Open as Subpage", css_classes=["flat"]
-        )
-        self.suffix_box.append(self.subpage_btn)
-        self.subpage_btn.connect("clicked", self.on_subpage_btn_clicked)
-
         # content
-        self.revealer: Gtk.Revealer = Gtk.Revealer(reveal_child=False)
+        self.revealer = Gtk.Revealer(reveal_child=False)
         self.main_box.append(self.revealer)
         # self.revealer.set_visible(False)  # DEBUG
         # self.revealer.connect("notify::reveal-child", self._on_revealer_toggled)
 
-        self.group: PrefGroup = PrefGroup(margin_start=4, margin_end=4, margin_top=4, margin_bottom=4)
+        self.group = PrefGroup(margin_start=4, margin_end=4, margin_top=4, margin_bottom=4)
         self.revealer.set_child(self.group)
 
-        self.reveal_btn: RevealButton = RevealButton(self.revealer)
+        # prefix buttons
+        self.reveal_btn = RevealButton(self.revealer, visible=False)
         self.prefix_box.append(self.reveal_btn)
+
+        # suffix buttons
+        self.info_btn = Gtk.Button(icon_name="info-symbolic", tooltip_text="Open Info", css_classes=["flat"])
+        self.suffix_box.append(self.info_btn)
+        self.info_btn.connect("clicked", self.on_info_btn_clicked)
 
         if accent_color is not None and isinstance(accent_color, AdwAccentColor):
             self.main_box.add_css_class(accent_color.as_css_name())
@@ -195,9 +194,15 @@ class BaseBlock(Adw.Bin):
     # def on_revealer_toggled(self, *args):
     #     self.emit("revealer-toggled", not self.revealer.get_child_revealed())
 
-    def on_subpage_btn_clicked(self, *args):
-        """Child class should override this."""
-        pass
+    def on_info_btn_clicked(self, *args):
+        self.emit("info-clicked")
+
+    def toggle_highlight(self, highlight: bool):
+        """Highlight the block, e.g. when hovered."""
+        if highlight:
+            self.header_box.add_css_class("card")
+        else:
+            self.header_box.remove_css_class("card")
 
 
 class NodeBlock(BaseBlock):
@@ -215,9 +220,6 @@ class NodeBlock(BaseBlock):
         self.node_namespace = node_namespace
         self.node_full_name = node_full_name
 
-    def on_subpage_btn_clicked(self, *args):
-        self.nav_view.push(NodeInfoPage(self.node_full_name))
-
 
 class TopicBlock(BaseBlock):
     __gtype_name__ = "TopicBlock"
@@ -233,9 +235,6 @@ class TopicBlock(BaseBlock):
         self.topic_name = topic_name
         self.topic_types = topic_types
 
-    def on_subpage_btn_clicked(self, *args):
-        self.nav_view.push(TopicInfoPage(self.topic_name, self.topic_types))
-
 
 class ServiceBlock(BaseBlock):
     __gtype_name__ = "ServiceBlock"
@@ -250,9 +249,6 @@ class ServiceBlock(BaseBlock):
         )
         self.service_name = service_name
         self.service_types = service_types
-
-    def on_subpage_btn_clicked(self, *args):
-        self.nav_view.push(ServiceInfoPage(self.service_name, self.service_types))
 
 
 class ActionBlock(BaseBlock):
@@ -270,9 +266,6 @@ class ActionBlock(BaseBlock):
         self.action_types = action_types
         # TODO add subtitle etc
 
-    def on_subpage_btn_clicked(self, *args):
-        self.nav_view.push(ActionInfoPage(self.action_name, self.topic_types))
-
 
 class ParameterBlock(BaseBlock):
     __gtype_name__ = "ParameterBlock"
@@ -287,9 +280,6 @@ class ParameterBlock(BaseBlock):
         )
         self.node_full_name = node_full_name
         self.parameter_name = parameter_name
-
-    def on_subpage_btn_clicked(self, *args):
-        self.nav_view.push(ParamEditPage(self.node_full_name, self.parameter_name))
 
 
 class TransformBlock(BaseBlock):
@@ -315,39 +305,44 @@ class TransformBlock(BaseBlock):
             **kwargs,
         )
 
-        # TODO add no wrap and no ellipsize to labels, and 20 width-cards
-        if parent:
-            self.group.add_row(PrefRow(title="parent", subtitle=parent, css_classes=["property"]))
+        self.frame_name = frame_name
+        self.parent = parent
+        self.transform = transform
+        self.broadcaster = broadcaster
+        self.rate = rate
+        self.most_recent_transform = most_recent_transform
+        self.oldest_transform = oldest_transform
+        self.buffer_length = buffer_length
 
-        # TODO add an update method, to refresh the transform data
-        if transform:
-            tf_row = self.group.add_row(Adw.ExpanderRow(title="transform", css_classes=["property"]))
+        # # TODO add no wrap and no ellipsize to labels, and 20 width-cards
+        # if parent:
+        #     self.group.add_row(PrefRow(title="parent", subtitle=parent, css_classes=["property"]))
 
-            trans = transform.transform.translation
-            tf_row.add_row(PrefRow(title="tx", subtitle=str(trans.x), css_classes=["property"]))
-            tf_row.add_row(PrefRow(title="ty", subtitle=str(trans.y), css_classes=["property"]))
-            tf_row.add_row(PrefRow(title="tz", subtitle=str(trans.z), css_classes=["property"]))
+        # # TODO add an update method, to refresh the transform data
+        # if transform:
+        #     tf_row = self.group.add_row(Adw.ExpanderRow(title="transform", css_classes=["property"]))
 
-            rot = transform.transform.rotation
-            tf_row.add_row(PrefRow(title="qx", subtitle=str(rot.x), css_classes=["property"]))
-            tf_row.add_row(PrefRow(title="qy", subtitle=str(rot.y), css_classes=["property"]))
-            tf_row.add_row(PrefRow(title="qz", subtitle=str(rot.z), css_classes=["property"]))
-            tf_row.add_row(PrefRow(title="qw", subtitle=str(rot.w), css_classes=["property"]))
+        #     trans = transform.transform.translation
+        #     tf_row.add_row(PrefRow(title="tx", subtitle=str(trans.x), css_classes=["property"]))
+        #     tf_row.add_row(PrefRow(title="ty", subtitle=str(trans.y), css_classes=["property"]))
+        #     tf_row.add_row(PrefRow(title="tz", subtitle=str(trans.z), css_classes=["property"]))
 
-        if broadcaster:
-            self.group.add_row(PrefRow(title="broadcaster", subtitle=broadcaster, css_classes=["property"]))
+        #     rot = transform.transform.rotation
+        #     tf_row.add_row(PrefRow(title="qx", subtitle=str(rot.x), css_classes=["property"]))
+        #     tf_row.add_row(PrefRow(title="qy", subtitle=str(rot.y), css_classes=["property"]))
+        #     tf_row.add_row(PrefRow(title="qz", subtitle=str(rot.z), css_classes=["property"]))
+        #     tf_row.add_row(PrefRow(title="qw", subtitle=str(rot.w), css_classes=["property"]))
 
-        if rate:
-            self.group.add_row(PrefRow(title="rate", subtitle=rate, css_classes=["property"]))
+        # if broadcaster:
+        #     self.group.add_row(PrefRow(title="broadcaster", subtitle=broadcaster, css_classes=["property"]))
 
-        if most_recent_transform:
-            self.group.add_row(
-                PrefRow(title="most_recent_transform", subtitle=most_recent_transform, css_classes=["property"])
-            )
+        # if rate:
+        #     self.group.add_row(PrefRow(title="rate", subtitle=rate, css_classes=["property"]))
 
-        if buffer_length:
-            self.group.add_row(PrefRow(title="buffer_length", subtitle=buffer_length, css_classes=["property"]))
+        # if most_recent_transform:
+        #     self.group.add_row(
+        #         PrefRow(title="most_recent_transform", subtitle=most_recent_transform, css_classes=["property"])
+        #     )
 
-    def on_subpage_btn_clicked(self, *args):
-        # self.nav_view.push(ParamEditPage(self.node_name, self.parameter_name))
-        print("not implemented yet")
+        # if buffer_length:
+        #     self.group.add_row(PrefRow(title="buffer_length", subtitle=buffer_length, css_classes=["property"]))
