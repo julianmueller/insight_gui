@@ -118,7 +118,7 @@ class GraphPage(ContentPage):
             # Add node using unified interface
             node_id = self.canvas.add_block(
                 block_class=NodeBlock,
-                block_args={"node_full_name": node_full_name},
+                block_args={"node_name": node_name, "node_namespace": node_namespace, "node_full_name": node_full_name},
             )
 
             # Add publishers to the node
@@ -183,13 +183,12 @@ class GraphPage(ContentPage):
 
             # Add parameters to the node
             for parameter_name in self.available_parameters[node_full_name]:
-                param_full_name = f"{node_full_name}/{parameter_name}"
+                # param_full_name = f"{node_full_name}/{parameter_name}"
                 param_id = self.canvas.add_block(
                     block_class=ParameterBlock,
                     block_args={
                         "parameter_name": parameter_name,
-                        "node_name": node_name,
-                        "param_full_name": param_full_name,
+                        "node_full_name": node_full_name,
                     },
                 )
                 self.canvas.connect_blocks(node_id, param_id)

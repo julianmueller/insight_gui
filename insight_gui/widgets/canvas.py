@@ -331,7 +331,7 @@ class Canvas(Adw.Bin):
                 return block.uuid
 
         # Add to nx_graph
-        self._nx_graph.add_node(block.uuid, label=block.label, type=block_type, args=block_args)
+        self._nx_graph.add_node(block.uuid, label=block.title, type=block_type, args=block_args)
 
         # Set up block event handlers
         block.connect("revealer-toggled", self._block_revealed)
@@ -361,7 +361,7 @@ class Canvas(Adw.Bin):
 
     def get_block_by_label(self, label: str, type_filter: str = None) -> BaseBlock:
         for block in self._blocks:
-            if block.label == label and (type_filter is None or block.__class__.__name__.lower() == type_filter):
+            if block.title == label and (type_filter is None or block.__class__.__name__.lower() == type_filter):
                 return block
         return None
 

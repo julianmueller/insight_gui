@@ -47,37 +47,110 @@ class BaseBlock(Adw.Bin):
     __gtype_name__ = "BaseBlock"
     __gsignals__ = {"revealer-toggled": (GObject.SignalFlags.RUN_FIRST, None, (bool,))}
 
-    def __init__(self, label: str, uuid: str = None, accent_color: AdwAccentColor = None, **kwargs):
+    def __init__(self, title: str, subtitle: str = "", uuid: str = None, accent_color: AdwAccentColor = None, **kwargs):
         super().__init__()
         super().connect("realize", self.on_realize)
 
         self.uuid: str = uuid if uuid is not None else uuid4().hex
-        self.label: str = label
+        self.title: str = title
+        self.subtitle: str = subtitle
         self.pos = (0, 0)
         self.connected_blocks = []  # TODO fill these
 
-        builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
+        # builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
 
-        self.main_box: Gtk.Box = builder.get_object("main_box")
+        self.main_box: Gtk.Box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL, spacing=0, width_request=100, css_classes=["card"]
+        )
         self.set_child(self.main_box)
 
-        self.header_box: Gtk.Box = builder.get_object("header_box")
-        self.header_lbl: Gtk.Label = builder.get_object("header_lbl")
-        self.header_lbl.set_label(label)
+        self.header_box: Gtk.Box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=6,
+            margin_start=6,
+            margin_end=6,
+            margin_top=6,
+            margin_bottom=6,
+        )
+        self.main_box.append(self.header_box)
 
-        # TODO add options for more btns here, eg for topic pub/sub, service call etc
-        self.subpage_btn: Gtk.Button = builder.get_object("subpage_btn")
+        self.prefix_box: Gtk.Box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=4,
+            # margin_start=4,
+            # margin_end=4,
+            # margin_top=4,
+            # margin_bottom=4,
+            vexpand=False,
+            hexpand=False,
+            valign=Gtk.Align.CENTER,
+        )
+        self.header_box.append(self.prefix_box)
+
+        self.title_box: Gtk.Box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=2,
+            valign=Gtk.Align.CENTER,
+        )
+        self.header_box.append(self.title_box)
+
+        self.title_lbl: Gtk.Label = Gtk.Label(
+            label=title,
+            hexpand=True,
+            # margin_start=4,
+            # margin_end=4,
+            # margin_top=4,
+            # margin_bottom=4,
+            css_classes=["heading"],  # heading
+        )
+        self.title_box.append(self.title_lbl)
+
+        self.subtitle_lbl: Gtk.Label = Gtk.Label(
+            label=subtitle,
+            hexpand=True,
+            # margin_start=4,
+            # margin_end=4,
+            # margin_top=4,
+            # margin_bottom=4,
+            visible=bool(subtitle),  # hide if empty
+            css_classes=["caption", "dim-label"],  # subheading
+        )
+        self.title_box.append(self.subtitle_lbl)
+
+        self.suffix_box: Gtk.Box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=4,
+            # margin_start=4,
+            # margin_end=4,
+            # margin_top=4,
+            # margin_bottom=4,
+            vexpand=False,
+            hexpand=False,
+            valign=Gtk.Align.CENTER,
+        )
+        self.header_box.append(self.suffix_box)
+
+        # prefix buttons
+        # ...
+
+        # suffix buttons
+        self.subpage_btn: Gtk.Button = Gtk.Button(
+            icon_name="external-link-symbolic", tooltip_text="Open as Subpage", css_classes=["flat"]
+        )
+        self.suffix_box.append(self.subpage_btn)
         self.subpage_btn.connect("clicked", self.on_subpage_btn_clicked)
 
-        self.revealer: Gtk.Revealer = builder.get_object("revealer")
-        self.revealer.set_reveal_child(False)
+        # content
+        self.revealer: Gtk.Revealer = Gtk.Revealer(reveal_child=False)
+        self.main_box.append(self.revealer)
         # self.revealer.set_visible(False)  # DEBUG
         # self.revealer.connect("notify::reveal-child", self._on_revealer_toggled)
 
-        self.group: PrefGroup = builder.get_object("group")
+        self.group: PrefGroup = PrefGroup(margin_start=4, margin_end=4, margin_top=4, margin_bottom=4)
+        self.revealer.set_child(self.group)
 
         self.reveal_btn: RevealButton = RevealButton(self.revealer)
-        self.header_box.prepend(self.reveal_btn)
+        self.prefix_box.append(self.reveal_btn)
 
         if accent_color is not None and isinstance(accent_color, AdwAccentColor):
             self.main_box.add_css_class(accent_color.as_css_name())
@@ -130,13 +203,16 @@ class BaseBlock(Adw.Bin):
 class NodeBlock(BaseBlock):
     __gtype_name__ = "NodeBlock"
 
-    def __init__(self, node_full_name: str, **kwargs):
+    def __init__(self, node_name: str, node_namespace: str, node_full_name: str, **kwargs):
         super().__init__(
-            label=node_full_name,
+            title=node_name,
+            subtitle=node_full_name,
             uuid=f"node:{node_full_name}",
             accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE,
             **kwargs,
         )
+        self.node_name = node_name
+        self.node_namespace = node_namespace
         self.node_full_name = node_full_name
 
     def on_subpage_btn_clicked(self, *args):
@@ -148,11 +224,14 @@ class TopicBlock(BaseBlock):
 
     def __init__(self, topic_name: str, topic_types: str | list[str], **kwargs):
         super().__init__(
-            label=topic_name, uuid=f"topic:{topic_name}", accent_color=AdwAccentColor.ADW_ACCENT_COLOR_ORANGE, **kwargs
+            title=topic_name,
+            subtitle=topic_types if isinstance(topic_types, str) else ", ".join(topic_types),
+            uuid=f"topic:{topic_name}",
+            accent_color=AdwAccentColor.ADW_ACCENT_COLOR_ORANGE,
+            **kwargs,
         )
         self.topic_name = topic_name
         self.topic_types = topic_types
-        # TODO add subtitle etc
 
     def on_subpage_btn_clicked(self, *args):
         self.nav_view.push(TopicInfoPage(self.topic_name, self.topic_types))
@@ -163,14 +242,14 @@ class ServiceBlock(BaseBlock):
 
     def __init__(self, service_name: str, service_types: str | list[str], **kwargs):
         super().__init__(
-            label=service_name,
+            title=service_name,
+            subtitle=service_types if isinstance(service_types, str) else ", ".join(service_types),
             uuid=f"service:{service_name}",
             accent_color=AdwAccentColor.ADW_ACCENT_COLOR_GREEN,
             **kwargs,
         )
         self.service_name = service_name
         self.service_types = service_types
-        # TODO add subtitle etc
 
     def on_subpage_btn_clicked(self, *args):
         self.nav_view.push(ServiceInfoPage(self.service_name, self.service_types))
@@ -181,7 +260,11 @@ class ActionBlock(BaseBlock):
 
     def __init__(self, action_name: str, action_types: str | list[str], **kwargs):
         super().__init__(
-            label=action_name, uuid=f"action:{action_name}", accent_color=AdwAccentColor.ADW_ACCENT_COLOR_RED, **kwargs
+            title=action_name,
+            subtitle=action_types if isinstance(action_types, str) else ", ".join(action_types),
+            uuid=f"action:{action_name}",
+            accent_color=AdwAccentColor.ADW_ACCENT_COLOR_RED,
+            **kwargs,
         )
         self.action_name = action_name
         self.action_types = action_types
@@ -194,18 +277,19 @@ class ActionBlock(BaseBlock):
 class ParameterBlock(BaseBlock):
     __gtype_name__ = "ParameterBlock"
 
-    def __init__(self, node_name: str, parameter_name: str, **kwargs):
+    def __init__(self, parameter_name: str, node_full_name: str, **kwargs):
         super().__init__(
-            label=parameter_name,
-            uuid=f"param:{node_name}:{parameter_name}",
+            title=parameter_name,
+            subtitle=f"{node_full_name}/{parameter_name}",
+            uuid=f"param:{node_full_name}:{parameter_name}",
             accent_color=AdwAccentColor.ADW_ACCENT_COLOR_PURPLE,
             **kwargs,
         )
-        self.node_name = node_name
+        self.node_full_name = node_full_name
         self.parameter_name = parameter_name
 
     def on_subpage_btn_clicked(self, *args):
-        self.nav_view.push(ParamEditPage(self.node_name, self.parameter_name))
+        self.nav_view.push(ParamEditPage(self.node_full_name, self.parameter_name))
 
 
 class TransformBlock(BaseBlock):
@@ -224,7 +308,11 @@ class TransformBlock(BaseBlock):
         **kwargs,
     ):
         super().__init__(
-            label=frame_name, uuid=f"tf:{frame_name}", accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE, **kwargs
+            title=frame_name,
+            subtitle="",
+            uuid=f"tf:{frame_name}",
+            accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE,
+            **kwargs,
         )
 
         # TODO add no wrap and no ellipsize to labels, and 20 width-cards
