@@ -391,7 +391,7 @@ def create_pages():
                 Page(
                     title="Multicast",
                     subtitle="Test multicast send/receive",
-                    icon_name="wifi-find-symbolic",
+                    icon_name="cell-tower-symbolic",
                     page_id="multicast",
                     nav_page_class=MulticastPage,
                 ),
