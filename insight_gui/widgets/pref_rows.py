@@ -118,14 +118,16 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
         self.title_lbl.set_hexpand(True)
         self.title_lbl.set_halign(Gtk.Align.FILL)
         self.title_lbl.set_single_line_mode(True)
-        # self.title_lbl.set_width_chars(12)
+        # fixes: reported min width 12 and natural width 10 in measure() with for_size=16; natural size must be >= min size
+        self.title_lbl.set_width_chars(12)
 
         self.subtitle_lbl: Gtk.Label = self.title_lbl.get_next_sibling()
         self.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         self.subtitle_lbl.set_hexpand(True)
         self.subtitle_lbl.set_halign(Gtk.Align.FILL)
         self.subtitle_lbl.set_single_line_mode(True)
-        # self.subtitle_lbl.set_width_chars(12)
+        # fixes: reported min width 12 and natural width 10 in measure() with for_size=16; natural size must be >= min size
+        self.subtitle_lbl.set_width_chars(12)
 
         # react to hide header
         if not title and not subtitle:
