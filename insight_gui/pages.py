@@ -47,6 +47,7 @@ from insight_gui.ros2_pages.joint_states_page import JointStatesPage
 from insight_gui.ros2_pages.teleop_page import TeleoperatorPage
 from insight_gui.ros2_pages.log_page import LoggerPage
 from insight_gui.ros2_pages.doctor_page import DoctorPage
+from insight_gui.ros2_pages.multicast_page import MulticastPage
 
 
 class Page(GObject.Object):
@@ -387,6 +388,13 @@ def create_pages():
                 #     page_id="qos",
                 #     nav_page_class=QualityOfServicePage,
                 # ),
+                Page(
+                    title="Multicast",
+                    subtitle="Test multicast send/receive",
+                    icon_name="wifi-find-symbolic",
+                    page_id="multicast",
+                    nav_page_class=MulticastPage,
+                ),
                 Page(
                     title="Doctor",
                     subtitle="System diagnostics",

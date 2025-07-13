@@ -61,6 +61,7 @@
         <file preprocess="xml-stripblanks">icons/scalable/actions/forest-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/linked-camera-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/cards-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/wifi-find-symbolic.svg</file>
 
         <file preprocess="xml-stripblanks">icons/scalable/actions/light-mode-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/dark-mode-symbolic.svg</file>
