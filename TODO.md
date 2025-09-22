@@ -100,8 +100,8 @@
     - ~~check continuous img stream~~
     - ~~resizing of the window also resizes the preference pages, or maybe even hides the sidebar (but it shall show no warnings!)~~
     - ~~make btns in interface list filtering work~~
-    - add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length
-    - make btns of img viewer work
+    - ~~add for all row descriptions etc a max line limit! (robot description param hold the whole urdf file, which results in a mile long description) so it is concat after some content length~~
+    - ~~make btns of img viewer work~~
     - some rows shall vexpand (like the logs) which is currently not working
     - with the caching in place, sometimes old topics/services are beeing displayed, and can be inspected in subpages. Add a warning/banner, when a info-subpage is opened for a non-existing topic/etc. that says that it is not beeing published anymore
 
