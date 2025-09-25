@@ -29,16 +29,23 @@
     <license>GPL-3.0-only</license>
     <author email="julian.mueller@iwb.tum.de">Julian Müller</author>
 
+    <buildtool_depend>ament_python</buildtool_depend>
+
+    <build_depend>libglib-dev</build_depend>
+    <build_depend>libgirepository-dev</build_depend>
+    <build_depend>gtk4</build_depend>
+    <build_depend>libadwaita-dev</build_depend>
+
     <exec_depend>rclpy</exec_depend>
     <exec_depend>ros2cli</exec_depend>
     <exec_depend>ros2launch</exec_depend>
     <exec_depend>turtlesim</exec_depend>
 
-    <exec_depend>gtk4</exec_depend>
-    <exec_depend>libgirepository-dev</exec_depend>
     <exec_depend>adwaita-icon-theme</exec_depend>
     <exec_depend>libadwaita-dev</exec_depend>
+    <exec_depend>libgirepository-dev</exec_depend>
     <exec_depend>libglib-dev</exec_depend>
+    <exec_depend>gtk4</exec_depend>
     <exec_depend>python3-gi</exec_depend>
     <exec_depend>python3-gi-cairo</exec_depend>
     <exec_depend>python3-networkx</exec_depend>
