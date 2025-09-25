@@ -40,7 +40,7 @@
     <exec_depend>ros2cli</exec_depend>
     <exec_depend>ros2launch</exec_depend>
     <exec_depend>tf2_ros</exec_depend>
-    <exec_depend>tf_transformation</exec_depend>
+    <exec_depend>tf_transformations</exec_depend>
     <exec_depend>turtlesim</exec_depend>
 
     <exec_depend>adwaita-icon-theme</exec_depend>
