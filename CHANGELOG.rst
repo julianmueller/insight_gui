@@ -2,6 +2,21 @@
 Changelog for package insight_gui
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge pull request `#4 <https://github.com/julianmueller/insight_gui/issues/4>`_ from julianmueller/codex/fix-package.xml-dependencies-for-builds
+* Restore rosdep keys for GTK stack build dependencies
+* fix label length issue
+* replace multicast page icon
+* add multicast send/receive page
+* add canvas sidebar
+* update styling of canvas blocks
+* working on canvas, graph and introduction of tf tree
+* work on grpah page,
+* add static stransformer page, and more icons
+* add overview page
+* Contributors: Julian Müller
+
 0.1.1 (2025-06-28)
 ------------------
 * update dependencies
