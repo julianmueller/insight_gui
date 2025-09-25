@@ -2,8 +2,8 @@
 Changelog for package insight_gui
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.2 (2025-09-25)
+------------------
 * fix typo
 * Merge pull request `#4 <https://github.com/julianmueller/insight_gui/issues/4>`_ from julianmueller/codex/fix-package.xml-dependencies-for-builds
 * Restore rosdep keys for GTK stack build dependencies
