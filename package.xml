@@ -29,8 +29,6 @@
     <license>GPL-3.0-only</license>
     <author email="julian.mueller@iwb.tum.de">Julian Müller</author>
 
-    <buildtool_depend>ament_python</buildtool_depend>
-
     <build_depend>libglib-dev</build_depend>
     <build_depend>libgirepository-dev</build_depend>
     <build_depend>gtk4</build_depend>
