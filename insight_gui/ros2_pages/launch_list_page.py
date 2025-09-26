@@ -73,7 +73,7 @@ class LaunchListPage(ContentPage):
                 if launch_files:
                     self.pkgs_with_launch_files[pkg_name] = {
                         "path": str(launch_dir),
-                        "launch_files": [f for f in launch_files],
+                        "launch_files": list(launch_files),
                     }
 
             return len(self.pkgs_with_launch_files) > 0

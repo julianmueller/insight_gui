@@ -92,8 +92,8 @@ class Page(GObject.Object):
         return self._group_id
 
     @group_id.setter
-    def group_id(self, id: str):
-        self._group_id = id
+    def group_id(self, group_id: str):
+        self._group_id = group_id
 
     @GObject.Property(type=object)
     def nav_page_class(self) -> list:

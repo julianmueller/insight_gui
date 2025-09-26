@@ -532,7 +532,7 @@ class TextViewRow(AdditionalContentRow):
         return False
 
     # TODO do the filtering with GtkTextTags
-    def filter(self, filter_snippets: list[str]):
+    def filter_by_text(self, filter_snippets: list[str]):
         # Get the current text from the buffer
         start_iter = self.text_buffer.get_start_iter()
         end_iter = self.text_buffer.get_end_iter()
@@ -1002,7 +1002,7 @@ class MultiBoxRow(Adw.PreferencesRow, PrefRowInterface):
 
         self.boxes = []
 
-    def add_label_pair(self, title: str, subtitle: str, property: bool = False, **kwargs) -> Gtk.Widget:
+    def add_label_pair(self, title: str, subtitle: str, prop: bool = False, **kwargs) -> Gtk.Widget:
         box = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
             spacing=6,
@@ -1087,7 +1087,7 @@ class MultiToggleButtonRow(AdditionalContentRow):
         )
         self.suffixes_box.add_css_class("linked")
 
-        self.buttons = dict()
+        self.buttons = {}
 
     def add_toggle_btn(self, unique_id: str | int, **kwargs):
         if not unique_id:

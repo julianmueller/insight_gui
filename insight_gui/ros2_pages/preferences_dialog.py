@@ -167,7 +167,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.last_valid_gui_node_namespace = self.gui_node_name_row.get_text()
         self.gui_node_namespace_row.connect("apply", self.on_apply_gui_node_namespace)
 
-        ########### FILTERING PAGE ###########
+        # FILTERING PAGE #######################
 
         self.filter_page = PrefPage(title="Filter", icon_name="funnel-outline-symbolic")
         super().add(self.filter_page)
@@ -321,7 +321,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             "show-qos-parameters", self.show_qos_parameters_row, "active", Gio.SettingsBindFlags.DEFAULT
         )
 
-        ######### APPEARANCE PAGE ###########
+        # APPEARANCE PAGE #######################
 
         self.appearance_page = PrefPage(title="Appearance", icon_name="preferences-desktop-appearance-symbolic")
         super().add(self.appearance_page)
@@ -400,7 +400,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         #     )
         # )
 
-        ########### CACHING PAGE ###########
+        # CACHING PAGE #######################
 
         self.caching_page = PrefPage(title="Caching", icon_name="speedometer-symbolic")
         super().add(self.caching_page)

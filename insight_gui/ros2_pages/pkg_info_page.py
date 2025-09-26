@@ -135,8 +135,8 @@ class PackageInfoPage(ContentPage):
             maintainers_exp.add_row(row)
 
         # license
-        license = self.xml_tree.find("license").text
-        self.xml_group.add_row(PrefRow(title="License", subtitle=str(license), css_classes=["property"]))
+        license_txt = self.xml_tree.find("license").text
+        self.xml_group.add_row(PrefRow(title="License", subtitle=str(license_txt), css_classes=["property"]))
 
         # authors
         authors = self.xml_tree.findall("author")
