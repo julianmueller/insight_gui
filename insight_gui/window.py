@@ -20,14 +20,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from pathlib import Path
 from typing import Type
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gdk, Gio, GLib, GObject
+from gi.repository import Gtk, Adw, Gdk, Gio, GLib
 
 from insight_gui.pages import create_pages
 
@@ -168,7 +167,7 @@ class MainWindow(BaseWindow):
         super().set_default_size(1200, 800)
         super().set_size_request(400, 500)
 
-        builder: Gtk.Builder = Gtk.Builder.new_from_file(str(Path(__file__).with_suffix(".ui")))
+        builder: Gtk.Builder = Gtk.Builder.new_from_file(str(self.app.share_dir / "window.ui"))
 
         self.split_view: Adw.NavigationSplitView = builder.get_object("split_view")
         super().set_content(self.split_view)

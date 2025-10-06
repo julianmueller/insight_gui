@@ -17,8 +17,6 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -31,12 +29,16 @@ package_name = "insight_gui"
 base_dir = Path(__file__).parent.resolve()
 data_dir = base_dir / package_name / "data"
 gresource_file = data_dir / "resources.gresource"  # compiled GResource file
-gschema_file = data_dir / "geschemas.compiled"  # compiled GSettings schema file
+gschema_file = data_dir / "gschemas.compiled"  # compiled GSettings schema file
 
 
 if not gresource_file.exists():
     # Just touch it so 'data_files' can see it
     gresource_file.touch()
+
+if not gschema_file.exists():
+    # Ensure the compiled schema is part of the wheel/installation data_files
+    gschema_file.touch()
 
 
 # find files in data folder
@@ -141,7 +143,10 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
         (f"share/{package_name}", ["package.xml"]),
-        (f"share/{package_name}/data", collect_data_files(".css", ".xml", "png", ".gresource", ".compiled")),
+        (
+            f"share/{package_name}/data",
+            collect_data_files(".css", ".xml", "png", ".svg", ".ui", ".gresource", ".compiled"),
+        ),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
