@@ -57,7 +57,7 @@ class ContentPage(Adw.NavigationPage):
         self.is_mapped = False
         self.is_realized = False
 
-        builder: Gtk.Builder = Gtk.Builder.new_from_file(str(self.app.share_dir  / "content_page.ui"))
+        builder: Gtk.Builder = Gtk.Builder.new_from_file(str(self.app.share_dir / "content_page.ui"))
 
         self.toolbar_view: Adw.ToolbarView = builder.get_object("toolbar_view")
         self.header_bar: Adw.HeaderBar = builder.get_object("header_bar")
