@@ -2,6 +2,12 @@
 Changelog for package insight_gui
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.3 (2025-10-06)
+------------------
+* fix build bug and move .ui files to share
+* fix pytests
+* Contributors: Julian Müller
+
 0.1.2 (2025-09-25)
 ------------------
 * Merge pull request `#4 <https://github.com/julianmueller/insight_gui/issues/4>`_ from julianmueller/codex/fix-package.xml-dependencies-for-builds
