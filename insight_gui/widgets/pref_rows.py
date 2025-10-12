@@ -20,14 +20,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from typing import Callable, Type
+from pathlib import Path
 import re
+from typing import Callable, Type
+
+import numpy as np
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango
+gi.require_version("GdkPixbuf", "2.0")
+from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango, GdkPixbuf
 
 from insight_gui.widgets.buttons import ToggleButton, CopyButton
 
@@ -250,10 +254,36 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
         self.next_page_icon.set_visible(True)
 
     def set_subtitle(self, subtitle: str, max_lines: int = 1):
-        # TODO concat lines of the subtitle!
-        # if len(subtitle)
-        # subtitle =
-        super().set_subtitle(subtitle)
+        subtitle = "" if subtitle is None else str(subtitle)
+
+        if max_lines <= 0:
+            max_lines = 1
+
+        # Normalize whitespace and collapse multiline subtitles into a readable string
+        # while still allowing explicit multi-line subtitles when requested.
+        lines = [re.sub(r"\s+", " ", line).strip() for line in subtitle.splitlines()]
+        lines = [line for line in lines if line]
+
+        if not lines:
+            cleaned_subtitle = ""
+        else:
+            ellipsis_needed = len(lines) > max_lines
+            display_lines = lines[:max_lines]
+
+            if max_lines == 1:
+                cleaned_subtitle = " ".join(display_lines)
+            else:
+                cleaned_subtitle = "\n".join(display_lines)
+
+            if ellipsis_needed:
+                cleaned_subtitle = cleaned_subtitle.rstrip() + " …"
+
+        is_single_line = max_lines == 1
+        self.subtitle_lbl.set_single_line_mode(is_single_line)
+        self.subtitle_lbl.set_wrap(not is_single_line)
+        self.subtitle_lbl.set_lines(max_lines)
+
+        super().set_subtitle(cleaned_subtitle)
 
 
 class ScaleRow(PrefRow):
@@ -583,7 +613,12 @@ class ImageViewRow(AdditionalContentRow):
         self.max_height = max_height
         self.image: Gtk.Picture = image
         self.frame: Gtk.Frame = Gtk.Frame(hexpand=True, vexpand=True)
-        self.content_box.append(self.frame)
+        self.frame.set_halign(Gtk.Align.START)
+        self.frame.set_valign(Gtk.Align.START)
+        self.scrolled_window = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
+        self.scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        self.scrolled_window.set_child(self.frame)
+        self.content_box.append(self.scrolled_window)
 
         if image is None:
             self.reset_image_to_default_icon()
@@ -616,12 +651,6 @@ class ImageViewRow(AdditionalContentRow):
             tooltip_text="Copy image",
             func=self.on_copy_image,
         )
-        self.open_img_btn = self.add_footer_btn(
-            label="Open",
-            icon_name="folder-open-symbolic",
-            tooltip_text="Open image",
-            func=self.on_open_image,
-        )
         self.save_img_btn = self.add_footer_btn(
             label="Save",
             icon_name="document-save-symbolic",
@@ -635,9 +664,24 @@ class ImageViewRow(AdditionalContentRow):
         self.current_texture = None  # Track the last texture
         self.pending_frame = None  # Store the next frame to be displayed
         self.updating = False  # Prevent redundant updates
+        self._pixbuf: GdkPixbuf.Pixbuf | None = None
+        self._image_width: int | None = None
+        self._image_height: int | None = None
+        self._zoom: float = 1.0
+        self._min_zoom: float = 0.1
+        self._max_zoom: float = 10.0
+
+        self.footer_box.set_sensitive(False)
 
     def reset_image_to_default_icon(self, tooltip_text: str = "No image"):
         self.set_image_from_icon_name(icon_name="dialog-error-symbolic", tooltip_text=tooltip_text)
+        self.current_texture = None
+        self.pending_frame = None
+        self._pixbuf = None
+        self._image_width = None
+        self._image_height = None
+        self._zoom = 1.0
+        self.footer_box.set_sensitive(False)
 
     def set_image_from_icon_name(self, *, icon_name: str, tooltip_text: str = "", size: int = 100):
         display = Gdk.Display.get_default()
@@ -667,34 +711,48 @@ class ImageViewRow(AdditionalContentRow):
             )
             self.frame.set_child(self.icon_image)
             self.frame.set_size_request(width=size, height=size)
+            self.footer_box.set_sensitive(False)
 
     def set_image_from_opencv(self, cv_image):
         if cv_image is None:
             raise RuntimeError("Image has no data")
 
-        new_image = Gtk.Picture()
+        new_image = Gtk.Picture(halign=Gtk.Align.START, valign=Gtk.Align.START)
+        new_image.set_can_shrink(True)
+        new_image.set_content_fit(Gtk.ContentFit.FILL)
+        new_image.set_keep_aspect_ratio(True)
 
-        # TODO also check for other datatypes
-        # If necessary, convert BGR -> RGB (depends on your data format).
-        # cv_image is shape (height, width, channels).
-        cv_image_rgb = cv_image[:, :, ::-1] if cv_image.shape[-1] == 3 else cv_image
-        height, width, channels = cv_image_rgb.shape
-        rowstride = width * 3  # 3 bytes per pixel (RGB)
+        # ensure a consistent RGB/RGBA representation
+        if cv_image.ndim == 2:
+            cv_image_rgb = np.stack((cv_image,) * 3, axis=-1)
+        else:
+            channels = cv_image.shape[-1]
+            if channels == 3:
+                cv_image_rgb = cv_image[:, :, ::-1]
+            elif channels == 4:
+                cv_image_rgb = cv_image[:, :, [2, 1, 0, 3]]
+            else:
+                cv_image_rgb = cv_image[:, :, :3][:, :, ::-1]
 
-        # resize the image accordingly
-        natural_width = self.frame.get_allocated_width()
-        scale_factor = natural_width / width
-        new_height = int(height * scale_factor)
-        self.frame.set_size_request(width=natural_width, height=new_height)
+        height, width = cv_image_rgb.shape[:2]
+        channels = cv_image_rgb.shape[-1]
+        rowstride = width * channels
 
         # Convert the numpy image to bytes
-        data = cv_image_rgb.tobytes()
+        data = cv_image_rgb.astype("uint8").tobytes()
         # Wrap the bytes in a GLib.Bytes object
         bytes_data = GLib.Bytes.new(data)
 
-        # Create a MemoryTexture directly from the image data (RGB8).
-        # Alternatively, for RGBA data, use Gdk.MemoryFormat.RGBA8, etc.
-        new_texture = Gdk.MemoryTexture.new(width, height, Gdk.MemoryFormat.R8G8B8, bytes_data, rowstride)
+        # Determine texture format
+        if channels == 4:
+            texture_format = Gdk.MemoryFormat.R8G8B8A8
+            has_alpha = True
+        else:
+            texture_format = Gdk.MemoryFormat.R8G8B8
+            has_alpha = False
+
+        # Create a MemoryTexture directly from the image data (RGB/RGBA8).
+        new_texture = Gdk.MemoryTexture.new(width, height, texture_format, bytes_data, rowstride)
 
         # Queue the frame for display
         self.pending_frame = new_texture
@@ -708,6 +766,21 @@ class ImageViewRow(AdditionalContentRow):
                 self.frame.set_child(self.image)
                 self.pending_frame = None  # Clear the pending frame
 
+                self._pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
+                    bytes_data,
+                    GdkPixbuf.Colorspace.RGB,
+                    has_alpha,
+                    8,
+                    width,
+                    height,
+                    rowstride,
+                )
+                self._image_width = width
+                self._image_height = height
+                self._zoom = 1.0
+                self.footer_box.set_sensitive(True)
+                self._apply_zoom()
+
             self.updating = False  # Allow new frames to be processed
 
         # Schedule widget update on the GTK main thread.
@@ -717,34 +790,126 @@ class ImageViewRow(AdditionalContentRow):
             GLib.idle_add(_update_texture)
 
     def on_save_image(self, *args):
-        # TODO implement saving behaviour
-        print("saving")
-        pass
+        if not self._has_image():
+            return
+
+        def _on_save(dialog: Gtk.FileDialog, result, user_data):
+            try:
+                file = dialog.save_finish(result)
+                if file:
+                    path = Path(file.get_path())
+                    if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".bmp"}:
+                        path = path.with_suffix(".png")
+                    self._write_pixbuf_to_file(path)
+            except GLib.Error:
+                pass
+
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        for name, suffixes in {
+            "PNG Image": ["png"],
+            "JPEG Image": ["jpg", "jpeg"],
+            "Bitmap Image": ["bmp"],
+        }.items():
+            file_filter = Gtk.FileFilter()
+            file_filter.set_name(name)
+            for suffix in suffixes:
+                file_filter.add_suffix(suffix)
+            filters.append(file_filter)
+
+        file_dialog = Gtk.FileDialog(title="Save Image", modal=True)
+        file_dialog.set_filters(filters)
+        file_dialog.set_default_filter(filters.get_item(0))
+        parent = self._get_parent_window()
+        file_dialog.save(parent=parent, callback=_on_save, user_data=None)
 
     def on_copy_image(self, *args):
-        # TODO implement copying behaviour
-        print("copying")
-        pass
+        if not self._has_image() or not self.current_texture:
+            return
+
+        display = Gdk.Display.get_default()
+        if not display:
+            return
+
+        clipboard = display.get_clipboard()
+        clipboard.set_texture(self.current_texture)
+        self._show_toast("Image copied to clipboard")
 
     def on_zoom_in(self, *args):
-        # TODO implement zoom in
-        print("zoom in")
-        pass
+        if not self._has_image():
+            return
+        self._set_zoom(self._zoom * 1.25)
 
     def on_zoom_out(self, *args):
-        # TODO implement zoom out
-        print("zoom out")
-        pass
+        if not self._has_image():
+            return
+        self._set_zoom(self._zoom * 0.8)
 
     def on_fit_to_width(self, *args):
-        # TODO implement fit to width
-        print("fit to width")
-        pass
+        if not self._has_image() or not self._image_width:
+            return
 
-    def on_open_image(self, *args):
-        # TODO implement open image
-        print("open image")
-        pass
+        available_width = self.scrolled_window.get_allocated_width()
+        if available_width <= 0:
+            available_width = self.frame.get_allocated_width()
+        if available_width <= 0:
+            available_width = self.content_box.get_allocated_width()
+
+        if available_width <= 0:
+            GLib.idle_add(self.on_fit_to_width)
+            return
+
+        zoom = available_width / float(self._image_width)
+        self._set_zoom(zoom)
+
+
+    def _show_toast(self, title: str):
+        overlay = self.get_ancestor(Adw.ToastOverlay)
+        if isinstance(overlay, Adw.ToastOverlay):
+            overlay.add_toast(Adw.Toast(title=title))
+
+    def _has_image(self) -> bool:
+        return self._pixbuf is not None and self._image_width is not None and self._image_height is not None
+
+    def _set_zoom(self, zoom: float):
+        zoom = max(self._min_zoom, min(self._max_zoom, zoom))
+        if abs(zoom - self._zoom) < 1e-3:
+            return
+        self._zoom = zoom
+        self._apply_zoom()
+
+    def _apply_zoom(self):
+        if not self._has_image() or not self.image:
+            return
+
+        width = max(1, int(self._image_width * self._zoom))
+        height = max(1, int(self._image_height * self._zoom))
+
+        self.image.set_size_request(width, height)
+        self.frame.set_size_request(width, height)
+
+    def _write_pixbuf_to_file(self, path: Path):
+        if not self._pixbuf:
+            return
+
+        ext = path.suffix.lower()
+        if ext in {".jpg", ".jpeg"}:
+            file_type = "jpeg"
+            options = ["quality"]
+            values = ["95"]
+        elif ext == ".bmp":
+            file_type = "bmp"
+            options = []
+            values = []
+        else:
+            file_type = "png"
+            options = []
+            values = []
+
+        self._pixbuf.savev(str(path), file_type, options, values)
+
+    def _get_parent_window(self) -> Gtk.Window | None:
+        root = self.get_root()
+        return root if isinstance(root, Gtk.Window) else None
 
 
 class ColumnViewRow(AdditionalContentRow):

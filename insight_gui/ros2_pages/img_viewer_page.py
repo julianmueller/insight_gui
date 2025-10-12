@@ -56,6 +56,7 @@ class ImageViewerPage(ContentPage):
 
         self.last_update_time = 0
         self.max_update_rate = 10  # in Hz
+        self._last_msg_wall_time: float | None = None
 
         # main btns in bottom bar
         self.play_pause_stream_btn = super().add_bottom_widget(
@@ -123,10 +124,12 @@ class ImageViewerPage(ContentPage):
         self.width_row: PrefRow = self.info_group.add_row(PrefRow(title="Image Width"))
         self.height_row = self.info_group.add_row(PrefRow(title="Image Height"))
         self.encoding_row = self.info_group.add_row(PrefRow(title="Image Encoding"))
+        self.frequency_row = self.info_group.add_row(PrefRow(title="Frequency"))
 
         self.width_lbl = self.width_row.add_suffix_lbl("")
         self.height_lbl = self.height_row.add_suffix_lbl("")
         self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
+        self.frequency_lbl = self.frequency_row.add_suffix_lbl("–")
 
     def refresh_bg(self) -> bool:
         available_topics = self.ros2_connector.get_available_topics()
@@ -163,6 +166,8 @@ class ImageViewerPage(ContentPage):
         self.single_img_done = True
         self.img_row.reset_image_to_default_icon()
         self.remove_sub()
+        self._last_msg_wall_time = None
+        self.frequency_lbl.set_label("–")
 
     def remove_sub(self):
         if self.sub:
@@ -179,6 +184,8 @@ class ImageViewerPage(ContentPage):
 
     def on_clear_img(self, *args):
         self.img_row.reset_image_to_default_icon()
+        self._last_msg_wall_time = None
+        self.frequency_lbl.set_label("–")
 
     def on_toggle_stream_type(self, *args):
         # active = continuous stream, inactive = single shot
@@ -209,6 +216,8 @@ class ImageViewerPage(ContentPage):
             self.sub = self.ros2_connector.add_subsciption(Image, topic_name, self.img_topic_callback)
             self.single_img_done = True
             self.img_row.reset_image_to_default_icon()
+            self._last_msg_wall_time = None
+            self.frequency_lbl.set_label("–")
 
     def img_topic_callback(self, msg: Image, *args):
         if not self.is_mapped:
@@ -216,6 +225,15 @@ class ImageViewerPage(ContentPage):
 
         # apply rate limiting
         now = time.time()
+        if self._last_msg_wall_time is not None:
+            dt = now - self._last_msg_wall_time
+            if dt > 0:
+                freq = 1.0 / dt
+                self.frequency_lbl.set_label(f"{freq:.1f} Hz")
+        else:
+            self.frequency_lbl.set_label("–")
+        self._last_msg_wall_time = now
+
         if now - self.last_update_time < 1.0 / self.max_update_rate:
             return
 
