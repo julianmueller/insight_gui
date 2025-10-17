@@ -144,6 +144,18 @@ setup(
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
         (f"share/{package_name}", ["package.xml"]),
         (
+            "share/applications",
+            [f"{package_name}/data/com.github.julianmueller.Insight.desktop"],
+        ),
+        (
+            "share/icons/hicolor/scalable/apps",
+            [f"{package_name}/data/icons/scalable/actions/insight.svg"],
+        ),
+        (
+            "share/icons/hicolor/symbolic/apps",
+            [f"{package_name}/data/icons/scalable/actions/insight-symbolic.svg"],
+        ),
+        (
             f"share/{package_name}/data",
             collect_data_files(".css", ".xml", "png", ".svg", ".ui", ".gresource", ".compiled"),
         ),
