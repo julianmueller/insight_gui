@@ -44,6 +44,7 @@ from insight_gui.ros2_pages.tf_static_broadcaster_page import StaticTransformBro
 from insight_gui.ros2_pages.tf_tree_page import TFTreePage
 from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
 from insight_gui.ros2_pages.joint_states_page import JointStatesPage
+from insight_gui.ros2_pages.controller_manager_page import ControllerManagerPage
 from insight_gui.ros2_pages.teleop_page import TeleoperatorPage
 from insight_gui.ros2_pages.log_page import LoggerPage
 from insight_gui.ros2_pages.doctor_page import DoctorPage
@@ -322,13 +323,13 @@ def create_pages():
         PageGroup(
             title="Control",
             pages=[
-                # Page(
-                #     title="Controllers",
-                #     subtitle="Toggle ros2control controllers",
-                #     icon_name="memory-symbolic",
-                #     page_id="controllers",
-                #     nav_page_class=ControllerTogglePage,
-                # ),
+                Page(
+                    title="Controllers",
+                    subtitle="Manage ros2_control controllers",
+                    icon_name="memory-symbolic",
+                    page_id="controllers",
+                    nav_page_class=ControllerManagerPage,
+                ),
                 Page(
                     title="Joint States",
                     subtitle="Manipulate joints",

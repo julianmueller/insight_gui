@@ -40,6 +40,7 @@
     <exec_depend>tf2_ros</exec_depend>
     <exec_depend>tf_transformations</exec_depend>
     <exec_depend>turtlesim</exec_depend>
+    <exec_depend>controller_manager_msgs</exec_depend>
 
     <exec_depend>adwaita-icon-theme</exec_depend>
     <exec_depend>libadwaita-dev</exec_depend>
