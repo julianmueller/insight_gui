@@ -31,6 +31,7 @@ from insight_gui.ros2_pages.node_list_page import NodeListPage
 from insight_gui.ros2_pages.topic_list_page import TopicListPage
 from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
 from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
+from insight_gui.ros2_pages.topic_remap_page import TopicRemapPage
 from insight_gui.ros2_pages.service_list_page import ServiceListPage
 from insight_gui.ros2_pages.service_call_page import ServiceCallPage
 from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
@@ -235,13 +236,13 @@ def create_pages():
                     page_id="img_viewer",
                     nav_page_class=ImageViewerPage,
                 ),
-                # Page(
-                #     title="Remap",
-                #     subtitle="Remap topics",
-                #     icon_name="tactic-symbolic",
-                #     page_id="remap",
-                #     nav_page_class=RemapPage,
-                # ),
+                Page(
+                    title="Remap",
+                    subtitle="Remap topics",
+                    icon_name="tactic-symbolic",
+                    page_id="remap",
+                    nav_page_class=TopicRemapPage,
+                ),
             ],
         ),
         PageGroup(
