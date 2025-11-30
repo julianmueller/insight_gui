@@ -22,14 +22,14 @@
 
 import re
 import time
-import threading
 import importlib
 from typing import Callable, Dict, Any, Tuple, List
 from operator import itemgetter
+from functools import wraps
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
+from rclpy.qos import QoSProfile
 from rclpy.publisher import Publisher, MsgType
 from rclpy.subscription import Subscription
 from rclpy.service import Service, SrvType, SrvTypeRequest, SrvTypeResponse
@@ -38,7 +38,6 @@ from rclpy.action import ActionClient
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from rclpy.action import get_action_names_and_types
 from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
-from rclpy.logging import LoggingSeverity
 
 # from rosidl_runtime_py.utilities import get_action
 
@@ -59,24 +58,55 @@ import gi
 gi.require_version("GLib", "2.0")
 from gi.repository import GLib, Gio
 
-# Cache key constants
-CACHE_NODES = "nodes"
-CACHE_TOPICS = "topics"
-CACHE_SERVICES = "services"
-CACHE_ACTIONS = "actions"
-CACHE_PUBLISHERS = "publishers"
-CACHE_SUBSCRIBERS = "subscribers"
-CACHE_SERVICE_CLIENTS = "service_clients"
-CACHE_SERVICE_SERVERS = "service_servers"
-CACHE_ACTION_CLIENTS = "action_clients"
-CACHE_ACTION_SERVERS = "action_servers"
-CACHE_PARAMETERS = "parameters"
-CACHE_PARAM_VALUE = "param_value"
-CACHE_PARAM_TYPE = "param_type"
-CACHE_PARAM_INFO = "param_info"
-CACHE_MSG_CLASS = "msg_class"
-CACHE_SRV_CLASS = "srv_class"
-CACHE_ACTION_CLASS = "action_class"
+from insight_gui.utils.chache import ttl_cache
+from functools import wraps, lru_cache
+
+
+def cached(_func=None, *, use_ttl: bool = True):
+    """Decorator that applies caching using the connector's cache settings.
+
+    When use_ttl is False, caching uses plain lru_cache (no expiry). The wrapped
+    method can be called with no_cache=True to bypass caching for that call.
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            no_cache = kwargs.pop("no_cache", False)
+            app_settings = getattr(getattr(self, "app", None), "settings", None)
+
+            if (
+                no_cache
+                or not (app_settings and app_settings.get_boolean("enable-caching"))
+                or (use_ttl and getattr(self, "CACHE_TTL", 0) <= 0)
+                or getattr(self, "CACHE_MAXSIZE", 0) <= 0
+            ):
+                return func(self, *args, **kwargs)
+
+            if not hasattr(self, "_cache_wrappers"):
+                self._cache_wrappers: Dict[Callable, Callable] = {}
+            if not hasattr(self, "_cached_methods"):
+                self._cached_methods: List[Callable] = []
+
+            cached_entry = self._cache_wrappers.get(func)
+            if cached_entry is None:
+                if use_ttl:
+                    cached_entry = ttl_cache(
+                        maxsize=int(self.CACHE_MAXSIZE),
+                        ttl=int(self.CACHE_TTL),
+                    )(lambda *a, **k: func(self, *a, **k))
+                else:
+                    cached_entry = lru_cache(maxsize=int(self.CACHE_MAXSIZE))(lambda *a, **k: func(self, *a, **k))
+                self._cache_wrappers[func] = cached_entry
+                self._cached_methods.append(func)
+
+            return cached_entry(*args, **kwargs)
+
+        return wrapper
+
+    if _func is None:
+        return decorator
+    return decorator(_func)
 
 
 class ROS2Connector:
@@ -88,10 +118,10 @@ class ROS2Connector:
         self.thread: GLib.Thread = None
         self.is_running = False
         self.start_time = None
-
-        # Cache system
-        self._cache: Dict[str, Dict[str, Any]] = {}
-        self._cache_lock = threading.Lock()
+        self.CACHE_TTL = self.app.settings.get_double("cache-expiration-time")
+        self.CACHE_MAXSIZE = 128
+        self._cache_wrappers: Dict[Callable, Callable] = {}
+        self._cached_methods: List[Callable] = []
 
         rclpy.init(args=None)
 
@@ -143,6 +173,14 @@ class ROS2Connector:
             self.is_running = False
 
         return False
+
+    def shutdown(self):
+        # for sub in list(self.node.subscriptions):
+        #     self.node.destroy_subscription(sub)
+
+        self.clear_cache()
+        self.stop_node()
+        # rclpy.shutdown()
 
     def on_node_state_changed(self, action: Gio.Action, value: GLib.Variant):
         action.set_state(GLib.Variant.new_boolean(self.is_running))
@@ -220,68 +258,36 @@ class ROS2Connector:
 
         return action_client, goal_future
 
-    def shutdown(self):
-        for sub in list(self.node.subscriptions):
-            self.node.destroy_subscription(sub)
-
-        # Clear cache on shutdown
-        with self._cache_lock:
-            self._cache.clear()
-
-        # self.is_running = False
-        self.stop_node()
-        # rclpy.shutdown()
-
     # Cache management methods
-    def _is_cache_valid(self, cache_key: str) -> bool:
-        """Check if cached data is still valid based on timeout."""
-        if cache_key not in self._cache:
-            return False
+    CACHE_TTL: float = 0.0
+    CACHE_MAXSIZE: int = 128
 
-        cache_entry = self._cache[cache_key]
-        current_time = time.time()
-        return (current_time - cache_entry["timestamp"]) < self.app.settings.get_double("cache-expiration-time")
+    def _cached_functions(self) -> List[Callable]:
+        return list(getattr(self, "_cache_wrappers", {}).values())
 
-    def _get_from_cache(self, cache_key: str) -> Any:
-        """Get data from cache if valid, otherwise return None."""
-        if not self.app.settings.get_boolean("enable-caching"):
-            return None
+    def clear_cache(self) -> None:
+        """Clear all caches."""
+        self._cache_wrappers = {}
+        self._cached_methods = []
 
-        with self._cache_lock:
-            if self._is_cache_valid(cache_key):
-                return self._cache[cache_key]["data"]
-            return None
-
-    def _store_in_cache(self, cache_key: str, data: Any) -> None:
-        """Store data in cache with current timestamp."""
-        with self._cache_lock:
-            self._cache[cache_key] = {"data": data, "timestamp": time.time()}
-
-    def clear_cache(self, cache_key: str = None) -> None:
-        """Clear cache. If cache_key is provided, clear only that entry, otherwise clear all."""
-        with self._cache_lock:
-            if cache_key:
-                self._cache.pop(cache_key, None)
-            else:
-                self._cache.clear()
+    def change_caching(self, ttl: float | None = None, maxsize: int | None = None) -> None:
+        """Update cache TTL/maxsize and clear existing caches."""
+        if ttl is not None:
+            self.CACHE_TTL = float(ttl)
+        if maxsize is not None:
+            self.CACHE_MAXSIZE = int(maxsize)
+        self.clear_cache()
 
     # Standardized ROS2 data collection methods with caching
-    def get_available_nodes(self, use_cache: bool = True) -> List[Tuple[str, str, str]]:
+    @cached
+    def get_available_nodes(self) -> List[Tuple[str, str, str]]:
         """Get available nodes with caching support."""
         if not self.is_running or not self.node:
             return []
 
         try:
-            # Attempt to get data from cache
-            nodes = self._get_from_cache(CACHE_NODES) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if nodes is None:
-                nodes = get_node_names(node=self.node, include_hidden_nodes=True)
-                nodes = sorted(nodes, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(CACHE_NODES, nodes)
+            nodes = get_node_names(node=self.node, include_hidden_nodes=True)
+            nodes = sorted(nodes, key=itemgetter(0))
 
             # Filter hidden nodes if requested
             if not self.app.settings.get_boolean("show-hidden-nodes"):
@@ -293,22 +299,15 @@ class ROS2Connector:
             print(f"Error getting nodes: {e}")
             return []
 
-    def get_available_topics(self, use_cache: bool = True) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_available_topics(self) -> List[Tuple[str, List[str]]]:
         """Get available topics with caching support."""
         if not self.is_running or not self.node:
             return []
 
         try:
-            # Attempt to get data from cache
-            topics = self._get_from_cache(CACHE_TOPICS) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if topics is None:
-                topics = get_topic_names_and_types(node=self.node, include_hidden_topics=True)
-                topics = sorted(topics, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(CACHE_TOPICS, topics)
+            topics = get_topic_names_and_types(node=self.node, include_hidden_topics=True)
+            topics = sorted(topics, key=itemgetter(0))
 
             # Apply filters to the data
             if not self.app.settings.get_boolean("show-hidden-topics"):
@@ -323,28 +322,17 @@ class ROS2Connector:
             print(f"Error getting topics: {e}")
             return []
 
-    def get_publishers_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
-    ) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_publishers_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Get publishers for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"{CACHE_PUBLISHERS}_{node_namespace}_{node_name}"
-
         try:
-            # Attempt to get data from cache
-            publishers = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if publishers is None:
-                publishers = self.node.get_publisher_names_and_types_by_node(
-                    node_name=node_name, node_namespace=node_namespace
-                )
-                publishers = sorted(publishers, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, publishers)
+            publishers = self.node.get_publisher_names_and_types_by_node(
+                node_name=node_name, node_namespace=node_namespace
+            )
+            publishers = sorted(publishers, key=itemgetter(0))
 
             # Filter action-related topics if requested
             if not self.app.settings.get_boolean("show-action-topics"):
@@ -356,28 +344,17 @@ class ROS2Connector:
             print(f"Error getting publishers for node {node_namespace}/{node_name}: {e}")
             return []
 
-    def get_subscribers_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
-    ) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_subscribers_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Get subscribers for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"{CACHE_SUBSCRIBERS}_{node_namespace}_{node_name}"
-
         try:
-            # Attempt to get data from cache
-            subscribers = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if subscribers is None:
-                subscribers = self.node.get_subscriber_names_and_types_by_node(
-                    node_name=node_name, node_namespace=node_namespace
-                )
-                subscribers = sorted(subscribers, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, subscribers)
+            subscribers = self.node.get_subscriber_names_and_types_by_node(
+                node_name=node_name, node_namespace=node_namespace
+            )
+            subscribers = sorted(subscribers, key=itemgetter(0))
 
             # Filter action-related topics if requested
             if not self.app.settings.get_boolean("show-action-topics"):
@@ -389,22 +366,15 @@ class ROS2Connector:
             print(f"Error getting subscribers for node {node_namespace}/{node_name}: {e}")
             return []
 
-    def get_available_services(self, use_cache: bool = True) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_available_services(self) -> List[Tuple[str, List[str]]]:
         """Get available services with caching support."""
         if not self.is_running or not self.node:
             return []
 
         try:
-            # Attempt to get data from cache
-            services = self._get_from_cache(CACHE_SERVICES) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if services is None:
-                services = get_service_names_and_types(node=self.node, include_hidden_services=True)
-                services = sorted(services, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(CACHE_SERVICES, services)
+            services = get_service_names_and_types(node=self.node, include_hidden_services=True)
+            services = sorted(services, key=itemgetter(0))
 
             # Filter hidden services if requested
             if not self.app.settings.get_boolean("show-hidden-services"):
@@ -424,28 +394,17 @@ class ROS2Connector:
             print(f"Error getting services: {e}")
             return []
 
-    def get_service_clients_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
-    ) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_service_clients_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Get service clients for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"{CACHE_SERVICE_CLIENTS}_{node_namespace}_{node_name}"
-
         try:
-            # Attempt to get data from cache
-            service_clients = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if service_clients is None:
-                service_clients = self.node.get_client_names_and_types_by_node(
-                    node_name=node_name, node_namespace=node_namespace
-                )
-                service_clients = sorted(service_clients, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, service_clients)
+            service_clients = self.node.get_client_names_and_types_by_node(
+                node_name=node_name, node_namespace=node_namespace
+            )
+            service_clients = sorted(service_clients, key=itemgetter(0))
 
             # Filter action-related services if requested
             if not self.app.settings.get_boolean("show-action-services"):
@@ -461,28 +420,17 @@ class ROS2Connector:
             print(f"Error getting service clients for node {node_namespace}/{node_name}: {e}")
             return []
 
-    def get_service_servers_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
-    ) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_service_servers_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Get service servers for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"{CACHE_SERVICE_SERVERS}_{node_namespace}_{node_name}"
-
         try:
-            # Attempt to get data from cache
-            service_servers = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if service_servers is None:
-                service_servers = self.node.get_service_names_and_types_by_node(
-                    node_name=node_name, node_namespace=node_namespace
-                )
-                service_servers = sorted(service_servers, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, service_servers)
+            service_servers = self.node.get_service_names_and_types_by_node(
+                node_name=node_name, node_namespace=node_namespace
+            )
+            service_servers = sorted(service_servers, key=itemgetter(0))
 
             # Filter action-related services if requested
             if not self.app.settings.get_boolean("show-action-services"):
@@ -498,22 +446,15 @@ class ROS2Connector:
             print(f"Error getting service servers for node {node_namespace}/{node_name}: {e}")
             return []
 
-    def get_available_actions(self, use_cache: bool = True) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_available_actions(self) -> List[Tuple[str, List[str]]]:
         """Get available actions with caching support."""
         if not self.is_running or not self.node:
             return []
 
         try:
-            # Attempt to get data from cache
-            actions = self._get_from_cache(CACHE_ACTIONS) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if actions is None:
-                actions = get_action_names_and_types(node=self.node)
-                actions = sorted(actions, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(CACHE_ACTIONS, actions)
+            actions = get_action_names_and_types(node=self.node)
+            actions = sorted(actions, key=itemgetter(0))
 
             # Filter hidden actions if requested
             if not self.app.settings.get_boolean("show-hidden-actions"):
@@ -525,28 +466,17 @@ class ROS2Connector:
             print(f"Error getting actions: {e}")
             return []
 
-    def get_action_clients_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
-    ) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_action_clients_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Get action clients for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"{CACHE_ACTION_CLIENTS}_{node_namespace}_{node_name}"
-
         try:
-            # Attempt to get data from cache
-            action_clients = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if action_clients is None:
-                action_clients = get_action_client_names_and_types_by_node(
-                    node=self.node, remote_node_name=node_name, remote_node_namespace=node_namespace
-                )
-                action_clients = sorted(action_clients, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, action_clients)
+            action_clients = get_action_client_names_and_types_by_node(
+                node=self.node, remote_node_name=node_name, remote_node_namespace=node_namespace
+            )
+            action_clients = sorted(action_clients, key=itemgetter(0))
 
             # Filter hidden actions if requested
             if not self.app.settings.get_boolean("show-hidden-actions"):
@@ -558,28 +488,17 @@ class ROS2Connector:
             print(f"Error getting action clients for node {node_namespace}/{node_name}: {e}")
             return []
 
-    def get_action_servers_by_node(
-        self, node_name: str, node_namespace: str = "/", use_cache: bool = True
-    ) -> List[Tuple[str, List[str]]]:
+    @cached
+    def get_action_servers_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
         """Get action servers for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"{CACHE_ACTION_SERVERS}_{node_namespace}_{node_name}"
-
         try:
-            # Attempt to get data from cache
-            action_servers = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if action_servers is None:
-                action_servers = get_action_server_names_and_types_by_node(
-                    node=self.node, remote_node_name=node_name, remote_node_namespace=node_namespace
-                )
-                action_servers = sorted(action_servers, key=itemgetter(0))
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, action_servers)
+            action_servers = get_action_server_names_and_types_by_node(
+                node=self.node, remote_node_name=node_name, remote_node_namespace=node_namespace
+            )
+            action_servers = sorted(action_servers, key=itemgetter(0))
 
             # Filter hidden actions if requested
             if not self.app.settings.get_boolean("show-hidden-actions"):
@@ -592,25 +511,16 @@ class ROS2Connector:
             return []
 
     # Node-specific parameter methods with caching
-    def get_parameters_by_node(self, node_name: str, use_cache: bool = True) -> List[str]:
+    @cached
+    def get_parameters_by_node(self, node_name: str) -> List[str]:
         """Get parameters for a specific node with caching support."""
         if not self.is_running or not self.node:
             return []
 
-        cache_key = f"parameters_{node_name}"
-
         try:
-            # Attempt to get data from cache
-            parameters = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if parameters is None:
-                future = call_list_parameters(node=self.node, node_name=node_name)
-                parameters = future.result().result.names if future else []
-                parameters = sorted(parameters)  # Sort parameter names
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, parameters)
+            future = call_list_parameters(node=self.node, node_name=node_name)
+            parameters = future.result().result.names if future else []
+            parameters = sorted(parameters)
 
             # Filter out QoS parameters if requested
             if not self.app.settings.get_boolean("show-qos-parameters"):
@@ -622,27 +532,18 @@ class ROS2Connector:
             print(f"Error getting parameters for node {node_name}: {e}")
             return []
 
-    def get_parameter_value(self, node_name: str, parameter_name: str, use_cache: bool = True) -> Any:
+    @cached
+    def get_parameter_value(self, node_name: str, parameter_name: str) -> Any:
         """Get parameter value for a specific parameter with caching support."""
         if not self.is_running or not self.node:
             return None
 
-        cache_key = f"param_value_{node_name}_{parameter_name}"
-
         try:
-            # Attempt to get data from cache
-            param_value = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if param_value is None:
-                param_value = get_value(
-                    parameter_value=call_get_parameters(
-                        node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                    ).values[0]
-                )
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, param_value)
+            param_value = get_value(
+                parameter_value=call_get_parameters(
+                    node=self.node, node_name=node_name, parameter_names=[parameter_name]
+                ).values[0]
+            )
 
             return param_value
 
@@ -650,27 +551,18 @@ class ROS2Connector:
             print(f"Error getting parameter value for {node_name}/{parameter_name}: {e}")
             return None
 
-    def get_parameter_type(self, node_name: str, parameter_name: str, use_cache: bool = True) -> str:
+    @cached
+    def get_parameter_type(self, node_name: str, parameter_name: str) -> str:
         """Get parameter type for a specific parameter with caching support."""
         if not self.is_running or not self.node:
             return ""
 
-        cache_key = f"param_type_{node_name}_{parameter_name}"
-
         try:
-            # Attempt to get data from cache
-            param_type = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if param_type is None:
-                param_type = get_parameter_type_string(
-                    call_describe_parameters(node=self.node, node_name=node_name, parameter_names=[parameter_name])
-                    .descriptors[0]
-                    .type
-                )
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, param_type)
+            param_type = get_parameter_type_string(
+                call_describe_parameters(node=self.node, node_name=node_name, parameter_names=[parameter_name])
+                .descriptors[0]
+                .type
+            )
 
             return param_type
 
@@ -678,38 +570,27 @@ class ROS2Connector:
             print(f"Error getting parameter type for {node_name}/{parameter_name}: {e}")
             return ""
 
-    def get_parameter_info(self, node_name: str, parameter_name: str, use_cache: bool = True) -> Dict[str, Any]:
+    @cached
+    def get_parameter_info(self, node_name: str, parameter_name: str) -> Dict[str, Any]:
         """Get complete parameter information (type and value) with caching support."""
         if not self.is_running or not self.node:
             return {"type": "", "value": None}
 
-        cache_key = f"param_info_{node_name}_{parameter_name}"
-
         try:
-            # Attempt to get data from cache
-            param_info = self._get_from_cache(cache_key) if use_cache else None
+            param_descriptor = call_describe_parameters(
+                node=self.node, node_name=node_name, parameter_names=[parameter_name]
+            ).descriptors[0]
 
-            # If cache is empty or use_cache is False, fetch fresh data
-            if param_info is None:
-                # Get both type and value in one go for efficiency
-                # TODO maybe use: self.node.describe_parameter(param_name)
-                param_descriptor = call_describe_parameters(
+            param_type = get_parameter_type_string(param_descriptor.type)
+            param_read_only = param_descriptor.read_only
+
+            param_value = get_value(
+                parameter_value=call_get_parameters(
                     node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                ).descriptors[0]
+                ).values[0]
+            )
 
-                param_type = get_parameter_type_string(param_descriptor.type)
-                param_read_only = param_descriptor.read_only
-
-                param_value = get_value(
-                    parameter_value=call_get_parameters(
-                        node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                    ).values[0]
-                )
-
-                param_info = {"type": param_type, "value": param_value, "read_only": param_read_only}
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, param_info)
+            param_info = {"type": param_type, "value": param_value, "read_only": param_read_only}
 
             return param_info
 
@@ -718,23 +599,14 @@ class ROS2Connector:
             return {"type": "", "value": None}
 
     # Message and service class methods with caching
-    def get_message_class(self, topic_name: str, use_cache: bool = True) -> Any:
+    @cached(use_ttl=False)
+    def get_message_class(self, topic_name: str) -> Any:
         """Get message class for a specific topic with caching support."""
         if not self.is_running or not self.node:
             return None
 
-        cache_key = f"msg_class_{topic_name}"
-
         try:
-            # Attempt to get data from cache
-            msg_class = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if msg_class is None:
-                msg_class = get_msg_class(node=self.node, topic=topic_name, include_hidden_topics=True)
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, msg_class)
+            msg_class = get_msg_class(node=self.node, topic=topic_name, include_hidden_topics=True)
 
             return msg_class
 
@@ -742,23 +614,14 @@ class ROS2Connector:
             print(f"Error getting message class for topic {topic_name}: {e}")
             return None
 
-    def get_service_class(self, service_name: str, use_cache: bool = True) -> Any:
+    @cached(use_ttl=False)
+    def get_service_class(self, service_name: str) -> Any:
         """Get service class for a specific service with caching support."""
         if not self.is_running or not self.node:
             return None
 
-        cache_key = f"srv_class_{service_name}"
-
         try:
-            # Attempt to get data from cache
-            srv_class = self._get_from_cache(cache_key) if use_cache else None
-
-            # If cache is empty or use_cache is False, fetch fresh data
-            if srv_class is None:
-                srv_class = get_service_class(node=self.node, service_name=service_name, include_hidden_services=True)
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, srv_class)
+            srv_class = get_service_class(node=self.node, service_name=service_name, include_hidden_services=True)
 
             return srv_class
 
@@ -766,47 +629,35 @@ class ROS2Connector:
             print(f"Error getting service class for service {service_name}: {e}")
             return None
 
-    def get_action_class(self, action_name: str, use_cache: bool = True) -> Any:
+    @cached(use_ttl=False)
+    def get_action_class(self, action_name: str) -> Any:
         """Get action class for a specific action with caching support."""
         if not self.is_running or not self.node:
             return None
 
-        cache_key = f"action_class_{action_name}"
-
         try:
-            # Attempt to get data from cache
-            action_class = self._get_from_cache(cache_key) if use_cache else None
+            available_actions = self.get_available_actions()
+            action_type = None
+            for name, types in available_actions:
+                if name == action_name:
+                    action_type = types[0] if types else None
+                    break
 
-            # If cache is empty or use_cache is False, fetch fresh data
-            if action_class is None:
-                # TODO check if rosidl_runtime_py.utilities.get_action can be used here
-                available_actions = self.get_available_actions()
-                action_type = None
-                for name, types in available_actions:
-                    if name == action_name:
-                        action_type = types[0] if types else None
-                        break
+            if not action_type:
+                return None
 
-                if not action_type:
-                    return None
+            package_name, interface_type, action_name_only = action_type.split("/")
+            module_name = f"{package_name}.{interface_type}"
 
-                # Import the action class dynamically
-                package_name, interface_type, action_name_only = action_type.split("/")
-                module_name = f"{package_name}.{interface_type}"
-
-                module = importlib.import_module(module_name)
-                action_class = getattr(module, action_name_only)
-
-            # Store fresh data in cache
-            self._store_in_cache(cache_key, action_class)
-
-            return action_class
+            module = importlib.import_module(module_name)
+            return getattr(module, action_name_only)
 
         except Exception as e:
             print(f"Error getting action class for action {action_name}: {e}")
             return None
 
-    # Utility methods for message/service type names
+    # Utility methods for message/service type names # TODO refactor to get_interface_type_name?
+    @cached(use_ttl=False)
     def get_message_type_name(self, msg_class) -> str:
         """Get the full type name for a message class (e.g., 'geometry_msgs/msg/Twist')."""
         if not msg_class:
@@ -834,6 +685,7 @@ class ROS2Connector:
             message_name = msg_class.__name__
             return f"{package_name}/{message_type}/{message_name}"
 
+    @cached(use_ttl=False)
     def get_service_type_name(self, srv_class) -> str:
         """Get the full type name for a service class (e.g., 'std_srvs/srv/Empty')."""
         if not srv_class:
@@ -861,6 +713,7 @@ class ROS2Connector:
             service_name = srv_class.__name__
             return f"{package_name}/{service_type}/{service_name}"
 
+    @cached(use_ttl=False)
     def get_action_type_name(self, action_class) -> str:
         """Get the full type name for an action class (e.g., 'example_interfaces/action/Fibonacci')."""
         if not action_class:
@@ -937,10 +790,10 @@ class ROS2Connector:
         self.clear_cache()
 
         # Pre-populate caches with fresh data
-        self.get_available_nodes(use_cache=True)
-        self.get_available_topics(use_cache=True)
-        self.get_available_services(use_cache=True)
-        self.get_available_actions(use_cache=True)
+        self.get_available_nodes()
+        self.get_available_topics()
+        self.get_available_services()
+        self.get_available_actions()
 
     def log(self, message: str, level: str = "info") -> None:
         """Log a message with the specified severity level (debug, [info], warning, error, fatal)."""
