@@ -21,6 +21,7 @@
 # =============================================================================
 
 from typing import Callable
+import asyncio
 import threading
 
 import gi
@@ -42,6 +43,7 @@ class ContentPage(Adw.NavigationPage):
         searchable: bool = True,
         refreshable: bool = True,
         detachable: bool = True,
+        auto_refresh_on_realize: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -90,9 +92,9 @@ class ContentPage(Adw.NavigationPage):
         self.toast_overlay: Adw.ToastOverlay = builder.get_object("toast_overlay")
         self.banner: Adw.Banner = builder.get_object("banner")
 
-        self.content_stack: Gtk.Stack = builder.get_object("content_stack")
-        self.refresh_page: Adw.StatusPage = builder.get_object("refresh_page")
-        self.empty_search_page: Adw.StatusPage = builder.get_object("empty_search_page")
+        self.content_stack: Gtk.Stack = builder.get_object("content_stack")  # TODO why is there an extra stack?
+        self.refresh_page: Adw.StatusPage = builder.get_object("refresh_page")  # TODO is this still used?
+        self.empty_search_page: Adw.StatusPage = builder.get_object("empty_search_page")  # TODO is this still used?
         self.bottom_bar: Gtk.ActionBar = builder.get_object("bottom_bar")
 
         super().set_child(self.toolbar_view)
@@ -103,6 +105,7 @@ class ContentPage(Adw.NavigationPage):
         self.refresh_btn.set_visible(self.refreshable)
         self.detachable = detachable
         self.detach_btn.set_visible(self.detachable)
+        self.auto_refresh_on_realize = auto_refresh_on_realize
 
         # tags and search_text for filtering
         self.filter_tags: set[str] = set()
@@ -124,7 +127,6 @@ class ContentPage(Adw.NavigationPage):
             #     self.detach_kwargs[arg] = _locals[arg]
 
         self.refreshing = False
-        self.refresh_thread: threading.Thread = None
         self.refresh_fail_text = "Refresh yielded no results"
 
         self.pref_page = PrefPage()
@@ -141,8 +143,9 @@ class ContentPage(Adw.NavigationPage):
             self.nav_view.connect("pushed", self.update_breadcrumbs)
             self.nav_view.connect("popped", self.update_breadcrumbs)
 
-        # refresh the gui
-        GLib.idle_add(self.refresh)
+        # refresh the gui if allowed
+        if self.auto_refresh_on_realize:
+            GLib.idle_add(self.refresh, use_cache=True)
 
     def on_unrealize(self, *args):
         self.is_realized = False
@@ -153,16 +156,18 @@ class ContentPage(Adw.NavigationPage):
     def on_unmap(self, *args):
         self.is_mapped = False
 
-    def refresh(self):
+    def refresh(self, use_cache: bool = False):
         if self.refreshing:
             return
 
         # refresh started
         self.refreshing = True
         self.search_bar.set_search_mode(False)
-        self.refresh_spinner.start()
-        self.refresh_icon.set_visible(False)
         self.refresh_spinner.set_visible(True)
+        self.refresh_btn.set_can_target(False)
+        self.refresh_icon.set_visible(False)
+        self.content_stack.set_sensitive(False)
+        self.refresh_spinner.start()
 
         def background_task(*args):
             # TODO add, that if the ros2_connector is not running, a toast is shown
@@ -190,7 +195,9 @@ class ContentPage(Adw.NavigationPage):
 
             # finish refresh
             self.refresh_spinner.set_visible(False)
+            self.refresh_btn.set_can_target(True)
             self.refresh_icon.set_visible(True)
+            self.content_stack.set_sensitive(True)
             self.refresh_spinner.stop()
             self.refreshing = False
             return False  # Ensure idle_add runs once

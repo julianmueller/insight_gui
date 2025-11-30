@@ -196,16 +196,14 @@ class TopicRemapPage(ContentPage):
             self.show_toast(str(exc))
             return False
 
-        msg_class = self.ros2_connector.get_message_class(self.selected_topic, use_cache=False)
+        msg_class = self.ros2_connector.get_message_class(self.selected_topic)
         if not msg_class:
             self.show_toast("Could not determine message type")
             return False
 
         try:
             self.remap_pub = self.ros2_connector.add_publisher(msg_class, target_topic)
-            self.remap_sub = self.ros2_connector.add_subsciption(
-                msg_class, self.selected_topic, self._on_remap_message
-            )
+            self.remap_sub = self.ros2_connector.add_subsciption(msg_class, self.selected_topic, self._on_remap_message)
         except Exception as exc:
             self.show_toast(f"Failed to start remap: {exc}")
             self.stop_remap()

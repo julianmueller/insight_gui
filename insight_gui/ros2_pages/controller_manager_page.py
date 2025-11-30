@@ -165,19 +165,14 @@ class ControllerManagerPage(ContentPage):
 
                 tooltip_lines = []
                 if controller.claimed_interfaces:
-                    tooltip_lines.append(
-                        "Claimed interfaces:\n  "
-                        + "\n  ".join(sorted(controller.claimed_interfaces))
-                    )
+                    tooltip_lines.append("Claimed interfaces:\n  " + "\n  ".join(sorted(controller.claimed_interfaces)))
                 if controller.required_command_interfaces:
                     tooltip_lines.append(
-                        "Required command interfaces:\n  "
-                        + "\n  ".join(sorted(controller.required_command_interfaces))
+                        "Required command interfaces:\n  " + "\n  ".join(sorted(controller.required_command_interfaces))
                     )
                 if controller.required_state_interfaces:
                     tooltip_lines.append(
-                        "Required state interfaces:\n  "
-                        + "\n  ".join(sorted(controller.required_state_interfaces))
+                        "Required state interfaces:\n  " + "\n  ".join(sorted(controller.required_state_interfaces))
                     )
 
                 if tooltip_lines:
@@ -203,9 +198,7 @@ class ControllerManagerPage(ContentPage):
                 # Allow toggling only for controllers that support activation/deactivation.
                 if controller.state.lower() not in {"active", "inactive"}:
                     toggle_btn.set_sensitive(False)
-                    toggle_btn.set_tooltip_text(
-                        "Controller cannot be toggled in its current state"
-                    )
+                    toggle_btn.set_tooltip_text("Controller cannot be toggled in its current state")
 
                 row.add_suffix(toggle_btn)
                 group.add_row(row)
@@ -299,12 +292,8 @@ class ControllerManagerPage(ContentPage):
         type_name = getattr(controller_state, "type", "")
 
         claimed_interfaces = tuple(getattr(controller_state, "claimed_interfaces", []) or [])
-        required_command_interfaces = tuple(
-            getattr(controller_state, "required_command_interfaces", []) or []
-        )
-        required_state_interfaces = tuple(
-            getattr(controller_state, "required_state_interfaces", []) or []
-        )
+        required_command_interfaces = tuple(getattr(controller_state, "required_command_interfaces", []) or [])
+        required_state_interfaces = tuple(getattr(controller_state, "required_state_interfaces", []) or [])
 
         return ControllerInfo(
             name=name,
@@ -342,8 +331,7 @@ class ControllerManagerPage(ContentPage):
                 if not success:
                     self._restore_toggle(toggle_btn, previous_state)
                     failure_msg = (
-                        f"Failed to {'activate' if should_activate else 'deactivate'} "
-                        f"{controller_name}: {message}"
+                        f"Failed to {'activate' if should_activate else 'deactivate'} {controller_name}: {message}"
                     )
                     self.show_toast(
                         failure_msg,

@@ -85,6 +85,7 @@ class TransformsPage(ContentPage):
                 tooltip_text="Calculate transformation from source to target",
                 sensitive=False,
                 margin_top=12,
+                margin_bottom=12,
                 halign=Gtk.Align.CENTER,
                 css_classes=["suggested-action", "pill"],
             )
@@ -120,7 +121,6 @@ class TransformsPage(ContentPage):
             # get all the infos from the collected frames
             for frame_name, frame_info in self.frames_dict.items():
                 parent_frame = frame_info["parent"]
-                print(frame_info)
                 trans: TransformStamped = self.tf_buffer.lookup_transform(parent_frame, frame_name, rclpy.time.Time())
                 self.frames_dict[frame_name]["transform"] = trans
 
@@ -193,6 +193,7 @@ class TransformsPage(ContentPage):
         self.source_frame_row.set_selected(current_target_index)
         self.target_frame_row.set_selected(current_source_index)
 
+    # TODO this freezes the UI (at least when the two tfs are not connected)
     def on_calc_transform(self, *args):
         source_frame = self.source_frame_row.get_selected_item().get_string()
         target_frame = self.target_frame_row.get_selected_item().get_string()

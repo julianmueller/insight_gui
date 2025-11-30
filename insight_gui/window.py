@@ -115,7 +115,7 @@ class BaseWindow(Adw.ApplicationWindow):
 
     def on_refresh(self, *args):
         if self.current_page and self.current_page.refreshable:
-            self.current_page.refresh()
+            self.current_page.refresh(use_cache=False)
 
     def on_detach(self, *args):
         if self.current_page and self.current_page.detachable:
