@@ -28,7 +28,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gdk, Gio, GLib
 
-from insight_gui.pages import create_pages
+from insight_gui.pages import all_pages
 
 from insight_gui.ros2_pages.welcome_page import WelcomePage
 from insight_gui.ros2_pages.overview_page import OverviewPage
@@ -162,7 +162,7 @@ class BaseWindow(Adw.ApplicationWindow):
 class MainWindow(BaseWindow):
     __gtype_name__ = "MainWindow"
 
-    def __init__(self, **kwargs):
+    def __init__(self, start_page_id: str = None, **kwargs):
         super().__init__(**kwargs)
         super().set_default_size(1200, 800)
         super().set_size_request(400, 500)
@@ -183,7 +183,7 @@ class MainWindow(BaseWindow):
         self.menu_btn: Gtk.Button = builder.get_object("menu_btn")
         self.nav_views_stack: Gtk.Stack = builder.get_object("nav_views_stack")
 
-        self.page_groups = create_pages()
+        self.page_groups = all_pages
         self.stack_sidebar: StackSidebar = builder.get_object("stack_sidebar")
         self.stack_sidebar.set_stack(self.nav_views_stack)
         self.stack_sidebar.update_from_page_groups(self.page_groups)
@@ -196,11 +196,18 @@ class MainWindow(BaseWindow):
         welcome_nav_view.add(WelcomePage())
         self.nav_views_stack.add_named(welcome_nav_view, "welcome")
 
-        if self.app.settings.get_boolean("restore-last-page"):
+        # load page from cli arg
+        if start_page_id and self.nav_views_stack.get_child_by_name(start_page_id):
+            self.nav_views_stack.set_visible_child_name(start_page_id)
+
+        # load last page, if setting is enabled
+        elif self.app.settings.get_boolean("restore-last-page"):
             last_page = self.app.settings.get_string("last-page")
 
             if last_page and self.nav_views_stack.get_child_by_name(last_page):
                 self.nav_views_stack.set_visible_child_name(last_page)
+
+        # load welcome page per default
         else:
             self.nav_views_stack.set_visible_child_name("welcome")
 

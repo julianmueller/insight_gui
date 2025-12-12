@@ -158,253 +158,262 @@ class PageGroup(GObject.Object):
             return None
 
 
-def create_pages():
-    return [
-        PageGroup(
-            title="Packages",
-            pages=[
-                Page(
-                    title="Packages",
-                    subtitle="Browse all packages",
-                    icon_name="package-symbolic",
-                    page_id="pkg_list",
-                    nav_page_class=PackageListPage,
-                ),
-            ],
-        ),
-        PageGroup(
-            title="Nodes",
-            pages=[
-                Page(
-                    title="Node List",
-                    subtitle="Browse all active nodes",
-                    icon_name="token-symbolic",
-                    page_id="node_list",
-                    nav_page_class=NodeListPage,
-                ),
-                Page(
-                    title="Launch Files",
-                    subtitle="Browse launch files",
-                    icon_name="rocket-launch-symbolic",
-                    page_id="launch_list",
-                    nav_page_class=LaunchListPage,
-                ),
-                Page(
-                    title="Parameters",
-                    subtitle="Manage node parameters",
-                    icon_name="instant-mix-symbolic",
-                    page_id="param_list",
-                    nav_page_class=ParameterListPage,
-                ),
-                Page(
-                    title="Graph",
-                    subtitle="ROS2 computational graph",
-                    icon_name="graph3-symbolic",
-                    page_id="graph_page",
-                    nav_page_class=GraphPage,
-                ),
-            ],
-        ),
-        PageGroup(
-            title="Topics",
-            pages=[
-                Page(
-                    title="Topic List",
-                    subtitle="Browse topics",
-                    icon_name="list-t-symbolic",
-                    page_id="topic_list",
-                    nav_page_class=TopicListPage,
-                ),
-                Page(
-                    title="Publisher",
-                    subtitle="Publish to topics",
-                    icon_name="rss-feed-symbolic",
-                    page_id="topic_pub",
-                    nav_page_class=TopicPublisherPage,
-                ),
-                Page(
-                    title="Subscriber",
-                    subtitle="Subscribe to topics",
-                    icon_name="subscriptions-symbolic",
-                    page_id="topic_sub",
-                    nav_page_class=TopicSubscriberPage,
-                ),
-                Page(
-                    title="Image Viewer",
-                    subtitle="View image topics",
-                    icon_name="image-x-generic-symbolic",
-                    page_id="img_viewer",
-                    nav_page_class=ImageViewerPage,
-                ),
-                Page(
-                    title="Remap",
-                    subtitle="Remap topics",
-                    icon_name="tactic-symbolic",
-                    page_id="remap",
-                    nav_page_class=TopicRemapPage,
-                ),
-            ],
-        ),
-        PageGroup(
-            title="Services",
-            pages=[
-                Page(
-                    title="Service List",
-                    subtitle="Browse services",
-                    icon_name="list-s-symbolic",
-                    page_id="service_list",
-                    nav_page_class=ServiceListPage,
-                ),
-                Page(
-                    title="Service Caller",
-                    subtitle="Call services",
-                    icon_name="call-start-symbolic",
-                    page_id="srv_caller",
-                    nav_page_class=ServiceCallPage,
-                ),
-            ],
-        ),
-        PageGroup(
-            title="Actions",
-            pages=[
-                Page(
-                    title="Action List",
-                    subtitle="Browse actions",
-                    icon_name="list-a-symbolic",
-                    page_id="action_list",
-                    nav_page_class=ActionListPage,
-                ),
-                Page(
-                    title="Action Goal",
-                    subtitle="Send action goals",
-                    icon_name="emoji-flags-symbolic",
-                    page_id="action_goal",
-                    nav_page_class=ActionGoalPage,
-                ),
-            ],
-        ),
-        PageGroup(
-            title="Interfaces",
-            pages=[
-                Page(
-                    title="Interfaces",
-                    subtitle="Browse interface definitions",
-                    icon_name="shapes-symbolic",
-                    page_id="interface_browser",
-                    nav_page_class=InterfaceBrowserPage,
-                ),
-            ],
-        ),
-        PageGroup(
-            title="Transforms",
-            pages=[
-                Page(
-                    title="Transforms",
-                    subtitle="Inspect transformations",
-                    icon_name="coordinates-symbolic",
-                    page_id="tf",
-                    nav_page_class=TransformsPage,
-                ),
-                Page(
-                    title="Static Transform Broadcaster",
-                    subtitle="Broadcast to /tf_static",
-                    icon_name="bigtop-updates-symbolic",
-                    page_id="tf_static_broadcaster",
-                    nav_page_class=StaticTransformBroadcasterPage,
-                ),
-                Page(
-                    title="TF-Tree",
-                    subtitle="Inspect all TFs as a tree",
-                    icon_name="forest-symbolic",
-                    page_id="tf_tree",
-                    nav_page_class=TFTreePage,
-                ),
-            ],
-        ),
-        PageGroup(
-            title="Control",
-            pages=[
-                # TODO this was purely-vibe coded, so rework
-                # Page(
-                #     title="Controllers",
-                #     subtitle="Manage ros2_control controllers",
-                #     icon_name="memory-symbolic",
-                #     page_id="controllers",
-                #     nav_page_class=ControllerManagerPage,
-                # ),
-                Page(
-                    title="Joint States",
-                    subtitle="Manipulate joints",
-                    icon_name="sliders-horizontal-symbolic",
-                    page_id="joint_states",
-                    nav_page_class=JointStatesPage,
-                ),
-                Page(
-                    title="Teleoperator",
-                    subtitle="Teleoperate a robot",
-                    icon_name="gamepad-symbolic",
-                    page_id="teleop",
-                    nav_page_class=TeleoperatorPage,
-                ),
-            ],
-        ),
-        # PageGroup(
-        #     title="ROS Bags",
-        #     pages=[
-        #         Page(
-        #             title="Recorder",
-        #             subtitle="Record a ros2 bag",
-        #             icon_name="money-bag-symbolic",
-        #             page_id="bag_recorder",
-        #             nav_page_class=BagRecorderPage,
-        #         ),
-        #         Page(
-        #             title="Playback",
-        #             subtitle="Play a ros2 bag",
-        #             icon_name="money-bag-symbolic",
-        #             page_id="bag_player",
-        #             nav_page_class=BagPlayerPage,
-        #         )
-        #     ],
-        # ),
-        PageGroup(
-            title="Diagnostics",
-            pages=[
-                Page(
-                    title="Logger",
-                    subtitle="System logs",
-                    icon_name="logviewer-symbolic",
-                    page_id="logger",
-                    nav_page_class=LoggerPage,
-                ),
-                # Page(
-                #     title="Documentation",
-                #     subtitle="Look at the ros2 docs",
-                #     icon_name="docs-symbolic",
-                #     page_id="docs",
-                #     nav_page_class=DocumentationPage,
-                # ),
-                # Page(
-                #     title="Quality of Service",
-                #     subtitle="Inspect QoS statistics",
-                #     icon_name="editor-choice-symbolic",
-                #     page_id="qos",
-                #     nav_page_class=QualityOfServicePage,
-                # ),
-                Page(
-                    title="Multicast",
-                    subtitle="Test multicast send/receive",
-                    icon_name="cell-tower-symbolic",
-                    page_id="multicast",
-                    nav_page_class=MulticastPage,
-                ),
-                Page(
-                    title="Doctor",
-                    subtitle="System diagnostics",
-                    icon_name="doctor-symbolic",
-                    page_id="doctor",
-                    nav_page_class=DoctorPage,
-                ),
-            ],
-        ),
-    ]
+def get_all_page_ids() -> list[str]:
+    page_ids = []
+
+    for group in all_pages:
+        for page in group.pages:
+            page_ids.append(page.page_id)
+    return page_ids
+
+
+# Compute and cache all pages at import time so creation only happens once.
+all_pages = [
+    PageGroup(
+        title="Packages",
+        pages=[
+            Page(
+                title="Packages",
+                subtitle="Browse all packages",
+                icon_name="package-symbolic",
+                page_id="pkg_list",
+                nav_page_class=PackageListPage,
+            ),
+        ],
+    ),
+    PageGroup(
+        title="Nodes",
+        pages=[
+            Page(
+                title="Node List",
+                subtitle="Browse all active nodes",
+                icon_name="token-symbolic",
+                page_id="node_list",
+                nav_page_class=NodeListPage,
+            ),
+            Page(
+                title="Launch Files",
+                subtitle="Browse launch files",
+                icon_name="rocket-launch-symbolic",
+                page_id="launch_list",
+                nav_page_class=LaunchListPage,
+            ),
+            Page(
+                title="Parameters",
+                subtitle="Manage node parameters",
+                icon_name="instant-mix-symbolic",
+                page_id="param_list",
+                nav_page_class=ParameterListPage,
+            ),
+            Page(
+                title="Graph",
+                subtitle="ROS2 computational graph",
+                icon_name="graph3-symbolic",
+                page_id="graph_page",
+                nav_page_class=GraphPage,
+            ),
+        ],
+    ),
+    PageGroup(
+        title="Topics",
+        pages=[
+            Page(
+                title="Topic List",
+                subtitle="Browse topics",
+                icon_name="list-t-symbolic",
+                page_id="topic_list",
+                nav_page_class=TopicListPage,
+            ),
+            Page(
+                title="Publisher",
+                subtitle="Publish to topics",
+                icon_name="rss-feed-symbolic",
+                page_id="topic_pub",
+                nav_page_class=TopicPublisherPage,
+            ),
+            Page(
+                title="Subscriber",
+                subtitle="Subscribe to topics",
+                icon_name="subscriptions-symbolic",
+                page_id="topic_sub",
+                nav_page_class=TopicSubscriberPage,
+            ),
+            Page(
+                title="Image Viewer",
+                subtitle="View image topics",
+                icon_name="image-x-generic-symbolic",
+                page_id="img_viewer",
+                nav_page_class=ImageViewerPage,
+            ),
+            Page(
+                title="Remap",
+                subtitle="Remap topics",
+                icon_name="tactic-symbolic",
+                page_id="remap",
+                nav_page_class=TopicRemapPage,
+            ),
+        ],
+    ),
+    PageGroup(
+        title="Services",
+        pages=[
+            Page(
+                title="Service List",
+                subtitle="Browse services",
+                icon_name="list-s-symbolic",
+                page_id="service_list",
+                nav_page_class=ServiceListPage,
+            ),
+            Page(
+                title="Service Caller",
+                subtitle="Call services",
+                icon_name="call-start-symbolic",
+                page_id="srv_caller",
+                nav_page_class=ServiceCallPage,
+            ),
+        ],
+    ),
+    PageGroup(
+        title="Actions",
+        pages=[
+            Page(
+                title="Action List",
+                subtitle="Browse actions",
+                icon_name="list-a-symbolic",
+                page_id="action_list",
+                nav_page_class=ActionListPage,
+            ),
+            Page(
+                title="Action Goal",
+                subtitle="Send action goals",
+                icon_name="emoji-flags-symbolic",
+                page_id="action_goal",
+                nav_page_class=ActionGoalPage,
+            ),
+        ],
+    ),
+    PageGroup(
+        title="Interfaces",
+        pages=[
+            Page(
+                title="Interfaces",
+                subtitle="Browse interface definitions",
+                icon_name="shapes-symbolic",
+                page_id="interface_browser",
+                nav_page_class=InterfaceBrowserPage,
+            ),
+        ],
+    ),
+    PageGroup(
+        title="Transforms",
+        pages=[
+            Page(
+                title="Transforms",
+                subtitle="Inspect transformations",
+                icon_name="coordinates-symbolic",
+                page_id="tf",
+                nav_page_class=TransformsPage,
+            ),
+            Page(
+                title="Static Transform Broadcaster",
+                subtitle="Broadcast to /tf_static",
+                icon_name="bigtop-updates-symbolic",
+                page_id="tf_static_broadcaster",
+                nav_page_class=StaticTransformBroadcasterPage,
+            ),
+            Page(
+                title="TF-Tree",
+                subtitle="Inspect all TFs as a tree",
+                icon_name="forest-symbolic",
+                page_id="tf_tree",
+                nav_page_class=TFTreePage,
+            ),
+        ],
+    ),
+    PageGroup(
+        title="Control",
+        pages=[
+            # TODO this was purely-vibe coded, so rework
+            # Page(
+            #     title="Controllers",
+            #     subtitle="Manage ros2_control controllers",
+            #     icon_name="memory-symbolic",
+            #     page_id="controllers",
+            #     nav_page_class=ControllerManagerPage,
+            # ),
+            Page(
+                title="Joint States",
+                subtitle="Manipulate joints",
+                icon_name="sliders-horizontal-symbolic",
+                page_id="joint_states",
+                nav_page_class=JointStatesPage,
+            ),
+            Page(
+                title="Teleoperator",
+                subtitle="Teleoperate a robot",
+                icon_name="gamepad-symbolic",
+                page_id="teleop",
+                nav_page_class=TeleoperatorPage,
+            ),
+        ],
+    ),
+    # PageGroup(
+    #     title="ROS Bags",
+    #     pages=[
+    #         Page(
+    #             title="Recorder",
+    #             subtitle="Record a ros2 bag",
+    #             icon_name="money-bag-symbolic",
+    #             page_id="bag_recorder",
+    #             nav_page_class=BagRecorderPage,
+    #         ),
+    #         Page(
+    #             title="Playback",
+    #             subtitle="Play a ros2 bag",
+    #             icon_name="money-bag-symbolic",
+    #             page_id="bag_player",
+    #             nav_page_class=BagPlayerPage,
+    #         )
+    #     ],
+    # ),
+    PageGroup(
+        title="Diagnostics",
+        pages=[
+            Page(
+                title="Logger",
+                subtitle="System logs",
+                icon_name="logviewer-symbolic",
+                page_id="logger",
+                nav_page_class=LoggerPage,
+            ),
+            # Page(
+            #     title="Documentation",
+            #     subtitle="Look at the ros2 docs",
+            #     icon_name="docs-symbolic",
+            #     page_id="docs",
+            #     nav_page_class=DocumentationPage,
+            # ),
+            # Page(
+            #     title="Quality of Service",
+            #     subtitle="Inspect QoS statistics",
+            #     icon_name="editor-choice-symbolic",
+            #     page_id="qos",
+            #     nav_page_class=QualityOfServicePage,
+            # ),
+            Page(
+                title="Multicast",
+                subtitle="Test multicast send/receive",
+                icon_name="cell-tower-symbolic",
+                page_id="multicast",
+                nav_page_class=MulticastPage,
+            ),
+            Page(
+                title="Doctor",
+                subtitle="System diagnostics",
+                icon_name="doctor-symbolic",
+                page_id="doctor",
+                nav_page_class=DoctorPage,
+            ),
+        ],
+    ),
+]

@@ -53,10 +53,12 @@ APPLICATION_PATH = APPLICATION_ID.replace(".", "/")
 class InsightApplication(Adw.Application):
     __gtype_name__ = "InsightApplication"
 
-    def __init__(self):
+    def __init__(self, start_page_id: str = None):
         super().__init__(application_id=APPLICATION_ID)
         Gtk.init()
         Adw.init()
+
+        self._start_page_id = start_page_id
 
         # find the shared data directory
         self.share_dir = Path(get_package_share_directory("insight_gui")) / "data"
@@ -132,7 +134,9 @@ class InsightApplication(Adw.Application):
 
     def do_activate(self):
         if not self.main_window:
-            self.main_window = MainWindow(app=self, title="Insight", icon_name="insight")
+            self.main_window = MainWindow(
+                app=self, title="Insight", icon_name="insight", start_page_id=self._start_page_id
+            )
 
         action = Gio.SimpleAction.new("preferences", None)
         action.connect("activate", self.main_window.on_preferences_dialog)
