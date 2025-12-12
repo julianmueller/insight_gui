@@ -20,8 +20,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+import concurrent.futures
+import threading
 from typing import Callable
-import inspect
 
 import gi
 
@@ -32,6 +33,7 @@ from gi.repository import Gtk, Adw, GObject, GLib, Gio
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.breadcrumbs import BreadcrumbsBar
+from insight_gui.exceptions import RefreshCancelled
 
 
 class ContentPage(Adw.NavigationPage):
@@ -127,6 +129,9 @@ class ContentPage(Adw.NavigationPage):
 
         self.refreshing = False
         self.refresh_fail_text = "Refresh yielded no results"
+        self._active_refresh_token: object | None = None
+        self._refresh_cancel_event: threading.Event = threading.Event()
+        self._refresh_future: concurrent.futures.Future | None = None
 
         self.pref_page = PrefPage()
         self.content_stack.add_child(self.pref_page)
@@ -148,19 +153,60 @@ class ContentPage(Adw.NavigationPage):
 
     def on_unrealize(self, *args):
         self.is_realized = False
+        self.deprioritize_refresh()
 
     def on_map(self, *args):
         self.is_mapped = True
 
     def on_unmap(self, *args):
         self.is_mapped = False
+        self.deprioritize_refresh()
+
+    def cancel_refresh(self):
+        """Request cancellation of the current refresh, if any, and reset UI state."""
+        if self.refreshing:
+            self._end_refresh_ui()
+        if self._refresh_future:
+            self._refresh_future.cancel()
+        self._refresh_cancel_event.set()
+        self._active_refresh_token = None
+
+    def deprioritize_refresh(self):
+        """Lower priority of the current refresh so newer pages can run first."""
+        self._refresh_cancel_event.set()
+        if self._refresh_future:
+            self.app.reprioritize_worker_future(self._refresh_future, priority=self.app.WORKER_PRIORITY_LOW)
+
+    def is_refresh_cancelled(self, *, cancel_event: threading.Event | None = None) -> bool:
+        event = cancel_event or getattr(self, "_refresh_cancel_event", None)
+        return bool(event and event.is_set())
+
+    def wait_for_refresh_cancel(
+        self, timeout: float | None = None, *, cancel_event: threading.Event | None = None
+    ) -> bool:
+        """Block up to ``timeout`` seconds, returning True if cancellation is requested."""
+        event = cancel_event or getattr(self, "_refresh_cancel_event", None)
+        if event is None:
+            return False
+        return event.wait(timeout)
 
     def refresh(self):
         if self.refreshing:
             return
+        cancel_event = threading.Event()
+        refresh_token = object()
+        self._refresh_cancel_event = cancel_event
+        self._active_refresh_token = refresh_token
         self._start_refresh_ui()
 
-        def _finish(payload: object, error: Exception | None = None):
+        def _finish(
+            payload: object, error: Exception | None = None, *, refresh_token=refresh_token, cancel_event=cancel_event
+        ):
+            if refresh_token is not self._active_refresh_token:
+                return GLib.SOURCE_REMOVE
+            if cancel_event.is_set():
+                self._end_refresh_ui()
+                return GLib.SOURCE_REMOVE
             # retry later if not yet realized
             if not self.is_realized:
                 GLib.timeout_add(100, _finish, payload, error)
@@ -190,17 +236,32 @@ class ContentPage(Adw.NavigationPage):
 
             return GLib.SOURCE_REMOVE
 
+        def _handle_cancelled(*_args, refresh_token=refresh_token, cancel_event=cancel_event):
+            if refresh_token is not self._active_refresh_token:
+                return GLib.SOURCE_REMOVE
+            cancel_event.set()
+            self._end_refresh_ui()
+            return GLib.SOURCE_REMOVE
+
         def _on_done(fut):
             try:
                 result = fut.result()
                 error = None
+            except RefreshCancelled:
+                self.app.idle_add(_handle_cancelled)
+                return
+            except concurrent.futures.CancelledError:
+                self.app.idle_add(_handle_cancelled)
+                return
             except Exception as exc:
                 result = None
                 error = exc
             self.app.idle_add(_finish, result, error)
 
         try:
-            self.refresh_future = self.app.run_in_worker(self.refresh_bg, done_callback=_on_done)
+            self._refresh_future = self.app.run_in_worker(
+                self.refresh_bg, done_callback=_on_done, priority=self.app.WORKER_PRIORITY_HIGH
+            )
         except Exception as exc:
             self.app.idle_add(_finish, None, exc)
 

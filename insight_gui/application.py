@@ -22,11 +22,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import asyncio
 import concurrent.futures
-import threading
 from collections.abc import Callable
-from functools import partial
 from pathlib import Path
 
 # # HOTFIX for https://discourse.gnome.org/t/gtk4-efficiency-and-performance-in-x11-export-remote-drawing-mode/8786
@@ -44,6 +41,12 @@ from gi.repository import Gtk, Adw, GLib, Gio, Gdk
 # custom imports
 from insight_gui.window import MainWindow
 from insight_gui.ros2_connector import ROS2Connector
+from insight_gui.utils.background_worker import (
+    BackgroundWorker,
+    WORKER_PRIORITY_HIGH,
+    WORKER_PRIORITY_NORMAL,
+    WORKER_PRIORITY_LOW,
+)
 
 
 APPLICATION_ID = "com.github.julianmueller.Insight"
@@ -59,6 +62,10 @@ class InsightApplication(Adw.Application):
         Adw.init()
 
         self._start_page_id = start_page_id
+        self.worker = BackgroundWorker(max_workers=2)
+        self.WORKER_PRIORITY_HIGH = WORKER_PRIORITY_HIGH
+        self.WORKER_PRIORITY_NORMAL = WORKER_PRIORITY_NORMAL
+        self.WORKER_PRIORITY_LOW = WORKER_PRIORITY_LOW
 
         # find the shared data directory
         self.share_dir = Path(get_package_share_directory("insight_gui")) / "data"
@@ -85,18 +92,6 @@ class InsightApplication(Adw.Application):
 
         except Exception as e:
             print(f"Application: Could not initialize GSettings normally: {e}")
-
-        # Async machinery shared across widgets for background tasks
-        self._loop_ready = threading.Event()
-        self._worker_executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=1, thread_name_prefix="insight-worker"
-        )
-        self._asyncio_thread = threading.Thread(
-            target=self._run_asyncio_loop,
-            name="insight-asyncio",
-            daemon=True,
-        )
-        self._asyncio_thread.start()
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -159,11 +154,8 @@ class InsightApplication(Adw.Application):
 
     def shutdown(self, *args):
         self.ros2_connector.shutdown()
-        if getattr(self, "asyncio_loop", None):
-            self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
-            if hasattr(self, "_asyncio_thread"):
-                self._asyncio_thread.join(timeout=1)
-        self._worker_executor.shutdown(wait=False, cancel_futures=True)
+        if getattr(self, "worker", None):
+            self.worker.shutdown(wait=False, cancel_futures=True)
         Gtk.Application.quit(self)
         return GLib.SOURCE_REMOVE
 
@@ -188,41 +180,28 @@ class InsightApplication(Adw.Application):
             Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-    def _run_asyncio_loop(self):
-        # Dedicated asyncio loop for worker scheduling (no GLib event policy).
-        self.asyncio_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.asyncio_loop)
-        self._loop_ready.set()
-        try:
-            self.asyncio_loop.run_forever()
-        finally:
-            self.asyncio_loop.close()
-
     def run_in_worker(
         self,
         func: Callable,
         *args,
         done_callback: Callable[[concurrent.futures.Future], None] | None = None,
+        priority: int = WORKER_PRIORITY_NORMAL,
         **kwargs,
     ) -> concurrent.futures.Future:
-        """Run a blocking callable on the single worker thread.
+        """Run a blocking callable on the worker pool.
 
         The optional ``done_callback`` receives the resulting Future and is
-        executed in the worker thread context, so use ``idle_add`` if you need
-        to touch GTK from inside it.
+        executed in the worker thread context, so use GTK-safe handoff for UI.
+        ``priority`` is lower-is-higher (0 is highest) and only affects queued tasks.
         """
 
-        async def _runner():
-            loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(self._worker_executor, partial(func, *args, **kwargs))
+        return self.worker.run_in_worker(
+            func, *args, done_callback=done_callback, priority=priority, **kwargs
+        )
 
-        if not self._loop_ready.wait(timeout=1):
-            raise RuntimeError("Asyncio loop not ready")
-
-        future = asyncio.run_coroutine_threadsafe(_runner(), self.asyncio_loop)
-        if done_callback:
-            future.add_done_callback(done_callback)
-        return future
+    def reprioritize_worker_future(self, fut: concurrent.futures.Future, priority: int) -> bool:
+        """Lower or raise priority of a queued future if it has not started yet."""
+        return self.worker.reprioritize_worker_future(fut, priority=priority)
 
     def idle_add(self, func, *args, **kwargs) -> None:
         """Invoke `func` on the GTK/GLib main thread. Used for GUI updates."""

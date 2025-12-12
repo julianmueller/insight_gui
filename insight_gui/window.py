@@ -26,7 +26,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gdk, Gio, GLib
+from gi.repository import GObject, Gtk, Adw, Gdk, Gio, GLib
 
 from insight_gui.pages import all_pages
 
@@ -314,6 +314,6 @@ class DetachedWindow(BaseWindow):
         self.nav_page: Adw.NavigationPage = nav_page_class(**nav_page_kwargs)
         self.nav_view.add(self.nav_page)
 
-    @property
+    @GObject.Property(type=Adw.NavigationPage)
     def current_page(self) -> Adw.NavigationPage:
         return self.nav_view.get_visible_page()

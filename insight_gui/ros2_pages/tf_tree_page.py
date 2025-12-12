@@ -21,7 +21,6 @@
 # =============================================================================
 
 import yaml
-import time
 import math
 import numpy as np
 from contextlib import contextmanager
@@ -42,6 +41,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.widgets.content_page import ContentPage
+from insight_gui.exceptions import RefreshCancelled
 from insight_gui.widgets.buttons import PlayPauseButton
 from insight_gui.widgets.canvas import Canvas
 from insight_gui.widgets.canvas_blocks import TransformBlock
@@ -75,16 +75,20 @@ class TFTreePage(ContentPage):
     def refresh_bg(self) -> bool:
         self.canvas.clear()
         self._connections = []
+        cancel_event = self._refresh_cancel_event
 
         # TODO move these tf calls to the connector and enable caching
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
-        time.sleep(5.0)
+        if self.wait_for_refresh_cancel(timeout=5.0, cancel_event=cancel_event):
+            raise RefreshCancelled()
         self.lookup_time = self.ros2_connector.node.get_clock().now()
 
         # Get the frames from the buffer as YAML
         result = self.tf_buffer.all_frames_as_yaml()
         self._frames_dict = yaml.safe_load(result)
+        if self.is_refresh_cancelled(cancel_event=cancel_event):
+            raise RefreshCancelled()
 
         if isinstance(self._frames_dict, dict):
             return len(self._frames_dict) > 0

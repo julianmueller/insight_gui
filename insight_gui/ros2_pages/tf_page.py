@@ -21,7 +21,6 @@
 # =============================================================================
 
 import yaml
-import time
 
 import rclpy
 
@@ -37,6 +36,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio
 
 from insight_gui.widgets.content_page import ContentPage
+from insight_gui.exceptions import RefreshCancelled
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 
 
@@ -107,15 +107,19 @@ class TransformsPage(ContentPage):
         self.frames_dict = {}
 
     def refresh_bg(self) -> bool:
+        cancel_event = self._refresh_cancel_event
         super().show_toast("Listening to tf data for 5.0 seconds...")
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
-        time.sleep(5.0)
+        if self.wait_for_refresh_cancel(timeout=5.0, cancel_event=cancel_event):
+            raise RefreshCancelled()
         self.lookup_time = self.ros2_connector.node.get_clock().now()
 
         # Get the frames from the buffer as YAML
         result = self.tf_buffer.all_frames_as_yaml()
         self.frames_dict = yaml.safe_load(result)
+        if self.is_refresh_cancelled(cancel_event=cancel_event):
+            raise RefreshCancelled()
 
         if isinstance(self.frames_dict, dict):
             # get all the infos from the collected frames

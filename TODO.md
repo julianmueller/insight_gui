@@ -34,7 +34,7 @@
     - ~~a launch page to directly launch nodes with a set of arguments~~
     - ~~add an overview page, where all pages are shown as cards (and are maybe grouped? and ofc searchable)~~
     - ~~static~~/dynamic tf2 broadcaster
-    - tf inspection subpage (show the stuff that rviz shows)
+    - ~~tf inspection subpage (show the stuff that rviz shows)~~
     - service echo (listener)
     - qos info page
     - URDF/robot_description viewer
@@ -42,7 +42,7 @@
     - visualize/load/save octomaps
     - ros2control controller show/toggle page
     - monitor param changes
-    - remap page, where topics and be remapped to another name?
+    - ~~remap page, where topics and be remapped to another name?~~
     - documentation Page, with Links to the ros2 webpages? maybe even a webview renderer?
     - clock page with manipulation options
     - bookmarks page to save links to pages for later
@@ -91,6 +91,7 @@
         - add blacklists
         - for topics/services/actions show the type as a subtitle?
         - instead of opening the blocks as their (node/topic/etc) page, a graph_local_page is opened, which shows only this block with its connections
+    - info popup when last refresh happened
 
 - ros2 stuff
     - (optional) add every page of the gui as a ros2 executable, so a window with only this page starts
@@ -141,3 +142,4 @@
 - in pub:
     - when an exisiting topic is selected, then the topic name changed, the type changed and the name back to the suggested, an exisiting topic name will get a different type, which results in an error (RCLError)
 - in topics with multiple message type, only one row is shown with the msg type (separated by comma), which leads to a nonexisting interface_info page, make this into multiple rows
+- start Executable in terminal not working `undefined symbol: __libc_pthread_init, version GLIBC_PRIVATE`
