@@ -53,35 +53,35 @@ class NodeInfoPage(ContentPage):
         self.node_namespace = parsed_name.namespace
 
         # Publishers
-        self.publishers_group = self.pref_page.add_group(title="Publishers", empty_group_text="Node has no publishers")
+        self.publishers_group = self.pref_page.add_group(title="Publishers", placeholder_text="Node has no publishers")
 
         # Subscribers
         self.subscribers_group = self.pref_page.add_group(
-            title="Subscribers", empty_group_text="Node has no subscribers"
+            title="Subscribers", placeholder_text="Node has no subscribers"
         )
 
         # Service Servers
         self.service_servers_group = self.pref_page.add_group(
-            title="Service Servers", description="", empty_group_text="Node has no service servers"
+            title="Service Servers", description="", placeholder_text="Node has no service servers"
         )
 
         # Service Clients
         self.service_clients_group = self.pref_page.add_group(
-            title="Service Clients", empty_group_text="Node has no service clients"
+            title="Service Clients", placeholder_text="Node has no service clients"
         )
 
         # Action Servers
         self.action_servers_group = self.pref_page.add_group(
-            title="Action Servers", empty_group_text="Node has no action servers"
+            title="Action Servers", placeholder_text="Node has no action servers"
         )
 
         # Action Clients
         self.action_clients_group = self.pref_page.add_group(
-            title="Action Clients", empty_group_text="Node has no action clients"
+            title="Action Clients", placeholder_text="Node has no action clients"
         )
 
         # Parameters
-        self.parameters_group = self.pref_page.add_group(title="Parameters", empty_group_text="Node has no parameters")
+        self.parameters_group = self.pref_page.add_group(title="Parameters", placeholder_text="Node has no parameters")
 
     def refresh_bg(self) -> bool:
         # Publishers

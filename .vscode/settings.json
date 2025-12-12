@@ -30,4 +30,10 @@
         "*.ui": "xml"
     },
     "python.REPL.enableREPLSmartSend": false,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.extraPaths": [
+        "/usr/lib/python3/dist-packages",
+        "/usr/lib/python3/site-packages"
+    ],
 }

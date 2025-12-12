@@ -45,41 +45,43 @@ class ParameterListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Parameters List")
-        super().set_empty_page_text("Refresh to show parameters")
+        super().set_placeholder_text("Refresh to show parameters")
         super().set_search_entry_placeholder_text("Search for parameters")
 
         self.parameter_lists: Dict[PrefGroup] = {}
 
-    def refresh_bg(self) -> bool:
-        self.available_nodes = self.ros2_connector.get_available_nodes()
+    def refresh_bg(self):
+        available_nodes = self.ros2_connector.get_available_nodes()
 
-        if len(self.available_nodes) == 0:
-            self.pref_page.set_empty_group_text("No Parameters found. Refresh to try again.")
+        if len(available_nodes) == 0:
             return False
 
-        for node_name, node_namespace, node_full_name in sorted(self.available_nodes):
-            # get the namespace group of the action
-            param_list = self.ros2_connector.get_parameters_by_node(node_name=node_name)
-            if len(param_list) == 0:
+        parameters_by_node: Dict[str, list[tuple[str, Dict[str, object]]]] = {}
+
+        for node_name, _node_namespace, _node_full_name in sorted(available_nodes):
+            param_names = self.ros2_connector.get_parameters_by_node(node_name=node_name)
+            if not param_names:
                 continue
 
-            self.parameter_lists[node_name] = param_list
-        return len(self.parameter_lists) > 0
+            param_entries: list[tuple[str, Dict[str, object]]] = []
+            for param_name in sorted(param_names):
+                param_info = self.ros2_connector.get_parameter_info(node_name=node_name, parameter_name=param_name)
+                param_entries.append((param_name, param_info))
 
-    def refresh_ui(self):
+            if param_entries:
+                parameters_by_node[node_name] = param_entries
+
+        return parameters_by_node if parameters_by_node else False
+
+    def refresh_ui(self, parameters_by_node: Dict[str, list[tuple[str, Dict[str, object]]]]):
         # for every node with params add a group
-        for node_name, param_list in sorted(self.parameter_lists.items(), key=itemgetter(0)):
+        for node_name, param_entries in sorted(parameters_by_node.items(), key=itemgetter(0)):
             # create a group and add all parameters
             group = self.pref_page.add_group(title=node_name)
-            for param_name in sorted(param_list):
-                param_info = self.ros2_connector.get_parameter_info(node_name=node_name, parameter_name=param_name)
-                param_type = param_info["type"]
-                param_value = param_info["value"]
-                param_read_only = param_info["read_only"]
-
-                # TODO use the following instead of ros2param
-                # param: Parameter = self.ros2_connector.node.get_parameter(param_name)
-                # param.name, (param_to_python func) param.type_, param.value
+            for param_name, param_info in param_entries:
+                param_type = param_info.get("type", "")
+                param_value = param_info.get("value")
+                param_read_only = bool(param_info.get("read_only", False))
 
                 row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
                 row.set_subpage_link(

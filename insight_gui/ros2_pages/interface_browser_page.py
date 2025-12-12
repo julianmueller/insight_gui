@@ -43,7 +43,7 @@ class InterfaceBrowserPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Interface Browser")
-        super().set_empty_page_text("Refresh to show interfaces")
+        super().set_placeholder_text("Refresh to show interfaces")
         super().set_search_entry_placeholder_text("Search for interfaces")
 
         # filter buttons for interface types
@@ -108,7 +108,7 @@ class InterfaceBrowserPage(ContentPage):
                     subpage_kwargs={"interface_full_name": msg_type_full_name},
                 )
                 msg_rows.append(row)
-            msg_group.add_rows_idle(msg_rows)
+            msg_group.add_rows(msg_rows)
 
         # add all the service interfaces
         for pkg_name, srvs_list in sorted(self.available_srvs.items()):
@@ -127,7 +127,7 @@ class InterfaceBrowserPage(ContentPage):
                     subpage_kwargs={"interface_full_name": srv_type_full_name},
                 )
                 srv_rows.append(row)
-            srv_group.add_rows_idle(srv_rows)
+            srv_group.add_rows(srv_rows)
 
         # add all the action interfaces
         for pkg_name, actions_list in sorted(self.available_action_msgs.items()):
@@ -146,13 +146,13 @@ class InterfaceBrowserPage(ContentPage):
                     subpage_kwargs={"interface_full_name": act_type_full_name},
                 )
                 act_rows.append(row)
-            actions_group.add_rows_idle(act_rows)
+            actions_group.add_rows(act_rows)
 
         # sort the groups alphabetically by title
         self.pref_page.sort_groups()
 
         if self.pref_page.num_groups == 0:
-            self.pref_page.set_empty_page_text("No interfaces found. Refresh to try again.")
+            self.pref_page.set_placeholder_text("No interfaces found. Refresh to try again.")
 
     def reset_ui(self):
         self.pref_page.clear()

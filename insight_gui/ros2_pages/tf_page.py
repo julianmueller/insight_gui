@@ -103,7 +103,7 @@ class TransformsPage(ContentPage):
         self.source_frame_row.set_model(self.frames_list_store)
 
         # a group to display all the frames
-        self.frames_group = self.pref_page.add_group(title="Frames", empty_group_text="Refresh to show frames")
+        self.frames_group = self.pref_page.add_group(title="Frames", placeholder_text="Refresh to show frames")
         self.frames_dict = {}
 
     def refresh_bg(self) -> bool:
@@ -127,7 +127,7 @@ class TransformsPage(ContentPage):
             self.calc_button.set_sensitive(True)
             return True
         else:
-            self.frames_group.set_empty_group_text("No frames found. Refresh to try again.")
+            self.frames_group.set_placeholder_text("No frames found. Refresh to try again.")
             self.calc_button.set_sensitive(False)
             return False
 
@@ -169,7 +169,7 @@ class TransformsPage(ContentPage):
             self.frames_list_store.append(Gtk.StringObject.new(frame_name))
 
         # add all rows to the group
-        self.frames_group.add_rows_idle(frame_rows)
+        self.frames_group.add_rows(frame_rows)
         self.frames_group.set_description(f"Lookup time: {(self.lookup_time.nanoseconds / 1e9):.2f}")
 
         # Set the Gio.ListModel on the ComboRow

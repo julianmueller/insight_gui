@@ -60,12 +60,12 @@ class ServiceInfoPage(ContentPage):
 
         # Service Servers
         self.service_servers_group = self.pref_page.add_group(
-            title="Service Servers", empty_group_text="Service has no servers"
+            title="Service Servers", placeholder_text="Service has no servers"
         )
 
         # Service Clients
         self.service_clients_group = self.pref_page.add_group(
-            title="Service Clients", empty_group_text="Service has no clients"
+            title="Service Clients", placeholder_text="Service has no clients"
         )
 
     def refresh_bg(self) -> bool:

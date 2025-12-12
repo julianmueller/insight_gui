@@ -22,6 +22,7 @@
 
 import re
 import time
+import threading
 import importlib
 from typing import Callable, Dict, Any, Tuple, List
 from operator import itemgetter
@@ -77,6 +78,7 @@ def cached(_func=None, *, use_ttl: bool = True):
 
             if (
                 no_cache
+                or getattr(self, "force_no_cache", False)
                 or not (app_settings and app_settings.get_boolean("enable-caching"))
                 or (use_ttl and getattr(self, "CACHE_TTL", 0) <= 0)
                 or getattr(self, "CACHE_MAXSIZE", 0) <= 0
@@ -122,6 +124,7 @@ class ROS2Connector:
         self.CACHE_MAXSIZE = 128
         self._cache_wrappers: Dict[Callable, Callable] = {}
         self._cached_methods: List[Callable] = []
+        self._rpc_lock = threading.Lock()
 
         rclpy.init(args=None)
 
@@ -514,12 +517,16 @@ class ROS2Connector:
     @cached
     def get_parameters_by_node(self, node_name: str) -> List[str]:
         """Get parameters for a specific node with caching support."""
+        return []  # FIXME
+
         if not self.is_running or not self.node:
             return []
 
         try:
-            future = call_list_parameters(node=self.node, node_name=node_name)
-            parameters = future.result().result.names if future else []
+            with self._rpc_lock:
+                future = call_list_parameters(node=self.node, node_name=node_name)
+            response = future.result() if future else None
+            parameters = response.result.names if response else []
             parameters = sorted(parameters)
 
             # Filter out QoS parameters if requested
@@ -532,18 +539,20 @@ class ROS2Connector:
             print(f"Error getting parameters for node {node_name}: {e}")
             return []
 
-    @cached
+    # @cached
     def get_parameter_value(self, node_name: str, parameter_name: str) -> Any:
         """Get parameter value for a specific parameter with caching support."""
+        return None  # FIXME
+
         if not self.is_running or not self.node:
             return None
 
         try:
-            param_value = get_value(
-                parameter_value=call_get_parameters(
+            with self._rpc_lock:
+                values = call_get_parameters(
                     node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                ).values[0]
-            )
+                ).values
+            param_value = get_value(parameter_value=values[0]) if values else None
 
             return param_value
 
@@ -554,15 +563,21 @@ class ROS2Connector:
     @cached
     def get_parameter_type(self, node_name: str, parameter_name: str) -> str:
         """Get parameter type for a specific parameter with caching support."""
+        return ""  # FIXME
+
         if not self.is_running or not self.node:
             return ""
 
         try:
-            param_type = get_parameter_type_string(
-                call_describe_parameters(node=self.node, node_name=node_name, parameter_names=[parameter_name])
-                .descriptors[0]
-                .type
-            )
+            with self._rpc_lock:
+                descriptors = call_describe_parameters(
+                    node=self.node, node_name=node_name, parameter_names=[parameter_name]
+                ).descriptors
+
+            if not descriptors:
+                return ""
+
+            param_type = get_parameter_type_string(descriptors[0].type)
 
             return param_type
 
@@ -570,25 +585,33 @@ class ROS2Connector:
             print(f"Error getting parameter type for {node_name}/{parameter_name}: {e}")
             return ""
 
-    @cached
+    # @cached
     def get_parameter_info(self, node_name: str, parameter_name: str) -> Dict[str, Any]:
         """Get complete parameter information (type and value) with caching support."""
+        return {"type": "", "value": None, "read_only": False}  # FIXME
+
         if not self.is_running or not self.node:
-            return {"type": "", "value": None}
+            return {"type": "", "value": None, "read_only": False}
 
         try:
-            param_descriptor = call_describe_parameters(
-                node=self.node, node_name=node_name, parameter_names=[parameter_name]
-            ).descriptors[0]
-
-            param_type = get_parameter_type_string(param_descriptor.type)
-            param_read_only = param_descriptor.read_only
-
-            param_value = get_value(
-                parameter_value=call_get_parameters(
+            with self._rpc_lock:
+                descriptors = call_describe_parameters(
                     node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                ).values[0]
-            )
+                ).descriptors
+
+            if not descriptors:
+                return {"type": "", "value": None, "read_only": False}
+
+            param_descriptor = descriptors[0]
+            param_type = get_parameter_type_string(param_descriptor.type)
+            param_read_only = getattr(param_descriptor, "read_only", False)
+
+            with self._rpc_lock:
+                values = call_get_parameters(
+                    node=self.node, node_name=node_name, parameter_names=[parameter_name]
+                ).values
+
+            param_value = get_value(parameter_value=values[0]) if values else None
 
             param_info = {"type": param_type, "value": param_value, "read_only": param_read_only}
 
@@ -596,7 +619,7 @@ class ROS2Connector:
 
         except Exception as e:
             print(f"Error getting parameter info for {node_name}/{parameter_name}: {e}")
-            return {"type": "", "value": None}
+            return {"type": "", "value": None, "read_only": False}
 
     # Message and service class methods with caching
     @cached(use_ttl=False)

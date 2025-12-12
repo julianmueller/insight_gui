@@ -21,8 +21,7 @@
 # =============================================================================
 
 from typing import Callable
-import asyncio
-import threading
+import inspect
 
 import gi
 
@@ -145,7 +144,7 @@ class ContentPage(Adw.NavigationPage):
 
         # refresh the gui if allowed
         if self.auto_refresh_on_realize:
-            GLib.idle_add(self.refresh, use_cache=True)
+            self.refresh()
 
     def on_unrealize(self, *args):
         self.is_realized = False
@@ -156,11 +155,56 @@ class ContentPage(Adw.NavigationPage):
     def on_unmap(self, *args):
         self.is_mapped = False
 
-    def refresh(self, use_cache: bool = False):
+    def refresh(self):
         if self.refreshing:
             return
+        self._start_refresh_ui()
 
-        # refresh started
+        def _finish(payload: object, error: Exception | None = None):
+            # retry later if not yet realized
+            if not self.is_realized:
+                GLib.timeout_add(100, _finish, payload, error)
+                return GLib.SOURCE_REMOVE
+
+            try:
+                if error:
+                    self.show_toast(f"Refresh failed! Error: {error}")
+                    self.ros2_connector.log(f"Refresh failed! Error: {error}", level="error")
+                    payload = None
+
+                # Treat explicit False as a failure signal; everything else counts as success
+                if payload is False:
+                    self.show_banner(self.refresh_fail_text)
+                    return GLib.SOURCE_REMOVE
+
+                self.hide_banner()
+                try:
+                    self.reset_ui()
+                    self.refresh_ui()
+                except Exception as ui_exc:
+                    self.show_toast(f"Refresh UI failed! Error: {ui_exc}")
+                    self.ros2_connector.log(f"Refresh UI failed! Error: {ui_exc}", level="error")
+                    self.show_banner(self.refresh_fail_text)
+            finally:
+                self._end_refresh_ui()
+
+            return GLib.SOURCE_REMOVE
+
+        def _on_done(fut):
+            try:
+                result = fut.result()
+                error = None
+            except Exception as exc:
+                result = None
+                error = exc
+            self.app.idle_add(_finish, result, error)
+
+        try:
+            self.refresh_future = self.app.run_in_worker(self.refresh_bg, done_callback=_on_done)
+        except Exception as exc:
+            self.app.idle_add(_finish, None, exc)
+
+    def _start_refresh_ui(self):
         self.refreshing = True
         self.search_bar.set_search_mode(False)
         self.refresh_spinner.set_visible(True)
@@ -169,42 +213,13 @@ class ContentPage(Adw.NavigationPage):
         self.content_stack.set_sensitive(False)
         self.refresh_spinner.start()
 
-        def background_task(*args):
-            # TODO add, that if the ros2_connector is not running, a toast is shown
-            try:
-                refresh_result = self.refresh_bg()
-            except Exception as e:
-                self.show_toast(f"Refresh failed! Error: {e}")
-                self.ros2_connector.node.get_logger().error(f"Refresh failed! Error: {e}")
-                refresh_result = False
-
-            GLib.idle_add(finish_thread, refresh_result)
-
-        def finish_thread(refresh_result: bool):
-            if not self.is_realized:
-                # Delay execution until realized
-                GLib.timeout_add(100, finish_thread, refresh_result)
-                return False  # Stop idle_add, let timeout_add retry
-
-            if refresh_result:
-                self.hide_banner()
-                self.reset_ui()
-                self.refresh_ui()
-            else:
-                self.show_banner(self.refresh_fail_text)
-
-            # finish refresh
-            self.refresh_spinner.set_visible(False)
-            self.refresh_btn.set_can_target(True)
-            self.refresh_icon.set_visible(True)
-            self.content_stack.set_sensitive(True)
-            self.refresh_spinner.stop()
-            self.refreshing = False
-            return False  # Ensure idle_add runs once
-
-        # start the refresh thread
-        self.refresh_thread = threading.Thread(target=background_task, daemon=True)
-        self.refresh_thread.start()
+    def _end_refresh_ui(self):
+        self.refresh_spinner.stop()
+        self.content_stack.set_sensitive(True)
+        self.refresh_icon.set_visible(True)
+        self.refresh_btn.set_can_target(True)
+        self.refresh_spinner.set_visible(False)
+        self.refreshing = False
 
     def refresh_bg(self) -> bool:
         """Child class should override this with blocking, long-running computation."""
@@ -226,6 +241,7 @@ class ContentPage(Adw.NavigationPage):
             self.search_bar.set_search_mode(not self.search_bar.get_search_mode())
             # self.search_bar.set_search_mode(True)
 
+    # TODO rename everywhere into "trigger_primary_action"
     def trigger(self):
         """Child class should override this to trigger some primary action of the page."""
         pass
@@ -344,8 +360,8 @@ class ContentPage(Adw.NavigationPage):
     def set_search_entry_placeholder_text(self, text: str):
         self.search_entry.set_placeholder_text(str(text))
 
-    def set_empty_page_text(self, text: str):
-        self.pref_page.set_empty_page_text(str(text))
+    def set_placeholder_text(self, text: str):
+        self.pref_page.set_placeholder_text(str(text))
 
     def set_refresh_fail_text(self, text: str):
         self.refresh_fail_text = str(text)

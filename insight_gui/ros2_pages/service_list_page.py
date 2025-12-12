@@ -43,7 +43,7 @@ class ServiceListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Service List")
-        super().set_empty_page_text("No services to show")
+        super().set_placeholder_text("No services to show")
         super().set_search_entry_placeholder_text("Search for services")
         super().set_refresh_fail_text("No services found. Refresh to try again.")
 

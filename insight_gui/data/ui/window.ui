@@ -34,8 +34,8 @@
             <object class="AdwNavigationPage">
                 <property name="title">Navigation</property>
                 <property name="child">
-                    <object class="AdwToolbarView">
 
+                    <object class="AdwToolbarView">
                         <child type="top">
                             <object class="AdwHeaderBar" id="nav_header_bar">
                                 <child type="start">
@@ -164,7 +164,11 @@
                 <property name="title">Content</property>
 
                 <property name="child">
-                    <object class="GtkStack" id="content_stack">
+                    <!--
+                    add a stack here, even tho the adw.navpage could be used, to keep the pages loaded and not unload them on 
+                    also, so that the stack-sidebar can switch btw the pages
+                    -->
+                    <object class="GtkStack" id="nav_views_stack">
                         <property name="hhomogeneous">False</property>
                         <property name="vhomogeneous">False</property>
                     </object>

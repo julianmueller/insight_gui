@@ -42,28 +42,24 @@ class NodeListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Nodes")
-        super().set_empty_page_text("No nodes to show")
+        super().set_placeholder_text("No nodes to show")
         super().set_search_entry_placeholder_text("Search for nodes")
         super().set_refresh_fail_text("No active nodes found. Refresh to try again.")
 
         self.node_ns_groups: Dict[PrefGroup] = {}
 
-        # self.node_list_group = self.pref_page.add_group(empty_group_text="Refresh to show nodes")
+        # self.node_list_group = self.pref_page.add_group(placeholder_text="Refresh to show nodes")
 
     def refresh_bg(self) -> bool:
         self.available_nodes = self.ros2_connector.get_available_nodes()
 
         if len(self.available_nodes) == 0:
-            # self.node_list_group.set_empty_group_text("No nodes found. Refresh to try again.")
+            # self.node_list_group.set_placeholder_text("No nodes found. Refresh to try again.")
             return False
         return True
 
     def refresh_ui(self):
         for node_name, node_namespace, node_full_name in self.available_nodes:
-            # if the namespace is empty (root namespace) use an empty string
-            if node_namespace == "/":
-                node_namespace = ""
-
             # put all nodes in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-nodes-by-namespace"):
                 node_namespace = ""
@@ -72,7 +68,8 @@ class NodeListPage(ContentPage):
             if node_namespace in self.node_ns_groups.keys():
                 group = self.node_ns_groups[node_namespace]
             else:
-                group = self.pref_page.add_group(title=node_namespace)
+                subtitle = "root namespace" if node_namespace == "/" else ""
+                group = self.pref_page.add_group(title=node_namespace, description=subtitle)
                 self.node_ns_groups[node_namespace] = group
 
             row = PrefRow(title=node_name, subtitle=node_full_name)

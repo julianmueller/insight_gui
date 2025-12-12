@@ -44,7 +44,7 @@ class LaunchListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Launch Files")
-        super().set_empty_page_text("Refresh to show packages with launch files")
+        super().set_placeholder_text("Refresh to show packages with launch files")
         super().set_search_entry_placeholder_text("Search for Packages with Launch Files")
 
         self.pkg_launch_groups: Dict[PrefGroup] = {}
@@ -104,7 +104,7 @@ class LaunchListPage(ContentPage):
                 )
                 rows.append(row)
 
-            group.add_rows_idle(rows)
+            group.add_rows(rows)
 
             # set the subtitle of the group to the package path and number of launch files
             num_launch_files = len(pkg_info["launch_files"])

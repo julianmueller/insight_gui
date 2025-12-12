@@ -126,7 +126,7 @@ class PageGroup(GObject.Object):
         self._group_id = group_id
         self._pages = pages
 
-    @property
+    @GObject.Property(type=int)
     def num_pages(self) -> int:
         return len(self._pages)
 
@@ -324,13 +324,14 @@ def create_pages():
         PageGroup(
             title="Control",
             pages=[
-                Page(
-                    title="Controllers",
-                    subtitle="Manage ros2_control controllers",
-                    icon_name="memory-symbolic",
-                    page_id="controllers",
-                    nav_page_class=ControllerManagerPage,
-                ),
+                # TODO this was purely-vibe coded, so rework
+                # Page(
+                #     title="Controllers",
+                #     subtitle="Manage ros2_control controllers",
+                #     icon_name="memory-symbolic",
+                #     page_id="controllers",
+                #     nav_page_class=ControllerManagerPage,
+                # ),
                 Page(
                     title="Joint States",
                     subtitle="Manipulate joints",

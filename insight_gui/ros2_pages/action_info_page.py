@@ -64,12 +64,12 @@ class ActionInfoPage(ContentPage):
 
         # Action Servers
         self.action_servers_group = self.pref_page.add_group(
-            title="Action Servers", empty_group_text="action has no servers"
+            title="Action Servers", placeholder_text="action has no servers"
         )
 
         # Subscribers
         self.action_clients_group = self.pref_page.add_group(
-            title="Action Clients", empty_group_text="action has no clients"
+            title="Action Clients", placeholder_text="action has no clients"
         )
 
     def refresh_bg(self) -> bool:

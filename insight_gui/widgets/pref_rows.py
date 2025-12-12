@@ -37,13 +37,14 @@ class PrefRowInterface(GObject.GObject):
 
     __gtype_name__ = "PrefRowInterface"
 
+    is_filtered = GObject.Property(type=bool, default=False)
+
     def __init__(self):
         super().__init__()
         self._filter_text = ""
-        self._tags: set[str] = set()
+        self._filter_tags: set[str] = set()
 
         # Store initial visibility
-        self._is_filtered = False
         self._visibility_before_filter = self.get_visible()
 
     @GObject.Property(type=bool, default=False)
@@ -52,40 +53,37 @@ class PrefRowInterface(GObject.GObject):
 
     @GObject.Property(type=str, default="")
     def filter_text(self) -> str:
+        """The text used for filtering the row."""
         return self._filter_text.lower()
 
     @filter_text.setter
     def filter_text(self, value: str):
         self._filter_text = str(value).lower()
 
-    @GObject.Property(type=bool, default=False)
-    def is_filtered(self) -> bool:
-        return self._is_filtered
+    def has_filter_tag(self, tag) -> bool:
+        return tag in self._filter_tags
 
-    def has_tag(self, tag) -> bool:
-        return tag in self._tags
+    def add_filter_tag(self, tag):
+        self._filter_tags.add(tag)
 
-    def add_tag(self, tag):
-        self._tags.add(tag)
-
-    def remove_tag(self, tag):
-        self._tags.discard(tag)
+    def remove_filter_tag(self, tag):
+        self._filter_tags.discard(tag)
 
     # filters (hides) the row but remembers its original visibility
     def set_filtered(self, visible: bool) -> bool:
-        if not self._is_filtered:
+        if not self.is_filtered:
             self._visibility_before_filter = self.get_visible()
 
         if self._visibility_before_filter:
             self.set_visible(visible)
 
-        self._is_filtered = True
+        self.is_filtered = True
 
     # restores original visibility before the filtering
     def set_unfiltered(self):
-        if self._is_filtered:
+        if self.is_filtered:
             self.set_visible(self._visibility_before_filter)
-            self._is_filtered = False
+            self.is_filtered = False
 
 
 class PrefRow(Adw.ActionRow, PrefRowInterface):
@@ -139,7 +137,7 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
             super().add_css_class(css_class)
 
         for tag in tags:
-            self.add_tag(tag)
+            self.add_filter_tag(tag)
 
         self.next_page_icon: Gtk.Image = Gtk.Image(icon_name="go-next-symbolic", visible=False)
         self.add_suffix(self.next_page_icon)

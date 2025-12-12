@@ -22,7 +22,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-# import os
+import asyncio
+import concurrent.futures
+import threading
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 # # HOTFIX for https://discourse.gnome.org/t/gtk4-efficiency-and-performance-in-x11-export-remote-drawing-mode/8786
@@ -79,6 +83,18 @@ class InsightApplication(Adw.Application):
 
         except Exception as e:
             print(f"Application: Could not initialize GSettings normally: {e}")
+
+        # Async machinery shared across widgets for background tasks
+        self._loop_ready = threading.Event()
+        self._worker_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="insight-worker"
+        )
+        self._asyncio_thread = threading.Thread(
+            target=self._run_asyncio_loop,
+            name="insight-asyncio",
+            daemon=True,
+        )
+        self._asyncio_thread.start()
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -139,6 +155,11 @@ class InsightApplication(Adw.Application):
 
     def shutdown(self, *args):
         self.ros2_connector.shutdown()
+        if getattr(self, "asyncio_loop", None):
+            self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
+            if hasattr(self, "_asyncio_thread"):
+                self._asyncio_thread.join(timeout=1)
+        self._worker_executor.shutdown(wait=False, cancel_futures=True)
         Gtk.Application.quit(self)
         return GLib.SOURCE_REMOVE
 
@@ -162,3 +183,48 @@ class InsightApplication(Adw.Application):
         Gtk.StyleContext.add_provider_for_display(
             Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
+
+    def _run_asyncio_loop(self):
+        # Dedicated asyncio loop for worker scheduling (no GLib event policy).
+        self.asyncio_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.asyncio_loop)
+        self._loop_ready.set()
+        try:
+            self.asyncio_loop.run_forever()
+        finally:
+            self.asyncio_loop.close()
+
+    def run_in_worker(
+        self,
+        func: Callable,
+        *args,
+        done_callback: Callable[[concurrent.futures.Future], None] | None = None,
+        **kwargs,
+    ) -> concurrent.futures.Future:
+        """Run a blocking callable on the single worker thread.
+
+        The optional ``done_callback`` receives the resulting Future and is
+        executed in the worker thread context, so use ``idle_add`` if you need
+        to touch GTK from inside it.
+        """
+
+        async def _runner():
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(self._worker_executor, partial(func, *args, **kwargs))
+
+        if not self._loop_ready.wait(timeout=1):
+            raise RuntimeError("Asyncio loop not ready")
+
+        future = asyncio.run_coroutine_threadsafe(_runner(), self.asyncio_loop)
+        if done_callback:
+            future.add_done_callback(done_callback)
+        return future
+
+    def idle_add(self, func, *args, **kwargs) -> None:
+        """Invoke `func` on the GTK/GLib main thread. Used for GUI updates."""
+
+        def _wrapper():
+            func(*args, **kwargs)
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(_wrapper)

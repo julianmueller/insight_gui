@@ -44,24 +44,24 @@ class DoctorPage(ContentPage):
         super().set_search_entry_placeholder_text("Ask the doctor")
 
         self.network_config_group = self.pref_page.add_group(
-            title="NETWORK CONFIGURATION", empty_group_text="Refresh to show network configuration"
+            title="NETWORK CONFIGURATION", placeholder_text="Refresh to show network configuration"
         )
         self.package_versions_group = self.pref_page.add_group(
-            title="PACKAGE VERSIONS", empty_group_text="Refresh to show package versions"
+            title="PACKAGE VERSIONS", placeholder_text="Refresh to show package versions"
         )
         self.platform_info_group = self.pref_page.add_group(
-            title="PLATFORM INFORMATION", empty_group_text="Refresh to show platform information"
+            title="PLATFORM INFORMATION", placeholder_text="Refresh to show platform information"
         )
         self.qos_compatibility_group = self.pref_page.add_group(
-            title="QOS COMPATIBILITY LIST", empty_group_text="Refresh to show QoS compatibility list"
+            title="QOS COMPATIBILITY LIST", placeholder_text="Refresh to show QoS compatibility list"
         )
         self.rmw_info_group = self.pref_page.add_group(
-            title="RMW MIDDLEWARE", empty_group_text="Refresh to show RMW middleware"
+            title="RMW MIDDLEWARE", placeholder_text="Refresh to show RMW middleware"
         )
         self.ros2_info_group = self.pref_page.add_group(
-            title="ROS2 INFORMATION", empty_group_text="Refresh to show ROS2 information"
+            title="ROS2 INFORMATION", placeholder_text="Refresh to show ROS2 information"
         )
-        self.topic_list_group = self.pref_page.add_group(title="TOPIC LIST", empty_group_text="Refresh to show topics")
+        self.topic_list_group = self.pref_page.add_group(title="TOPIC LIST", placeholder_text="Refresh to show topics")
 
     def refresh_bg(self) -> bool:
         self.reports = generate_reports()
@@ -75,7 +75,7 @@ class DoctorPage(ContentPage):
                     self.network_config_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
 
                 if self.network_config_group.num_rows == 0:
-                    self.network_config_group.set_empty_group_text(
+                    self.network_config_group.set_placeholder_text(
                         "No network configuration found. Refresh to try again."
                     )
 
@@ -90,19 +90,19 @@ class DoctorPage(ContentPage):
                     if latest_version != local_version:
                         row.add_prefix_icon("software-update-available-symbolic", tooltip_text="Update available")
                     rows.append(row)
-                self.package_versions_group.add_rows_idle(rows)
+                self.package_versions_group.add_rows(rows)
 
                 if self.package_versions_group.num_rows == 0:
-                    self.package_versions_group.set_empty_group_text("No package versions found.")
+                    self.package_versions_group.set_placeholder_text("No package versions found.")
 
             elif report.name == "PLATFORM INFORMATION":
                 rows = []
                 for item in sorted(report.items):
                     rows.append(PrefRow(title=item[0], subtitle=item[1]))
-                self.platform_info_group.add_rows_idle(rows)
+                self.platform_info_group.add_rows(rows)
 
                 if self.platform_info_group.num_rows == 0:
-                    self.platform_info_group.set_empty_group_text(
+                    self.platform_info_group.set_placeholder_text(
                         "No platform information found. Refresh to try again."
                     )
 
@@ -127,13 +127,13 @@ class DoctorPage(ContentPage):
                         else:
                             row.add_prefix_icon("dialog-error-symbolic")
                         rows.append(row)
-                    self.qos_compatibility_group.add_rows_idle(rows)
+                    self.qos_compatibility_group.add_rows(rows)
 
                 # for item in report.items:
                 #     self.qos_compatibility_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
 
                 if self.qos_compatibility_group.num_rows == 0:
-                    self.qos_compatibility_group.set_empty_group_text(
+                    self.qos_compatibility_group.set_placeholder_text(
                         "No QoS compatibility list found. Refresh to try again."
                     )
 
@@ -141,10 +141,10 @@ class DoctorPage(ContentPage):
                 rows = []
                 for item in sorted(report.items):
                     rows.append(PrefRow(title=item[0], subtitle=item[1]))
-                self.rmw_info_group.add_rows_idle(rows)
+                self.rmw_info_group.add_rows(rows)
 
                 if self.rmw_info_group.num_rows == 0:
-                    self.rmw_info_group.set_empty_group_text("No RMW middleware found. Refresh to try again.")
+                    self.rmw_info_group.set_placeholder_text("No RMW middleware found. Refresh to try again.")
 
             elif report.name == "ROS 2 INFORMATION":
                 rows = []
@@ -152,10 +152,10 @@ class DoctorPage(ContentPage):
                     row = PrefRow(title=item[0], subtitle=item[1])
                     row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.toast_overlay))
                     rows.append(row)
-                self.ros2_info_group.add_rows_idle(rows)
+                self.ros2_info_group.add_rows(rows)
 
                 if self.ros2_info_group.num_rows == 0:
-                    self.ros2_info_group.set_empty_group_text("No ROS 2 information found. Refresh to try again.")
+                    self.ros2_info_group.set_placeholder_text("No ROS 2 information found. Refresh to try again.")
 
             elif report.name == "TOPIC LIST":
                 rows = []
@@ -173,10 +173,10 @@ class DoctorPage(ContentPage):
                     else:
                         row.add_prefix_icon("dialog-error-symbolic")
                     rows.append(row)
-                self.topic_list_group.add_rows_idle(rows)
+                self.topic_list_group.add_rows(rows)
 
                 if self.topic_list_group.num_rows == 0:
-                    self.topic_list_group.set_empty_group_text("No topics found. Refresh to try again.")
+                    self.topic_list_group.set_placeholder_text("No topics found. Refresh to try again.")
 
     def reset_ui(self):
         self.network_config_group.clear()

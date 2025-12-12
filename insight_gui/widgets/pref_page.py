@@ -20,19 +20,22 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import re
-
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import GObject, Gtk, Adw, Gio
 
 from insight_gui.widgets.pref_group import PrefGroup
 
 
 class PrefPage(Adw.PreferencesPage):
+    """Custom wrapper class around Adw.PreferencesPage to manage preference groups and their rows."""
+
     __gtype_name__ = "PrefPage"
+
+    groups = GObject.Property(type=Gio.ListStore)
+    placeholder_group = GObject.Property(type=PrefGroup)
 
     def __init__(
         self,
@@ -40,7 +43,7 @@ class PrefPage(Adw.PreferencesPage):
         title: str = "Preferences",
         icon_name: str = "settings-symbolic",
         description: str = "",
-        empty_page_text: str = "page is empty",
+        placeholder_text: str = "page is empty",
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -51,17 +54,36 @@ class PrefPage(Adw.PreferencesPage):
         if description:
             super().set_description(str(description))
 
-        self.groups: list[PrefGroup] = []
-        self.empty_group = PrefGroup(sensitive=False, empty_group_text=empty_page_text)
-        super().add(self.empty_group)
+        self.groups: Gio.ListStore = Gio.ListStore(item_type=PrefGroup.__gtype__)
+        self.groups.connect("items-changed", self._on_groups_changed)
 
-    @property
+        self.placeholder_group = PrefGroup(sensitive=False, placeholder_text=placeholder_text)
+        self.set_placeholder_text(placeholder_text)
+        self.bind_property("is-empty", self.placeholder_group, "visible", GObject.BindingFlags.SYNC_CREATE)
+        super().add(self.placeholder_group)
+
+    @GObject.Property(type=int, default=0)
     def num_groups(self) -> int:
-        return len(self.groups)
+        return self.groups.get_n_items()
 
-    @property
+    @GObject.Property(type=bool, default=True)
     def is_empty(self) -> bool:
         return self.num_groups == 0
+
+    @GObject.Property(type=str, default="page is empty")
+    def placeholder_text(self) -> str:
+        return self.placeholder_group.get_placeholder_text()
+
+    @placeholder_text.setter
+    def placeholder_text(self, value: str) -> None:
+        self.placeholder_group.set_placeholder_text(str(value))
+
+    def _on_groups_changed(self, *args) -> None:
+        self.notify("num-groups")
+        self.notify("is-empty")
+
+    def set_placeholder_text(self, text: str) -> None:
+        self.placeholder_text = text
 
     def add(self, *args, **kwargs):
         raise NotImplementedError("use 'add_group' instead")
@@ -71,107 +93,84 @@ class PrefPage(Adw.PreferencesPage):
         *,
         title: str = "",
         description: str = "",
-        empty_group_text: str = "group is empty",
         filterable: bool = True,
         **kwargs,
     ) -> PrefGroup:
-        self.empty_group.set_visible(False)
-
         # check if pref group already exists
         pref_group = self.get_group(title)
         if pref_group:
             return pref_group
 
         else:
-            pref_group = PrefGroup(
-                title=title, description=description, empty_group_text=empty_group_text, filterable=filterable, **kwargs
-            )
+            pref_group = PrefGroup(title=title, description=description, filterable=filterable, **kwargs)
             super().add(pref_group)
             self.groups.append(pref_group)
             return pref_group
 
     def get_group(self, title: str) -> PrefGroup:
-        for group in self.groups:
+        """Returns the PrefGroup with the given title, or None if not found."""
+        for i in range(self.num_groups):
+            group = self.groups.get_item(i)
             if group.get_title() == title:
                 return group
         else:
             return None
 
     def sort_groups(self, reverse=False):
-        """Sorts the groups by a given key."""
-        self.groups.sort(key=lambda g: g.get_title(), reverse=reverse)
-        for group in self.groups:
+        """Sorts the groups by their title."""
+        # materialize current groups, sort, then re-apply order in the store and on the page
+        current = [self.groups.get_item(i) for i in range(self.groups.get_n_items())]
+        current.sort(key=lambda g: g.get_title(), reverse=reverse)
+
+        # remove all groups from the page
+        for group in current:
             super().remove(group)
-        # Re-add the groups to the page to update their order
-        for group in self.groups:
+
+        # clear the store
+        while self.groups.get_n_items() > 0:
+            self.groups.remove(0)
+
+        # re-add groups in sorted order
+        for group in current:
             super().add(group)
+            self.groups.append(group)
 
     def remove_group(self, pref_group: PrefGroup):
         super().remove(pref_group)
-        self.groups.remove(pref_group)
+        # find index and remove from the store
+        index = None
+        for i in range(self.groups.get_n_items()):
+            if self.groups.get_item(i) == pref_group:
+                index = i
+                break
+        if index is not None:
+            self.groups.remove(index)
 
     def clear(self):
-        for pref_group in reversed(self.groups):
+        # remove groups from page and clear the ListStore
+        # remove in reverse order to be safe
+        while self.groups.get_n_items() > 0:
+            idx = self.groups.get_n_items() - 1
+            pref_group = self.groups.get_item(idx)
             self.remove_group(pref_group)
-        self.empty_group.set_visible(True)
-        self.groups = []
 
     def apply_filters(self, search_str: str, search_tags: set[str] = None):
-        """Filters groups and rows based on a search query."""
-        # TODO make this also handle tags of rows
-
-        # If the search text is empty, restore original visibility
+        """Filters groups and rows using Gtk.FilterListModel on each group."""
+        search_tags = search_tags or set()
         if not search_str.strip() and not search_tags:
             self.reset_filtering()
             return
 
-        # Compile the regex pattern beforehand to avoid repeated compilation
-        try:
-            str_parts = [re.escape(part) for part in search_str.strip().split()]
-            fuzzy_pattern = ".*?".join(str_parts)  # Match any characters between the letters
-            regex = re.compile(fuzzy_pattern, re.IGNORECASE)
-        except re.error as e:
-            print(f"Regex error: {e}")
-            self.reset_filtering()
-            return
-
-        # Filtering process
-        for group in self.groups:
+        for i in range(self.groups.get_n_items()):
+            group = self.groups.get_item(i)
             if not group.filterable:
                 continue
-
-            group_matches = bool(search_str and group.filter_text and regex.search(group.filter_text))
-            any_row_matches = False
-
-            for row in group.rows:
-                if not getattr(row, "filterable", False):
-                    continue
-
-                # Check if the row matches the search text
-                row_matches = bool(row.filter_text and regex.search(row.filter_text))
-
-                # Check if the row matches any of the tags to keep
-                if search_tags:
-                    row_matches &= any(row.has_tag(tag) for tag in search_tags)
-
-                if row_matches:
-                    row.set_filtered(True)  # Show matching row
-                    any_row_matches = True
-                else:
-                    row.set_filtered(False)  # Hide non-matching row
-
-            # Show group if it matches or any row inside it matches
-            group.set_filtered(group_matches or any_row_matches)
+            group.apply_filter(search_str, search_tags)
 
     def reset_filtering(self):
         """Resets all groups and rows to their original visibility."""
-        for group in self.groups:
+        for i in range(self.groups.get_n_items()):
+            group = self.groups.get_item(i)
             if not group.filterable:
                 continue
-            group.set_unfiltered()
-            for row in group.rows:
-                if getattr(row, "filterable", False):
-                    row.set_unfiltered()
-
-    def set_empty_page_text(self, text: str):
-        self.empty_group.set_empty_group_text(text)
+            group.reset_filtering()

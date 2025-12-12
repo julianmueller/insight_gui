@@ -40,10 +40,10 @@ class PackageListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Package List")
-        super().set_empty_page_text("Refresh to show packages")
+        super().set_placeholder_text("Refresh to show packages")
         super().set_search_entry_placeholder_text("Search for Packages")
 
-        self.pkg_list_group = self.pref_page.add_group(empty_group_text="Refresh to show packages")
+        self.pkg_list_group = self.pref_page.add_group(placeholder_text="Refresh to show packages")
 
         self.new_pkg_btn = super().add_bottom_left_btn(
             label="New Package",
@@ -63,7 +63,7 @@ class PackageListPage(ContentPage):
         self.available_pkgs = get_packages_with_prefixes()
 
         if len(self.available_pkgs) == 0:
-            self.pkg_list_group.set_empty_group_text("No packages found. Refresh to try again.")
+            self.pkg_list_group.set_placeholder_text("No packages found. Refresh to try again.")
             return False
         return True
 
@@ -78,7 +78,7 @@ class PackageListPage(ContentPage):
             )
             rows.append(row)
 
-        self.pkg_list_group.add_rows_idle(rows)
+        self.pkg_list_group.add_rows(rows)
 
     def reset_ui(self):
         self.pkg_list_group.clear()

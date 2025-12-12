@@ -115,7 +115,7 @@ class BaseWindow(Adw.ApplicationWindow):
 
     def on_refresh(self, *args):
         if self.current_page and self.current_page.refreshable:
-            self.current_page.refresh(use_cache=False)
+            self.current_page.refresh()  # TODO maybe use "use_cache=False" here? but this brings troubles with the refreshing func etc
 
     def on_detach(self, *args):
         if self.current_page and self.current_page.detachable:
@@ -181,31 +181,31 @@ class MainWindow(BaseWindow):
         self.overview_btn.connect("clicked", self.on_overview_btn_clicked)
 
         self.menu_btn: Gtk.Button = builder.get_object("menu_btn")
-        self.content_stack: Gtk.Stack = builder.get_object("content_stack")
+        self.nav_views_stack: Gtk.Stack = builder.get_object("nav_views_stack")
 
         self.page_groups = create_pages()
         self.stack_sidebar: StackSidebar = builder.get_object("stack_sidebar")
-        self.stack_sidebar.set_stack(self.content_stack)
+        self.stack_sidebar.set_stack(self.nav_views_stack)
         self.stack_sidebar.update_from_page_groups(self.page_groups)
 
         overview_nav_view = Adw.NavigationView()
         overview_nav_view.add(OverviewPage(page_groups=self.page_groups))
-        self.content_stack.add_named(overview_nav_view, "overview")
+        self.nav_views_stack.add_named(overview_nav_view, "overview")
 
         welcome_nav_view = Adw.NavigationView()
         welcome_nav_view.add(WelcomePage())
-        self.content_stack.add_named(welcome_nav_view, "welcome")
+        self.nav_views_stack.add_named(welcome_nav_view, "welcome")
 
         if self.app.settings.get_boolean("restore-last-page"):
             last_page = self.app.settings.get_string("last-page")
 
-            if last_page and self.content_stack.get_child_by_name(last_page):
-                self.content_stack.set_visible_child_name(last_page)
+            if last_page and self.nav_views_stack.get_child_by_name(last_page):
+                self.nav_views_stack.set_visible_child_name(last_page)
         else:
-            self.content_stack.set_visible_child_name("welcome")
+            self.nav_views_stack.set_visible_child_name("welcome")
 
         # connect so late, to not trigger when the stack is assembled
-        self.content_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
+        self.nav_views_stack.connect("notify::visible-child-name", self.on_stack_page_changed)
 
         # ros time
         self.time_box: Gtk.Box = builder.get_object("time_box")
@@ -226,7 +226,7 @@ class MainWindow(BaseWindow):
 
     @property
     def current_page(self) -> Adw.NavigationPage:
-        return self.content_stack.get_visible_child().get_visible_page()
+        return self.nav_views_stack.get_visible_child().get_visible_page()
 
     def on_preferences_dialog(self, *args):
         self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)
@@ -252,11 +252,11 @@ class MainWindow(BaseWindow):
 
     def on_overview_btn_clicked(self, *args):
         self.split_view.set_show_content(True)
-        self.content_stack.set_visible_child_name("overview")
+        self.nav_views_stack.set_visible_child_name("overview")
 
     def on_stack_page_changed(self, *args):
         # save the last page in settings
-        last_page = self.content_stack.get_visible_child_name()
+        last_page = self.nav_views_stack.get_visible_child_name()
         if last_page != "welcome":
             self.app.settings.set_string("last-page", last_page)
 

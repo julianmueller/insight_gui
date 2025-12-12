@@ -21,25 +21,33 @@
 # =============================================================================
 
 from typing import Callable
+import asyncio
+import re
+from difflib import SequenceMatcher
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GLib
+from gi.repository import GObject, Gtk, Adw, GLib, Gio
 
 from insight_gui.widgets.pref_rows import PrefRow
 
 
 class PrefGroup(Adw.PreferencesGroup):
+    """Custom wrapper class around Adw.PreferencesGroup to manage preference rows."""
+
     __gtype_name__ = "PrefGroup"
+
+    rows = GObject.Property(type=Gio.ListStore)
+    placeholder_row = GObject.Property(type=PrefRow)
 
     def __init__(
         self,
         *,
         title: str = "",
         description: str = "",
-        empty_group_text: str = "empty list",
+        placeholder_text: str = "group is empty",
         filterable: bool = True,
         **kwargs,
     ):
@@ -55,68 +63,119 @@ class PrefGroup(Adw.PreferencesGroup):
         self.rows_box: Gtk.Box = self.title_box.get_next_sibling()
         self.listbox: Gtk.ListBox = self.rows_box.get_first_child()
 
-        # keep track of all rows
-        self.rows: list[Adw.ActionRow] = []
+        # keep track of all rows (use a Gio.ListStore instead of a python list)
+        self.rows: Gio.ListStore = Gio.ListStore.new(Gtk.Widget)
+        self.rows.connect("items-changed", self._on_rows_changed)
+        self._default_visibility = self.get_visible()
+        self._search_query: str = ""
+        self._search_tags: set[str] = set()
+        self._compiled_search: re.Pattern | None = None
 
         if not title and not description:
             self.title_box.set_visible(False)  # disable group header
 
         self.filterable = filterable
-        self.empty_row = PrefRow(title=str(empty_group_text), sensitive=False)
-        self.empty_row.add_prefix_icon("dialog-error-symbolic")
-        super().add(self.empty_row)
+        self.placeholder_row = PrefRow(title=placeholder_text, sensitive=False)
+        self.placeholder_row.add_prefix_icon("dialog-error-symbolic")
+        self.set_placeholder_text(placeholder_text)
+        # self.bind_property("is-empty", self.placeholder_row, "visible", GObject.BindingFlags.SYNC_CREATE)
+        # super().add(self.placeholder_row)
+        self.listbox.set_placeholder(self.placeholder_row)
 
-        # Store initial visibility
-        self._is_filtered = False
-        self._visibility_before_filter = self.get_visible()
+        # Filtering model driven by Gtk instead of manual visibility toggles
+        self.row_filter = Gtk.CustomFilter.new(self._filter_row)
+        self.filtered_rows = Gtk.FilterListModel(model=self.rows, filter=self.row_filter)
+        self.filtered_rows.connect("items-changed", self._on_filtered_items_changed)
 
-    @property
+        self.listbox.bind_model(self.filtered_rows, self._bind_row)
+
+    @GObject.Property(type=int, default=0)
     def num_rows(self):
-        return len(self.rows)
+        # return the number of items in the ListStore
+        return self.rows.get_n_items()
 
-    @property
+    @GObject.Property(type=bool, default=True)
     def is_empty(self):
         return self.num_rows == 0
 
-    @property
+    @GObject.Property(type=str, default="group is empty")
+    def placeholder_text(self) -> str:
+        return self.placeholder_row.get_title()
+
+    @placeholder_text.setter
+    def placeholder_text(self, value) -> str:
+        return self.placeholder_row.set_title(value)
+
+    def set_placeholder_text(self, text: str) -> None:
+        self.placeholder_text = text
+
+    @GObject.Property(type=str, flags=GObject.ParamFlags.READABLE)
     def filter_text(self) -> str:
-        return f"{self.get_title()} {self.get_description()}"
+        return f"{self.get_title()} {self.get_description()}".lower()
 
-    # filters (hides) the row but remembers its original visibility
-    def set_filtered(self, visible: bool) -> bool:
-        if not self._is_filtered:
-            self._visibility_before_filter = self.get_visible()
+    @GObject.Property(type=int, default=0)
+    def visible_rows_count(self) -> int:
+        return self.filtered_rows.get_n_items()
 
-        if self._visibility_before_filter:
-            self.set_visible(visible)
+    def _on_rows_changed(self, *args):
+        self.notify("num-rows")
+        self.notify("is-empty")
 
-        self._is_filtered = True
+    def _bind_row(self, row: Gtk.Widget) -> Gtk.Widget:
+        return row
 
-    # restores original visibility before the filtering
-    def set_unfiltered(self):
-        if self._is_filtered:
-            self.set_visible(self._visibility_before_filter)
-            self._is_filtered = False
+    def _compile_pattern(self, search: str) -> re.Pattern | None:
+        search = search.strip()
+        if not search:
+            return None
+        try:
+            parts = [re.escape(part) for part in search.split()]
+            return re.compile(".*?".join(parts), re.IGNORECASE)
+        except re.error:
+            return None
+
+    def _filter_row(self, row: Gtk.Widget) -> bool:
+        if not self.filterable:
+            return True
+
+        matches_query = True
+        if self._compiled_search:
+            row_text = getattr(row, "filter_text", "").lower()
+            if row_text:
+                matches_query = bool(self._compiled_search.search(row_text))
+                if not matches_query:
+                    matches_query = self._fuzzy_match(self._search_query, row_text)
+
+        matches_tags = True
+        if self._search_tags:
+            matches_tags = any(getattr(row, "has_filter_tag", lambda *_: False)(tag) for tag in self._search_tags)
+
+        return matches_query and matches_tags
+
+    def _on_filtered_items_changed(self, *args):
+        self._update_group_visibility()
+
+    def _update_group_visibility(self):
+        if not self.filterable:
+            return
+
+        if not self._compiled_search and not self._search_tags:
+            self.set_visible(self._default_visibility)
+            return
+
+        group_matches = bool(self._compiled_search and self._compiled_search.search(self.filter_text))
+        rows_visible = self.visible_rows_count > 0
+        self.set_visible(group_matches or rows_visible)
 
     def add(self, *args, **kwargs):
         raise NotImplementedError("use 'add_row' instead")
 
     def add_row(self, row: Gtk.Widget) -> Gtk.Widget:
-        self.empty_row.set_visible(False)
-        super().add(row)
-        self.rows.append(row)
+        GLib.idle_add(self.rows.append, row)
         return row
 
-    def add_row_idle(self, row: Gtk.Widget):
-        def _idle(row: Gtk.Widget):
-            self.add_row(row)
-            return False
-
-        GLib.idle_add(_idle, row)
-        return row
-
-    def add_rows_idle(self, rows: list[Gtk.Widget], batch_size: int = 2):
-        if len(rows) == 0:
+    def add_rows(self, rows: list[Gtk.Widget], batch_size: int = 2):
+        if not rows:
             return
 
         index = 0
@@ -124,30 +183,24 @@ class PrefGroup(Adw.PreferencesGroup):
         def add_batch():
             nonlocal index
             end = min(index + batch_size, len(rows))
-
             for i in range(index, end):
                 self.add_row(rows[i])
+            index = end
+            # return True to keep the idle source active if there are more items
+            return index < len(rows)
 
-            index += batch_size
-            return index < len(rows)  # Return True if more rows need to be added
-
-        GLib.idle_add(add_batch)  # Start adding in batches
+        GLib.idle_add(add_batch)
 
     def remove_row(self, row: Gtk.Widget):
-        super().remove(row)
-        self.rows = [_row for _row in self.rows if _row != row]
+        for i in range(self.rows.get_n_items()):
+            if self.rows.get_item(i) == row:
+                self.rows.remove(i)
+                break
 
     def clear(self):
-        rows_to_remove = reversed(self.rows)
-
-        def _idle():
-            for row in rows_to_remove:
-                Adw.PreferencesGroup.remove(self, row)
-            return False
-
-        GLib.idle_add(_idle)
-        self.rows = []
-        self.empty_row.set_visible(True)
+        while self.rows.get_n_items() > 0:
+            self.rows.remove(self.rows.get_n_items() - 1)
+        self.placeholder_row.set_visible(True)
 
     def add_suffix_btn(
         self,
@@ -171,5 +224,22 @@ class PrefGroup(Adw.PreferencesGroup):
     def set_description_to_row_count(self):
         super().set_description(f"Count: {self.num_rows}")
 
-    def set_empty_group_text(self, text: str):
-        self.empty_row.set_title(str(text))
+    def apply_filter(self, search_text: str = "", search_tags: set[str] | None = None):
+        """Apply search + tag filters using Gtk.FilterListModel."""
+        search_tags = search_tags or set()
+        self._search_query = search_text.strip()
+        self._search_tags = set(search_tags)
+        self._compiled_search = self._compile_pattern(self._search_query)
+        self.row_filter.changed(Gtk.FilterChange.DIFFERENT)
+        self._update_group_visibility()
+
+    def reset_filtering(self):
+        """Reset group and row visibility to the defaults."""
+        self.apply_filter("", set())
+
+    def _fuzzy_match(self, query: str, text: str, threshold: float = 0.6) -> bool:
+        """Simple fuzzy matcher using difflib ratio to allow near matches."""
+        if not query or not text:
+            return False
+        ratio = SequenceMatcher(None, query.lower(), text.lower()).ratio()
+        return ratio >= threshold

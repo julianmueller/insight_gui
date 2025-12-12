@@ -80,7 +80,7 @@ class PackageInfoPage(ContentPage):
 
         # Executables
         self.executables_group = self.pref_page.add_group(
-            title="Executables", empty_group_text="Package has no executables"
+            title="Executables", placeholder_text="Package has no executables"
         )
         executable_paths = get_executable_paths(package_name=self.pkg_name)
 

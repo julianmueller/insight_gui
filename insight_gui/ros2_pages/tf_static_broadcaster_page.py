@@ -299,7 +299,7 @@ class StaticTransformBroadcasterPage(ContentPage):
         #     # self.calc_button.set_sensitive(True)
         #     return True
         # else:
-        #     # self.frames_group.set_empty_group_text("No frames found. Refresh to try again.")
+        #     # self.frames_group.set_placeholder_text("No frames found. Refresh to try again.")
         #     # self.calc_button.set_sensitive(False)
         #     return False
         return True

@@ -67,11 +67,11 @@ class TopicInfoPage(ContentPage):
         self.message_type_group = self.pref_page.add_group(title="Message Type")
 
         # Publishers
-        self.publishers_group = self.pref_page.add_group(title="Publishers", empty_group_text="Topic has no publishers")
+        self.publishers_group = self.pref_page.add_group(title="Publishers", placeholder_text="Topic has no publishers")
 
         # Subscribers
         self.subscribers_group = self.pref_page.add_group(
-            title="Subscribers", empty_group_text="Topic has no subscribers"
+            title="Subscribers", placeholder_text="Topic has no subscribers"
         )
 
     def refresh_bg(self) -> bool:

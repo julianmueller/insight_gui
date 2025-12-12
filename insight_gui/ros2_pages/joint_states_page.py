@@ -54,7 +54,7 @@ class JointStatesPage(ContentPage):
         self.js_topic_list_store = Gio.ListStore.new(Gtk.StringObject)
         self.js_topic_row.set_model(self.js_topic_list_store)
 
-        self.joints_group = self.pref_page.add_group(title="Joints", empty_group_text="Refresh to show joints")
+        self.joints_group = self.pref_page.add_group(title="Joints", placeholder_text="Refresh to show joints")
 
     def refresh_bg(self) -> bool:
         self.joint_states_topic_list = []
@@ -131,4 +131,4 @@ class JointStatesPage(ContentPage):
 
         #     rows.append(row)
 
-        # self.joints_group.add_rows_idle(rows)
+        # self.joints_group.add_rows(rows)

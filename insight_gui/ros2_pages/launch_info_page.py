@@ -87,7 +87,7 @@ class LaunchInfoPage(ContentPage):
         # Group for all node entities
         self.nodes_group = self.pref_page.add_group(
             title="Executed Nodes",
-            empty_group_text="Launch file has no nodes",
+            placeholder_text="Launch file has no nodes",
         )
 
         # TODO add groups, aka included launch files here as subpage
@@ -95,7 +95,7 @@ class LaunchInfoPage(ContentPage):
 
         # Group for launch arguments
         self.arg_group = self.pref_page.add_group(
-            title="Launch Arguments", empty_group_text="Launch file has no arguments"
+            title="Launch Arguments", placeholder_text="Launch file has no arguments"
         )
 
         # Add launch button in bottom left corner

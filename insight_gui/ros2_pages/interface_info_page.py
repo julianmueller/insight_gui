@@ -149,7 +149,7 @@ class InterfaceInfoPage(ContentPage):
                 row.add_suffix_lbl(label=const_value)
 
         for class_type, interface_class in interface_classes.items():
-            group = self.pref_page.add_group(title=class_type, empty_group_text=f"Empty {class_type}")
+            group = self.pref_page.add_group(title=class_type, placeholder_text=f"Empty {class_type}")
             self.populate_group_w_msg_rows(interface_class=interface_class, pref_group=group)
 
             # Btn for opening the raw msg text dialog

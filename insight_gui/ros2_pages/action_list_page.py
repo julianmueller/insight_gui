@@ -42,7 +42,7 @@ class ActionListPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Actions")
-        super().set_empty_page_text("No actions to show")
+        super().set_placeholder_text("No actions to show")
         super().set_search_entry_placeholder_text("Search for actions")
         super().set_refresh_fail_text("No actions found. Refresh to try again.")
 

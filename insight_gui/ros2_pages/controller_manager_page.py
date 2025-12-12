@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, TYPE_CHECKING
+from typing import Dict, List, Tuple
 
 import gi
 
@@ -39,15 +39,13 @@ from insight_gui.widgets.buttons import ToggleButton
 try:  # pragma: no cover - optional dependency that might be missing on CI
     from controller_manager_msgs.srv import ListControllers as ListControllersSrv
     from controller_manager_msgs.srv import SwitchController as SwitchControllerSrv
+    from controller_manager_msgs.msg import ControllerState
 
     HAS_CONTROLLER_MANAGER_MSGS = True
 except ImportError:  # pragma: no cover - gracefully handle environments without ros2_control
     ListControllersSrv = None
     SwitchControllerSrv = None
     HAS_CONTROLLER_MANAGER_MSGS = False
-
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    from controller_manager_msgs.msg import ControllerState
 
 
 @dataclass(slots=True)
@@ -74,7 +72,7 @@ class ControllerManagerPage(ContentPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().set_title("Controllers")
-        super().set_empty_page_text("No controllers to show")
+        super().set_placeholder_text("No controllers to show")
         super().set_search_entry_placeholder_text("Search controllers")
         super().set_refresh_fail_text(
             "No controller managers found. Start a ros2_control controller manager and refresh."
@@ -141,7 +139,7 @@ class ControllerManagerPage(ContentPage):
             self.manager_groups.append(group)
 
             if not controllers:
-                group.set_empty_group_text("No controllers reported")
+                group.set_placeholder_text("No controllers reported")
                 continue
 
             for controller in sorted(controllers, key=lambda info: info.name):
@@ -153,15 +151,15 @@ class ControllerManagerPage(ContentPage):
                 subtitle = " • ".join(subtitle_parts)
 
                 row = PrefRow(title=controller.name, subtitle=subtitle)
-                row.add_tag(manager.display_name.lower())
+                row.add_filter_tag(manager.display_name.lower())
 
                 if controller.state:
-                    row.add_tag(controller.state.lower())
+                    row.add_filter_tag(controller.state.lower())
                 if controller.type_name:
-                    row.add_tag(controller.type_name.lower())
+                    row.add_filter_tag(controller.type_name.lower())
 
                 for interface_name in controller.claimed_interfaces:
-                    row.add_tag(interface_name.lower())
+                    row.add_filter_tag(interface_name.lower())
 
                 tooltip_lines = []
                 if controller.claimed_interfaces:
@@ -230,7 +228,7 @@ class ControllerManagerPage(ContentPage):
     def _discover_controller_managers(self) -> Dict[str, ControllerManager]:
         managers: Dict[str, ControllerManager] = {}
 
-        services = self.ros2_connector.get_available_services(use_cache=False)
+        services = self.ros2_connector.get_available_services()
         suffix = "/list_controllers"
 
         for service_name, service_types in services:
