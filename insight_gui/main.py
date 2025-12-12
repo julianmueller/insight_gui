@@ -45,6 +45,7 @@ def main(args=None):
         "--page",
         help="Start the application with the specified page open",
         type=str,
+        metavar="PAGE_ID",
         default="",
     )
     parser.add_argument(

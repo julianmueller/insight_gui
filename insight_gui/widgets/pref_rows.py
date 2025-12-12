@@ -30,63 +30,10 @@ gi.require_version("Adw", "1")
 from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango
 
 from insight_gui.widgets.buttons import ToggleButton, CopyButton
+from insight_gui.widgets.filtering_interface import FilteringInterface
 
 
-class PrefRowInterface(GObject.GObject):
-    """Interface Class for common row properties."""
-
-    __gtype_name__ = "PrefRowInterface"
-
-    is_filtered = GObject.Property(type=bool, default=False)
-
-    def __init__(self):
-        super().__init__()
-        self._filter_text = ""
-        self._filter_tags: set[str] = set()
-
-        # Store initial visibility
-        self._visibility_before_filter = self.get_visible()
-
-    @GObject.Property(type=bool, default=False)
-    def filterable(self) -> bool:
-        return bool(self.filter_text)
-
-    @GObject.Property(type=str, default="")
-    def filter_text(self) -> str:
-        """The text used for filtering the row."""
-        return self._filter_text.lower()
-
-    @filter_text.setter
-    def filter_text(self, value: str):
-        self._filter_text = str(value).lower()
-
-    def has_filter_tag(self, tag) -> bool:
-        return tag in self._filter_tags
-
-    def add_filter_tag(self, tag):
-        self._filter_tags.add(tag)
-
-    def remove_filter_tag(self, tag):
-        self._filter_tags.discard(tag)
-
-    # filters (hides) the row but remembers its original visibility
-    def set_filtered(self, visible: bool) -> bool:
-        if not self.is_filtered:
-            self._visibility_before_filter = self.get_visible()
-
-        if self._visibility_before_filter:
-            self.set_visible(visible)
-
-        self.is_filtered = True
-
-    # restores original visibility before the filtering
-    def set_unfiltered(self):
-        if self.is_filtered:
-            self.set_visible(self._visibility_before_filter)
-            self.is_filtered = False
-
-
-class PrefRow(Adw.ActionRow, PrefRowInterface):
+class PrefRow(Adw.ActionRow, FilteringInterface):
     __gtype_name__ = "PrefRow"
 
     def __init__(
@@ -99,7 +46,8 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
         **kwargs,
     ):
         Adw.ActionRow.__init__(self, **kwargs)
-        PrefRowInterface.__init__(self)
+        FilteringInterface.__init__(self, filterable=True)
+
         super().set_use_markup(False)
 
         self.header_box: Gtk.Box = self.get_first_child()
@@ -142,9 +90,8 @@ class PrefRow(Adw.ActionRow, PrefRowInterface):
         self.next_page_icon: Gtk.Image = Gtk.Image(icon_name="go-next-symbolic", visible=False)
         self.add_suffix(self.next_page_icon)
 
-    @GObject.Property(type=str, default="")
-    def filter_text(self) -> str:
-        return f"{super().get_title()} {super().get_subtitle()}".lower()
+        # set filtering text once labels are initialized
+        self.set_filter_str(f"{self.get_title()} {self.get_subtitle()}".lower())
 
     def add_prefix(self, widget: Gtk.Widget, *, prepend: bool = False) -> Gtk.Widget:
         if prepend:
@@ -425,7 +372,6 @@ class TextViewRow(AdditionalContentRow):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        # self.filterable = False
 
         self.min_height = min_height
         self.max_height = max_height
@@ -448,6 +394,7 @@ class TextViewRow(AdditionalContentRow):
         self.scroll.set_child(self.text_view)
         self.text_buffer = self.text_view.get_buffer()
         self.text_buffer.connect("changed", self.on_text_changed)
+        super().set_filter_str(f"{self.title_lbl.get_text()} {self.subtitle_lbl.get_text()} {self.get_text()}".lower())
 
         # copy button
         self.copy_btn = self.add_suffix(
@@ -461,10 +408,6 @@ class TextViewRow(AdditionalContentRow):
     @property
     def line_count(self) -> int:
         return self.text_buffer.get_line_count()
-
-    @property
-    def filter_text(self) -> str:
-        return f"{self.title_lbl.get_text()} {self.subtitle_lbl.get_text()} {self.get_text()}"
 
     def on_text_changed(self, *args):
         # TODO add that tabs are replaced by spaces
@@ -888,7 +831,7 @@ class ColumnViewRow(AdditionalContentRow):
 
 # somewhat based on
 # https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.1/class.ButtonRow.html
-class ButtonRow(Adw.PreferencesRow, PrefRowInterface):
+class ButtonRow(Adw.PreferencesRow, FilteringInterface):
     __gtype_name__ = "ButtonRow"
 
     def __init__(
@@ -904,8 +847,9 @@ class ButtonRow(Adw.PreferencesRow, PrefRowInterface):
         **kwargs,
     ):
         Adw.PreferencesRow.__init__(self, **kwargs)
-        PrefRowInterface.__init__(self)
+        FilteringInterface.__init__(self)
         super().set_activatable(False)
+        super().set_filter_str(self.btn_label.get_label().lower())
 
         self.btn = Gtk.Button(
             margin_top=8,
@@ -931,18 +875,14 @@ class ButtonRow(Adw.PreferencesRow, PrefRowInterface):
         for css_class in btn_css_classes:
             self.btn.add_css_class(css_class)
 
-    @GObject.Property(type=str, default="")
-    def filter_text(self) -> str:
-        return self.btn_label.get_label().lower()
-
 
 # TODO make the multibtn and mutlitogglebtn rows inherit from the multiwidget row
-class MultiWidgetRow(Adw.PreferencesRow, PrefRowInterface):
+class MultiWidgetRow(Adw.PreferencesRow, FilteringInterface):
     __gtype_name__ = "MultiWidgetRow"
 
     def __init__(self, **kwargs):
         Adw.PreferencesRow.__init__(self, **kwargs)
-        PrefRowInterface.__init__(self)
+        FilteringInterface.__init__(self)
         super().set_activatable(False)
 
         self.content_box = Gtk.Box(
@@ -976,12 +916,12 @@ class MultiWidgetRow(Adw.PreferencesRow, PrefRowInterface):
         return self.widgets
 
 
-class MultiBoxRow(Adw.PreferencesRow, PrefRowInterface):
+class MultiBoxRow(Adw.PreferencesRow, FilteringInterface):
     __gtype_name__ = "MultiBoxRow"
 
     def __init__(self, **kwargs):
         Adw.PreferencesRow.__init__(self, **kwargs)
-        PrefRowInterface.__init__(self)
+        FilteringInterface.__init__(self)
         super().set_activatable(False)
 
         self.content_box = Gtk.Box(
@@ -1020,12 +960,12 @@ class MultiBoxRow(Adw.PreferencesRow, PrefRowInterface):
         return box
 
 
-class MultiButtonRow(Adw.PreferencesRow, PrefRowInterface):
+class MultiButtonRow(Adw.PreferencesRow, FilteringInterface):
     __gtype_name__ = "MultiButtonRow"
 
     def __init__(self, **kwargs):
         Adw.PreferencesRow.__init__(self, **kwargs)
-        PrefRowInterface.__init__(self)
+        FilteringInterface.__init__(self)
         super().set_activatable(False)
 
         self.content_box = Gtk.Box(
@@ -1123,7 +1063,7 @@ class MultiToggleButtonRow(AdditionalContentRow):
 
 
 # TODO this is not really tested yet
-class SearchRow(Adw.PreferencesRow, PrefRowInterface):
+class SearchRow(Adw.PreferencesRow, FilteringInterface):
     __gtype_name__ = "SearchRow"
 
     # box: Gtk.Box = Gtk.Template.Child()
@@ -1145,8 +1085,11 @@ class SearchRow(Adw.PreferencesRow, PrefRowInterface):
         **kwargs,
     ):
         Adw.PreferencesRow.__init__(self, **kwargs)
-        PrefRowInterface.__init__(self)
+        FilteringInterface.__init__(self)
         super().set_activatable(False)
+        super().set_filterable(False)
+        # super().set_filter_str("")
+
         # super().get_first_child().get_first_child().get_next_sibling().get_next_sibling().set_visible(False)
         # PrefRow -> header -> prefixes -> image -> title_box
         # super().set_activatable_widget(self.btn)
@@ -1204,21 +1147,17 @@ class SearchRow(Adw.PreferencesRow, PrefRowInterface):
         for css_class in css_classes:
             super().add_css_class(css_class)
 
-    @property
-    def filter_text(self) -> str:
-        return ""
-
     def on_search_entry_changed(self, *args):
         self.search_func(self.search_entry.get_text())
 
 
-class SuggestionEntryRow(Adw.EntryRow, PrefRowInterface):
+class SuggestionEntryRow(Adw.EntryRow, FilteringInterface):
     __gtype_name__ = "SuggestionEntryRow"
     __gsignals__ = {"suggestion-apply": (GObject.SignalFlags.RUN_FIRST, None, (str,))}
 
     def __init__(self, *, title: str = "Select or create…", **kwargs):
         Adw.EntryRow.__init__(self, **kwargs)
-        PrefRowInterface.__init__(self)
+        FilteringInterface.__init__(self)
         super().set_title(title)
         super().set_show_apply_button(True)
         self.connect("apply", self.on_apply)

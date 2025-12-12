@@ -148,20 +148,20 @@ class OverviewPage(ContentPage):
     def on_card_clicked(self, card: PageCard, page_id: str):
         # Get the main window and navigate to the page
         window = self.app.main_window
-        nav_view = window.content_stack.get_child_by_name(page_id)
-        window.content_stack.set_visible_child(nav_view)
+        nav_view = window.nav_views_stack.get_child_by_name(page_id)
+        window.nav_views_stack.set_visible_child(nav_view)
 
     def on_card_gesture(self, gesture: Gtk.GestureClick, n_press: int, x: float, y: float, page_id: str):
         state = gesture.get_current_event_state()
         window = self.app.main_window
-        nav_view = window.content_stack.get_child_by_name(page_id)
+        nav_view = window.nav_views_stack.get_child_by_name(page_id)
         page = nav_view.get_visible_page()
 
         # Ctrl+click - open in detached window
         if state & Gdk.ModifierType.CONTROL_MASK:
             page.detach()
         else:
-            window.content_stack.set_visible_child(nav_view)
+            window.nav_views_stack.set_visible_child(nav_view)
 
     def on_search_changed(self, *args):
         search_text = self.search_entry.get_text()

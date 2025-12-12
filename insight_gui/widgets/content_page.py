@@ -260,7 +260,7 @@ class ContentPage(Adw.NavigationPage):
         self.reapply_filters()
 
     def reapply_filters(self):
-        self.pref_page.apply_filters(search_str=self.search_text, search_tags=self.filter_tags)
+        self.pref_page.apply_filters(filter_str=self.search_text, filter_tags=self.filter_tags)
 
     def detach(self, *args):
         from insight_gui.window import DetachedWindow

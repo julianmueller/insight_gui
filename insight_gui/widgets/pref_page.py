@@ -78,12 +78,12 @@ class PrefPage(Adw.PreferencesPage):
     def placeholder_text(self, value: str) -> None:
         self.placeholder_group.set_placeholder_text(str(value))
 
+    def set_placeholder_text(self, text: str) -> None:
+        self.placeholder_text = text
+
     def _on_groups_changed(self, *args) -> None:
         self.notify("num-groups")
         self.notify("is-empty")
-
-    def set_placeholder_text(self, text: str) -> None:
-        self.placeholder_text = text
 
     def add(self, *args, **kwargs):
         raise NotImplementedError("use 'add_group' instead")
@@ -154,10 +154,11 @@ class PrefPage(Adw.PreferencesPage):
             pref_group = self.groups.get_item(idx)
             self.remove_group(pref_group)
 
-    def apply_filters(self, search_str: str, search_tags: set[str] = None):
+    def apply_filters(self, filter_str: str, filter_tags: set[str] = None):
         """Filters groups and rows using Gtk.FilterListModel on each group."""
-        search_tags = search_tags or set()
-        if not search_str.strip() and not search_tags:
+        filter_tags = filter_tags or set()
+
+        if not filter_str.strip() and not filter_tags:
             self.reset_filtering()
             return
 
@@ -165,7 +166,7 @@ class PrefPage(Adw.PreferencesPage):
             group = self.groups.get_item(i)
             if not group.filterable:
                 continue
-            group.apply_filter(search_str, search_tags)
+            group.apply_filters(filter_str, filter_tags)
 
     def reset_filtering(self):
         """Resets all groups and rows to their original visibility."""
