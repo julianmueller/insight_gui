@@ -153,9 +153,20 @@ class InsightApplication(Adw.Application):
         self.main_window.present()
 
     def shutdown(self, *args):
+        # First ask pages to cancel any ongoing refresh so worker tasks can exit quickly
+        try:
+            self.main_window.current_page.cancel_refresh()
+            for win in list(self.detached_windows):
+                win.current_page.cancel_refresh()
+        except Exception as exc:
+            print(f"Error while cancelling refreshes during shutdown: {exc}")
+
+        # Stop the worker before tearing down ROS to avoid blocking calls on a dead node
+        self.worker.shutdown(wait=False, cancel_futures=True)
+
+        # Tear down ROS after worker threads are asked to stop
         self.ros2_connector.shutdown()
-        if getattr(self, "worker", None):
-            self.worker.shutdown(wait=False, cancel_futures=True)
+
         Gtk.Application.quit(self)
         return GLib.SOURCE_REMOVE
 
@@ -195,9 +206,7 @@ class InsightApplication(Adw.Application):
         ``priority`` is lower-is-higher (0 is highest) and only affects queued tasks.
         """
 
-        return self.worker.run_in_worker(
-            func, *args, done_callback=done_callback, priority=priority, **kwargs
-        )
+        return self.worker.run_in_worker(func, *args, done_callback=done_callback, priority=priority, **kwargs)
 
     def reprioritize_worker_future(self, fut: concurrent.futures.Future, priority: int) -> bool:
         """Lower or raise priority of a queued future if it has not started yet."""
