@@ -34,6 +34,11 @@ class PrefPage(Adw.PreferencesPage):
 
     __gtype_name__ = "PrefPage"
 
+    __gsignals__ = {
+        "group-filtered": (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN)),
+        "group-unfiltered": (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
+    }
+
     groups = GObject.Property(type=Gio.ListStore)
     placeholder_group = GObject.Property(type=PrefGroup)
 
@@ -103,6 +108,8 @@ class PrefPage(Adw.PreferencesPage):
 
         else:
             pref_group = PrefGroup(title=title, description=description, filterable=filterable, **kwargs)
+            pref_group.connect("filtered", self._on_groups_filtered_changed)
+            pref_group.connect("unfiltered", self.on_groups_unfiltered_changed)
             super().add(pref_group)
             self.groups.append(pref_group)
             return pref_group
@@ -154,8 +161,24 @@ class PrefPage(Adw.PreferencesPage):
             pref_group = self.groups.get_item(idx)
             self.remove_group(pref_group)
 
+    def get_total_row_count(self) -> int:
+        """Return total number of rows across all groups (excludes placeholders)."""
+        total = 0
+        for i in range(self.groups.get_n_items()):
+            total += self.groups.get_item(i).num_rows
+        return total
+
+    def get_visible_row_count(self) -> int:
+        """Return number of currently visible rows after filtering."""
+        total = 0
+        for i in range(self.groups.get_n_items()):
+            group = self.groups.get_item(i)
+            if group.get_visible():
+                total += group.get_visible_row_count()
+        return total
+
     def apply_filters(self, filter_str: str, filter_tags: set[str] = None):
-        """Filters groups and rows using Gtk.FilterListModel on each group."""
+        """Filters groups and rows based on the given filter string and tags."""
         filter_tags = filter_tags or set()
 
         if not filter_str.strip() and not filter_tags:
@@ -175,3 +198,9 @@ class PrefPage(Adw.PreferencesPage):
             if not group.filterable:
                 continue
             group.reset_filtering()
+
+    def _on_groups_filtered_changed(self, group: PrefGroup, filtered: bool):
+        self.emit("group-filtered", group, filtered)
+
+    def on_groups_unfiltered_changed(self, group: PrefGroup):
+        self.emit("group-unfiltered", group)

@@ -113,8 +113,7 @@ class OverviewPage(ContentPage):
         scrolled = Gtk.ScrolledWindow(
             hscrollbar_policy=Gtk.PolicyType.NEVER, vscrollbar_policy=Gtk.PolicyType.AUTOMATIC, vexpand=True
         )
-        self.content_stack.add_child(scrolled)
-        self.content_stack.set_visible_child(scrolled)
+        self.main_content_page.set_child(scrolled)
 
         # Cards container for this group
         self.cards_flowbox = Gtk.FlowBox(

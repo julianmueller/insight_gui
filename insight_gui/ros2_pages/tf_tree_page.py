@@ -61,12 +61,11 @@ class TFTreePage(ContentPage):
         super().set_title("TF-Tree")
         super().set_refresh_fail_text("No transforms found. Refresh to try again.")
 
-        self.content_stack.remove(self.pref_page)
         del self.pref_page
 
         # Create canvas
         self.canvas = Canvas()
-        self.content_stack.add_child(self.canvas)
+        self.main_content_page.set_child(self.canvas)
 
         # store received frames
         self._frames_dict = {}

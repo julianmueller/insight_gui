@@ -104,7 +104,7 @@
                                 <property name="hhomogeneous">False</property>
                                 <property name="vhomogeneous">False</property>
 
-                                <!-- <child>
+                                <child>
                                     <object class="AdwStatusPage" id="refresh_page">
                                         <property name="title">No Content</property>
                                         <property name="description">Refresh to show content. This may take a second.</property>
@@ -112,6 +112,7 @@
                                         <child>
                                             <object class="GtkButton">
                                                 <property name="halign">center</property>
+                                                <property name="action-name">win.refresh</property>
                                                 <property name="child">
                                                     <object class="AdwButtonContent">
                                                         <property name="label">Refresh</property>
@@ -130,8 +131,26 @@
                                         <property name="title">No Search Results</property>
                                         <property name="description">Search found no results.</property>
                                         <property name="icon-name">search-symbolic</property>
+                                        <child>
+                                            <object class="GtkButton" id="empty_search_clear_btn">
+                                                <property name="halign">center</property>
+                                                <!-- <property name="action-name">win.refresh</property> -->
+                                                <property name="child">
+                                                    <object class="AdwButtonContent">
+                                                        <property name="label">Clear search</property>
+                                                        <property name="icon-name">window-close-symbolic</property>
+                                                    </object>
+                                                </property>
+                                                <style>
+                                                    <class name="pill" />
+                                                </style>
+                                            </object>
+                                        </child>
                                     </object>
-                                </child> -->
+                                </child>
+                                <child>
+                                    <object class="AdwBin" id="main_content_page" />
+                                </child>
                             </object>
                         </child>
                     </object>

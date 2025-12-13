@@ -35,6 +35,12 @@ from insight_gui.widgets.filtering_interface import FilteringInterface
 
 class PrefRow(Adw.ActionRow, FilteringInterface):
     __gtype_name__ = "PrefRow"
+    __gsignals__ = {
+        # filtered signal emits a boolean indicating whether the row "survived" the filtering (filtered-in/filtered-out)
+        "filtered": (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_BOOLEAN,)),
+        # unfiltered signal emits when the filtering is cleared
+        "unfiltered": (GObject.SignalFlags.RUN_FIRST, None, ()),
+    }
 
     def __init__(
         self,
@@ -92,6 +98,14 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
 
         # set filtering text once labels are initialized
         self.set_filter_str(f"{self.get_title()} {self.get_subtitle()}".lower())
+
+    def set_filtered(self, visible: bool):
+        super().set_filtered(visible)
+        self.emit("filtered", visible)
+
+    def set_unfiltered(self):
+        super().set_unfiltered()
+        self.emit("unfiltered")
 
     def add_prefix(self, widget: Gtk.Widget, *, prepend: bool = False) -> Gtk.Widget:
         if prepend:
@@ -848,8 +862,10 @@ class ButtonRow(Adw.PreferencesRow, FilteringInterface):
     ):
         Adw.PreferencesRow.__init__(self, **kwargs)
         FilteringInterface.__init__(self)
+
+        # TODO add filtering possibility and signals
+
         super().set_activatable(False)
-        super().set_filter_str(self.btn_label.get_label().lower())
 
         self.btn = Gtk.Button(
             margin_top=8,
@@ -864,6 +880,7 @@ class ButtonRow(Adw.PreferencesRow, FilteringInterface):
         self.start_icon = Gtk.Image(icon_name=start_icon_name)
         self.btn_label = Gtk.Label(label=label)
         self.end_icon = Gtk.Image(icon_name=end_icon_name)
+        super().set_filter_str(self.btn_label.get_label().lower())
 
         self.content_box.append(self.start_icon)
         self.content_box.append(self.btn_label)
@@ -884,6 +901,8 @@ class MultiWidgetRow(Adw.PreferencesRow, FilteringInterface):
         Adw.PreferencesRow.__init__(self, **kwargs)
         FilteringInterface.__init__(self)
         super().set_activatable(False)
+
+        # TODO add filtering possibility and signals
 
         self.content_box = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL,
@@ -923,6 +942,8 @@ class MultiBoxRow(Adw.PreferencesRow, FilteringInterface):
         Adw.PreferencesRow.__init__(self, **kwargs)
         FilteringInterface.__init__(self)
         super().set_activatable(False)
+
+        # TODO add filtering possibility and signals
 
         self.content_box = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -967,6 +988,8 @@ class MultiButtonRow(Adw.PreferencesRow, FilteringInterface):
         Adw.PreferencesRow.__init__(self, **kwargs)
         FilteringInterface.__init__(self)
         super().set_activatable(False)
+
+        # TODO add filtering possibility and signals
 
         self.content_box = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -1090,6 +1113,8 @@ class SearchRow(Adw.PreferencesRow, FilteringInterface):
         super().set_filterable(False)
         # super().set_filter_str("")
 
+        # TODO add filtering possibility and signals
+
         # super().get_first_child().get_first_child().get_next_sibling().get_next_sibling().set_visible(False)
         # PrefRow -> header -> prefixes -> image -> title_box
         # super().set_activatable_widget(self.btn)
@@ -1161,6 +1186,8 @@ class SuggestionEntryRow(Adw.EntryRow, FilteringInterface):
         super().set_title(title)
         super().set_show_apply_button(True)
         self.connect("apply", self.on_apply)
+
+        # TODO add filtering possibility and signals
 
         # Suffix button to open popover
         self.popover = Gtk.Popover(position=Gtk.PositionType.BOTTOM, autohide=True)

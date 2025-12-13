@@ -39,6 +39,14 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
     """Custom wrapper class around Adw.PreferencesGroup to manage preference rows."""
 
     __gtype_name__ = "PrefGroup"
+    __gsignals__ = {
+        # filtered signal emits a boolean indicating whether the row "survived" the filtering (filtered-in/filtered-out)
+        "filtered": (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_BOOLEAN,)),
+        # unfiltered signal emits when the filtering is cleared
+        "unfiltered": (GObject.SignalFlags.RUN_FIRST, None, ()),
+        "row-filtered": (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN)),
+        "row-unfiltered": (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
+    }
 
     rows = GObject.Property(type=Gio.ListStore)
     placeholder_row = GObject.Property(type=PrefRow)
@@ -116,16 +124,27 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
     def add(self, *args, **kwargs):
         raise NotImplementedError("use 'add_row' instead")
 
+    def _append_row(self, row: Gtk.Widget):
+        """Internal method to append a row immediately. Might be blocking!"""
+        super(PrefGroup, self).add(row)
+        self.rows.append(row)
+
+        if isinstance(row, FilteringInterface) and row.filterable:
+            row.connect("filtered", self._on_row_filtered)
+            row.connect("unfiltered", self._on_row_unfiltered)
+
     def add_row(self, row: Gtk.Widget) -> Gtk.Widget:
+        """Add a single row to the group 'asynchronously' to avoid blocking the UI."""
+
         def _append_row():
-            super(PrefGroup, self).add(row)
-            self.rows.append(row)
-            return False
+            self._append_row(row)
+            return GLib.SOURCE_REMOVE  # run only once
 
         GLib.idle_add(_append_row)
         return row
 
     def add_rows(self, rows: list[Gtk.Widget], batch_size: int = 2):
+        """Add multiple rows to the group 'asynchronously' in batches to avoid blocking the UI."""
         if not rows:
             return
 
@@ -135,7 +154,7 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
             nonlocal index
             end = min(index + batch_size, len(rows))
             for i in range(index, end):
-                self.add_row(rows[i])
+                self._append_row(rows[i])
             index = end
             # return True to keep the idle source active if there are more items
             return index < len(rows)
@@ -179,6 +198,13 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
     def set_description_to_row_count(self):
         super().set_description(f"Count: {self.num_rows}")
 
+    def get_visible_row_count(self) -> int:
+        """Return the number of currently visible rows (excludes placeholders)."""
+        count = 0
+        for row in self.rows:
+            count += int(row.get_visible())
+        return count
+
     def apply_filters(self, filter_str: str = "", filter_tags: set[str] | None = None):
         """Apply search + tag filters using Gtk.FilterListModel."""
         if not self.filterable:
@@ -206,11 +232,12 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
 
         for row in self.rows:
             if not isinstance(row, FilteringInterface):
+                # Non-filterable rows stay as-is and count as visible content
                 any_row_matches = True
                 continue
 
             if not row.filterable:
-                row.set_unfiltered()
+                # row.set_unfiltered()
                 any_row_matches = True
                 continue
 
@@ -225,6 +252,7 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
             any_row_matches = any_row_matches or row_matches
 
         self.set_filtered(any_row_matches)
+        return
 
     def reset_filtering(self):
         """Reset group and row visibility to the defaults."""
@@ -232,3 +260,19 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
             if isinstance(row, FilteringInterface):
                 row.set_unfiltered()
         self.set_unfiltered()
+
+    def set_filtered(self, visible: bool):
+        super().set_filtered(visible)
+        self.emit("filtered", visible)
+
+    def set_unfiltered(self):
+        super().set_unfiltered()
+        self.emit("unfiltered")
+
+    def _on_row_filtered(self, row: Gtk.Widget, visible: bool):
+        """Handle a row being filtered."""
+        self.emit("row-filtered", row, visible)
+
+    def _on_row_unfiltered(self, row: Gtk.Widget):
+        """Handle a row being unfiltered."""
+        self.emit("row-unfiltered", row)

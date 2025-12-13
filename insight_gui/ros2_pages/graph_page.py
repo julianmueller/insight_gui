@@ -45,7 +45,6 @@ class GraphPage(ContentPage):
         super().set_title("Graph")
         super().set_refresh_fail_text("No nodes found. Refresh to try again.")
 
-        self.content_stack.remove(self.pref_page)
         del self.pref_page
 
         # TODO add a "save btn" to save the graph as:
@@ -57,7 +56,7 @@ class GraphPage(ContentPage):
 
         # Create canvas
         self.canvas = Canvas()
-        self.content_stack.add_child(self.canvas)
+        self.main_content_page.set_child(self.canvas)
 
     def refresh_bg(self):
         # Clear previous data

@@ -45,7 +45,7 @@ class ActionGoalPage(ContentPage):
     __gtype_name__ = "ActionGoalPage"
 
     def __init__(self, preselect_action: str = "", **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(searchable=False, **kwargs)
         super().set_title("Send Action Goal")
         super().set_refresh_fail_text("No actions found. Refresh to try again.")
 

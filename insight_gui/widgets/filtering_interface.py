@@ -20,6 +20,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+# nomenclature:
+# filtered:   indicating that filtering happened, and whether the object "survived" the filtering process (filtered-in/filtered-out)
+# unfiltered: filtering is cleared, previous visibility is restored
+
 
 class FilteringInterface:
     """Lightweight Python mixin for filtering support."""

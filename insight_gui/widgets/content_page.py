@@ -93,9 +93,12 @@ class ContentPage(Adw.NavigationPage):
         self.toast_overlay: Adw.ToastOverlay = builder.get_object("toast_overlay")
         self.banner: Adw.Banner = builder.get_object("banner")
 
-        self.content_stack: Gtk.Stack = builder.get_object("content_stack")  # TODO why is there an extra stack?
-        self.refresh_page: Adw.StatusPage = builder.get_object("refresh_page")  # TODO is this still used?
-        self.empty_search_page: Adw.StatusPage = builder.get_object("empty_search_page")  # TODO is this still used?
+        self.content_stack: Gtk.Stack = builder.get_object("content_stack")
+        self.main_content_page: Adw.Bin = builder.get_object("main_content_page")
+        self.refresh_page: Adw.StatusPage = builder.get_object("refresh_page")
+        self.empty_search_page: Adw.StatusPage = builder.get_object("empty_search_page")
+        self.empty_search_clear_btn: Gtk.Button = builder.get_object("empty_search_clear_btn")
+        self.empty_search_clear_btn.connect("clicked", self.on_clear_search_clicked)
         self.bottom_bar: Gtk.ActionBar = builder.get_object("bottom_bar")
 
         super().set_child(self.toolbar_view)
@@ -111,6 +114,7 @@ class ContentPage(Adw.NavigationPage):
         # tags and search_text for filtering
         self.filter_tags: set[str] = set()
         self.search_text: str = ""
+        self._latest_refresh_successful = True
 
         if self.detachable:
             self.detach_kwargs: dict = {}
@@ -134,8 +138,12 @@ class ContentPage(Adw.NavigationPage):
         self._refresh_future: concurrent.futures.Future | None = None
 
         self.pref_page = PrefPage()
-        self.content_stack.add_child(self.pref_page)
-        self.content_stack.set_visible_child(self.pref_page)
+        self.pref_page.connect("group-filtered", self._on_groups_filtered_changed)
+        self.pref_page.connect("group-unfiltered", self._on_groups_unfiltered_changed)
+
+        # this is here, because some contentpages do not have a pref_page (eg canvas-based pages)
+        self.main_content_page.set_child(self.pref_page)
+        self.content_stack.set_visible_child(self.main_content_page)
 
     def on_realize(self, *args):
         self.is_realized = True
@@ -198,6 +206,7 @@ class ContentPage(Adw.NavigationPage):
         self._refresh_cancel_event = cancel_event
         self._active_refresh_token = refresh_token
         self._start_refresh_ui()
+        self._latest_refresh_successful = True
 
         def _finish(
             payload: object, error: Exception | None = None, *, refresh_token=refresh_token, cancel_event=cancel_event
@@ -216,11 +225,13 @@ class ContentPage(Adw.NavigationPage):
                 if error:
                     self.show_toast(f"Refresh failed! Error: {error}")
                     self.ros2_connector.log(f"Refresh failed! Error: {error}", level="error")
+                    self._latest_refresh_successful = False
                     payload = None
 
                 # Treat explicit False as a failure signal; everything else counts as success
                 if payload is False:
                     self.show_banner(self.refresh_fail_text)
+                    self._latest_refresh_successful = False
                     return GLib.SOURCE_REMOVE
 
                 self.hide_banner()
@@ -231,12 +242,16 @@ class ContentPage(Adw.NavigationPage):
                     self.show_toast(f"Refresh UI failed! Error: {ui_exc}")
                     self.ros2_connector.log(f"Refresh UI failed! Error: {ui_exc}", level="error")
                     self.show_banner(self.refresh_fail_text)
+                    self._latest_refresh_successful = False
+
             finally:
+                # Update the stack to show the relevant status/content page
+                GLib.idle_add(self.update_visible_content_stack_page)
                 self._end_refresh_ui()
 
             return GLib.SOURCE_REMOVE
 
-        def _handle_cancelled(*_args, refresh_token=refresh_token, cancel_event=cancel_event):
+        def _handle_cancelled(*args, refresh_token=refresh_token, cancel_event=cancel_event):
             if refresh_token is not self._active_refresh_token:
                 return GLib.SOURCE_REMOVE
             cancel_event.set()
@@ -318,10 +333,43 @@ class ContentPage(Adw.NavigationPage):
         if not self.searchable:
             return
         self.search_text = self.search_entry.get_text()
-        self.reapply_filters()
+        self.apply_filters()
 
-    def reapply_filters(self):
+    def on_clear_search_clicked(self, *args):
+        """Clear the search entry and reset filters when empty-search page button is pressed."""
+        if not self.searchable:
+            return
+        self.search_entry.set_text("")
+        self.search_text = ""
+        self.search_bar.set_search_mode(False)
+        self.apply_filters()
+
+    def apply_filters(self):
+        """Apply current search_text and filter_tags to the pref_page."""
         self.pref_page.apply_filters(filter_str=self.search_text, filter_tags=self.filter_tags)
+
+    def _on_groups_filtered_changed(self, *args):
+        self.update_visible_content_stack_page()
+
+    def _on_groups_unfiltered_changed(self, *args):
+        self.update_visible_content_stack_page()
+
+    def update_visible_content_stack_page(self):
+        """Central place to decide which child the stack should show based on content/search."""
+        if not self._latest_refresh_successful:
+            self.content_stack.set_visible_child(self.refresh_page)
+            return
+
+        # check if pref_page exists and if filtering is applied
+        if self.searchable and getattr(self, "pref_page", None):
+            search_active = bool(self.search_text.strip() or self.filter_tags)
+            visible_rows_after_search = self.pref_page.get_visible_row_count()
+
+            if search_active and visible_rows_after_search == 0:
+                self.content_stack.set_visible_child(self.empty_search_page)
+                return
+
+        self.content_stack.set_visible_child(self.main_content_page)
 
     def detach(self, *args):
         from insight_gui.window import DetachedWindow
