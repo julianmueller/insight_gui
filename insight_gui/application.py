@@ -212,11 +212,11 @@ class InsightApplication(Adw.Application):
         """Lower or raise priority of a queued future if it has not started yet."""
         return self.worker.reprioritize_worker_future(fut, priority=priority)
 
-    def idle_add(self, func, *args, **kwargs) -> None:
-        """Invoke `func` on the GTK/GLib main thread. Used for GUI updates."""
+    # def idle_add(self, func, *args, **kwargs) -> None:
+    #     """Invoke `func` on the GTK/GLib main thread. Used for GUI updates."""
 
-        def _wrapper():
-            func(*args, **kwargs)
-            return GLib.SOURCE_REMOVE
+    #     def _wrapper():
+    #         func(*args, **kwargs)
+    #         return GLib.SOURCE_REMOVE
 
-        GLib.idle_add(_wrapper)
+    #     GLib.idle_add(_wrapper)
