@@ -30,6 +30,7 @@ gi.require_version("Adw", "1")
 from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango
 
 from insight_gui.widgets.buttons import ToggleButton, CopyButton
+from insight_gui.widgets.context_menu import ContextMenu
 from insight_gui.widgets.filtering_interface import FilteringInterface
 
 
@@ -99,6 +100,22 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
         # set filtering text once labels are initialized
         self.set_filter_str(f"{self.get_title()} {self.get_subtitle()}".lower())
 
+        self._primary_action_callback: Callable | None = None
+        self._primary_action_expects_state = False
+        self._primary_click_controller: Gtk.GestureClick | None = None
+
+        self.context_menu = ContextMenu(target=self, action_prefix="row")
+        self.context_menu.upsert_item(
+            "copy-title",
+            "Copy title",
+            lambda: self._copy_text_to_clipboard(self.get_title(), fallback_label="title"),
+        )
+        self.context_menu.upsert_item(
+            "copy-subtitle",
+            "Copy subtitle",
+            lambda: self._copy_text_to_clipboard(self.get_subtitle(), fallback_label="subtitle"),
+        )
+
     def set_filtered(self, visible: bool):
         super().set_filtered(visible)
         self.emit("filtered", visible)
@@ -106,6 +123,62 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
     def set_unfiltered(self):
         super().set_unfiltered()
         self.emit("unfiltered")
+
+    def _copy_text_to_clipboard(self, text: str, *, fallback_label: str):
+        clip = self.get_clipboard()
+        clip.set(str(text))
+        toast_overlay = self.get_ancestor(Adw.ToastOverlay)
+        toast_overlay.add_toast(Adw.Toast(title=f"Copied {fallback_label}"))
+
+    def trigger_primary_action(self, *, state: Gdk.ModifierType | None = None):
+        if not self._primary_action_callback:
+            return
+        if self._primary_action_expects_state:
+            self._primary_action_callback(state=state)
+        else:
+            self._primary_action_callback()
+
+    def _on_primary_pressed(self, controller: Gtk.GestureClick, n_press: int, x: float, y: float):
+        if controller.get_current_button() != Gdk.BUTTON_PRIMARY:
+            return
+        self.trigger_primary_action(state=controller.get_current_event_state())
+
+    def set_primary_action(
+        self,
+        *,
+        label: str,
+        callback: Callable,
+        tooltip_text: str = "",
+        pass_event_state: bool = False,
+        show_next_icon: bool = False,
+    ):
+        self._primary_action_callback = callback
+        self._primary_action_expects_state = pass_event_state
+
+        if tooltip_text:
+            super().set_tooltip_text(tooltip_text)
+
+        if show_next_icon:
+            self.next_page_icon.set_visible(True)
+
+        if self._primary_click_controller:
+            return
+
+        self._primary_click_controller = Gtk.GestureClick()
+        self._primary_click_controller.set_button(Gdk.BUTTON_PRIMARY)
+        self._primary_click_controller.connect("pressed", self._on_primary_pressed)
+        super().add_controller(self._primary_click_controller)
+        super().set_activatable(True)
+
+        self.context_menu.upsert_item("primary-action", label, lambda: self.trigger_primary_action(), position=0)
+        if self.context_menu.item_count > 1:
+            self.context_menu.add_separator(position=1)
+
+    # def add_context_menu_item(self, action_id: str, label: str, callback: Callable, *, position: int | None = None):
+    #     self.context_menu.upsert_item(action_id, label, callback, position=position)
+
+    # def add_context_menu_separator(self, *, position: int | None = None):
+    #     self.context_menu.add_separator(position=position)
 
     def add_prefix(self, widget: Gtk.Widget, *, prepend: bool = False) -> Gtk.Widget:
         if prepend:
@@ -186,27 +259,24 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
     def set_subpage_link(
         self, *, nav_view: Adw.NavigationView, subpage_class: Type[Adw.NavigationPage], subpage_kwargs: dict
     ):
-        def _on_pressed(controller: Gtk.GestureClick, n_press: int, x: float, y: float):
-            state = controller.get_current_event_state()
+        def _trigger(state: Gdk.ModifierType | None = None):
             subpage = subpage_class(**subpage_kwargs)
 
             # add CTRL+click functionality to open in detached window
-            if state & Gdk.ModifierType.CONTROL_MASK:
+            if state and state & Gdk.ModifierType.CONTROL_MASK:
                 subpage.detach()
 
             # regular click
             else:
                 nav_view.push(subpage)
 
-        # if hasattr(self, "subpage_signal_handler"):
-        #     super().disconnect(self.subpage_signal_handler)
-
-        self.gesture_click = Gtk.GestureClick()
-        self.subpage_signal_handler = self.gesture_click.connect("pressed", _on_pressed)
-        super().add_controller(self.gesture_click)
-
-        super().set_activatable(True)
-        self.next_page_icon.set_visible(True)
+        self.set_primary_action(
+            label="Open",
+            callback=_trigger,
+            tooltip_text="Open details",
+            pass_event_state=True,
+            show_next_icon=True,
+        )
 
     def set_subtitle(self, subtitle: str, max_lines: int = 1):
         # TODO concat lines of the subtitle!
