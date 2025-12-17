@@ -51,35 +51,35 @@ class NodeListPage(ContentPage):
         # self.node_list_group = self.pref_page.add_group(placeholder_text="Refresh to show nodes")
 
     def refresh_bg(self) -> bool:
-        self.available_nodes = self.ros2_connector.get_available_nodes()
+        self.nodes = self.ros2_connector.get_available_nodes()
 
-        if len(self.available_nodes) == 0:
+        if self.nodes is None or self.nodes.get_n_items() == 0:
             # self.node_list_group.set_placeholder_text("No nodes found. Refresh to try again.")
             return False
         return True
 
     def refresh_ui(self):
-        for node_name, node_namespace, node_full_name in self.available_nodes:
+        for node in self.nodes:
             # put all nodes in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-nodes-by-namespace"):
-                node_namespace = ""
+                node.namespace = ""
 
             # get the namespace group of the action
-            if node_namespace in self.node_ns_groups.keys():
-                group = self.node_ns_groups[node_namespace]
+            if node.namespace in self.node_ns_groups.keys():
+                group = self.node_ns_groups[node.namespace]
             else:
-                subtitle = "root namespace" if node_namespace == "/" else ""
-                group = self.pref_page.add_group(title=node_namespace, description=subtitle)
-                self.node_ns_groups[node_namespace] = group
+                description = "global namespace" if node.namespace == "/" else ""
+                group = self.pref_page.add_group(title=node.namespace, description=description)
+                self.node_ns_groups[node.namespace] = group
 
-            row = PrefRow(title=node_name, subtitle=node_full_name)
-            if _is_hidden_name(node_name):
+            row = PrefRow(title=node.name, subtitle=node.full_name)
+            if node.hidden:
                 row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden node")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=NodeInfoPage,
-                subpage_kwargs={"node_full_name": node_full_name},
+                subpage_kwargs={"node": node},
             )
             group.add_row(row)
 

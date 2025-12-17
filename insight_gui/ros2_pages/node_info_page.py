@@ -29,28 +29,32 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import GObject, Gtk, Adw
 
 from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 
+from insight_gui.models.node_item import NodeItem
+
 
 class NodeInfoPage(ContentPage):
     __gtype_name__ = "NodeInfoPage"
 
-    def __init__(self, node_full_name: str, **kwargs):
-        super().__init__(searchable=True, refreshable=True, **kwargs)
-        super().set_title(f"Node {node_full_name}")
+    node = GObject.Property(type=NodeItem)
 
-        self.node_full_name = node_full_name
+    def __init__(self, node: NodeItem, **kwargs):
+        super().__init__(searchable=True, refreshable=True, **kwargs)
+        self.node = node
+
+        super().set_title(f"Node {self.node.full_name}")
         self.detach_kwargs = {
-            "node_full_name": node_full_name,
+            "node": self.node,
         }
 
-        parsed_name = parse_node_name(node_full_name)
-        self.node_name = parsed_name.name
-        self.node_namespace = parsed_name.namespace
+        # parsed_name = parse_node_name(node_full_name)
+        # self.node.name = parsed_name.name
+        # self.node.namespace = parsed_name.namespace
 
         # Publishers
         self.publishers_group = self.pref_page.add_group(title="Publishers", placeholder_text="Node has no publishers")
@@ -86,36 +90,36 @@ class NodeInfoPage(ContentPage):
     def refresh_bg(self) -> bool:
         # Publishers
         self.publisher_list = self.ros2_connector.get_publishers_by_node(
-            node_name=self.node_name, node_namespace=self.node_namespace
+            node_name=self.node.name, node_namespace=self.node.namespace
         )
 
         # Subscribers
         self.subscriber_list = self.ros2_connector.get_subscribers_by_node(
-            node_name=self.node_name, node_namespace=self.node_namespace
+            node_name=self.node.name, node_namespace=self.node.namespace
         )
 
         # Service Servers
         self.service_server_list = self.ros2_connector.get_service_servers_by_node(
-            node_name=self.node_name, node_namespace=self.node_namespace
+            node_name=self.node.name, node_namespace=self.node.namespace
         )
 
         # Service Clients
         self.service_client_list = self.ros2_connector.get_service_clients_by_node(
-            node_name=self.node_name, node_namespace=self.node_namespace
+            node_name=self.node.name, node_namespace=self.node.namespace
         )
 
         # Action Servers
         self.action_servers_list = self.ros2_connector.get_action_servers_by_node(
-            node_name=self.node_name, node_namespace=self.node_namespace
+            node_name=self.node.name, node_namespace=self.node.namespace
         )
 
         # Action Clients
         self.action_clients_list = self.ros2_connector.get_action_clients_by_node(
-            node_name=self.node_name, node_namespace=self.node_namespace
+            node_name=self.node.name, node_namespace=self.node.namespace
         )
 
         # Parameters
-        self.parameter_list = self.ros2_connector.get_parameters_by_node(node_name=self.node_name)
+        self.parameter_list = self.ros2_connector.get_parameters_by_node(node_name=self.node.name)
 
         return (
             len(self.publisher_list)
@@ -220,7 +224,7 @@ class NodeInfoPage(ContentPage):
 
         # Parameters
         for param_name in sorted(self.parameter_list):
-            param_info = self.ros2_connector.get_parameter_info(node_name=self.node_name, parameter_name=param_name)
+            param_info = self.ros2_connector.get_parameter_info(node_name=self.node.name, parameter_name=param_name)
             param_type = param_info["type"]
             param_value = param_info["value"]
             param_read_only = param_info["read_only"]
@@ -229,7 +233,7 @@ class NodeInfoPage(ContentPage):
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ParamEditPage,
-                subpage_kwargs={"node_name": self.node_name, "param_name": param_name},
+                subpage_kwargs={"node_name": self.node.name, "param_name": param_name},
             )
             if param_read_only:
                 row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")

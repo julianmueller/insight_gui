@@ -159,7 +159,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             Adw.EntryRow(
                 title="GUI-Node Namespace",
                 text="",
-                tooltip_text="Namespace for the ROS2 GUI-Node (leave empty for root namespace)",
+                tooltip_text="Namespace for the ROS2 GUI-Node (leave empty for global namespace '/')",
                 show_apply_button=True,
             )
         )

@@ -18,7 +18,7 @@
         <key name="gui-node-namespace" type="s">
             <default>""</default>
             <summary>GUI-Node Namespace</summary>
-            <description>Namespace for the ROS2 GUI-Node (leave empty for root namespace)</description>
+            <description>Namespace for the ROS2 GUI-Node (leave empty for global namespace '/')</description>
         </key>
 
         <!-- Filter Settings -->

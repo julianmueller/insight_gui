@@ -26,7 +26,7 @@ import threading
 import importlib
 from typing import Callable, Dict, Any, Tuple, List
 from operator import itemgetter
-from functools import wraps
+from functools import wraps, lru_cache
 
 import rclpy
 from rclpy.node import Node
@@ -60,7 +60,7 @@ gi.require_version("GLib", "2.0")
 from gi.repository import GLib, Gio
 
 from insight_gui.utils.chache import ttl_cache
-from functools import wraps, lru_cache
+from insight_gui.models.node_item import NodeItem
 
 
 def cached(_func=None, *, use_ttl: bool = True):
@@ -283,24 +283,27 @@ class ROS2Connector:
 
     # Standardized ROS2 data collection methods with caching
     @cached
-    def get_available_nodes(self) -> List[Tuple[str, str, str]]:
+    def get_available_nodes(self) -> Gio.ListStore:
         """Get available nodes with caching support."""
         if not self.is_running or not self.node:
-            return []
+            return None
+
+        nodes = Gio.ListStore.new(NodeItem)
 
         try:
-            nodes = get_node_names(node=self.node, include_hidden_nodes=True)
-            nodes = sorted(nodes, key=itemgetter(0))
+            # returned as a List['name', 'namespace', 'full_name']
+            node_names = get_node_names(node=self.node, include_hidden_nodes=True)
 
-            # Filter hidden nodes if requested
-            if not self.app.settings.get_boolean("show-hidden-nodes"):
-                nodes = self._filter_hidden_nodes(nodes)
+            for name, namespace, full_name in node_names:
+                n = NodeItem(namespace=namespace, name=name, hidden=_is_hidden_name(full_name))
+                nodes.append(n)
 
+            nodes.sort(compare_func=lambda a, b: a.full_name < b.full_name)
             return nodes
 
         except Exception as e:
             print(f"Error getting nodes: {e}")
-            return []
+            return None
 
     @cached
     def get_available_topics(self) -> List[Tuple[str, List[str]]]:
