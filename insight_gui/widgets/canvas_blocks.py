@@ -31,6 +31,11 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GObject
 
+from insight_gui.models.node_item import NodeItem
+from insight_gui.models.topic_item import TopicItem
+from insight_gui.models.service_item import ServiceItem
+from insight_gui.models.action_item import ActionItem
+from insight_gui.models.parameter_item import ParameterItem
 
 from insight_gui.utils.adw_colors import AdwAccentColor
 from insight_gui.widgets.buttons import RevealButton
@@ -208,82 +213,88 @@ class BaseBlock(Adw.Bin):
 class NodeBlock(BaseBlock):
     __gtype_name__ = "NodeBlock"
 
-    def __init__(self, node_name: str, node_namespace: str, node_full_name: str, **kwargs):
+    node = GObject.Property(type=NodeItem, default=None)
+
+    def __init__(self, node: NodeItem, **kwargs):
         super().__init__(
-            title=node_name,
-            subtitle=node_full_name,
-            uuid=f"node:{node_full_name}",
+            title=node.name,
+            subtitle=node.full_name,
+            uuid=f"node:{node.full_name}",
             accent_color=AdwAccentColor.ADW_ACCENT_COLOR_BLUE,
             **kwargs,
         )
-        self.node_name = node_name
-        self.node_namespace = node_namespace
-        self.node_full_name = node_full_name
+        self.node = node
 
 
 class TopicBlock(BaseBlock):
     __gtype_name__ = "TopicBlock"
 
-    def __init__(self, topic_name: str, topic_types: str | list[str], **kwargs):
+    topic = GObject.Property(type=TopicItem, default=None)
+
+    def __init__(self, topic: TopicItem, **kwargs):
         super().__init__(
-            title=topic_name,
-            subtitle=topic_types if isinstance(topic_types, str) else ", ".join(topic_types),
-            uuid=f"topic:{topic_name}",
+            title=topic.name,
+            subtitle=topic.interface.full_name,
+            uuid=f"topic:{topic.name}",
             accent_color=AdwAccentColor.ADW_ACCENT_COLOR_ORANGE,
             **kwargs,
         )
-        self.topic_name = topic_name
-        self.topic_types = topic_types
+        self.topic = topic
 
 
 class ServiceBlock(BaseBlock):
     __gtype_name__ = "ServiceBlock"
 
-    def __init__(self, service_name: str, service_types: str | list[str], **kwargs):
+    service = GObject.Property(type=ServiceItem, default=None)
+
+    def __init__(self, service: ServiceItem, **kwargs):
         super().__init__(
-            title=service_name,
-            subtitle=service_types if isinstance(service_types, str) else ", ".join(service_types),
-            uuid=f"service:{service_name}",
+            title=service.name,
+            subtitle=service.interface.full_name,
+            uuid=f"service:{service.name}",
             accent_color=AdwAccentColor.ADW_ACCENT_COLOR_GREEN,
             **kwargs,
         )
-        self.service_name = service_name
-        self.service_types = service_types
+        self.service = service
 
 
 class ActionBlock(BaseBlock):
     __gtype_name__ = "ActionBlock"
 
-    def __init__(self, action_name: str, action_types: str | list[str], **kwargs):
+    action = GObject.Property(type=ActionItem, default=None)
+
+    def __init__(self, action: ActionItem, **kwargs):
         super().__init__(
-            title=action_name,
-            subtitle=action_types if isinstance(action_types, str) else ", ".join(action_types),
-            uuid=f"action:{action_name}",
+            title=action.name,
+            subtitle=action.interface.full_name,
+            uuid=f"action:{action.name}",
             accent_color=AdwAccentColor.ADW_ACCENT_COLOR_RED,
             **kwargs,
         )
-        self.action_name = action_name
-        self.action_types = action_types
+        self.action = action
         # TODO add subtitle etc
 
 
 class ParameterBlock(BaseBlock):
     __gtype_name__ = "ParameterBlock"
 
-    def __init__(self, parameter_name: str, node_full_name: str, **kwargs):
+    parameter = GObject.Property(type=ParameterItem, default=None)
+
+    def __init__(self, parameter: ParameterItem, **kwargs):
         super().__init__(
-            title=parameter_name,
-            subtitle=f"{node_full_name}/{parameter_name}",
-            uuid=f"param:{node_full_name}:{parameter_name}",
+            title=parameter.name,
+            subtitle=f"{parameter.node.full_name}/{parameter.name}",
+            uuid=f"param:{parameter.node.full_name}:{parameter.name}",
             accent_color=AdwAccentColor.ADW_ACCENT_COLOR_PURPLE,
             **kwargs,
         )
-        self.node_full_name = node_full_name
-        self.parameter_name = parameter_name
+        self.parameter = parameter
 
 
 class TransformBlock(BaseBlock):
     __gtype_name__ = "TransformBlock"
+
+    # TODO make this also use GObject Properts for TF
 
     def __init__(
         self,

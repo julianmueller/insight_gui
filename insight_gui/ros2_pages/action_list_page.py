@@ -22,8 +22,6 @@
 
 from typing import Dict
 
-from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
-
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -36,6 +34,7 @@ from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 
 
+# TODO do the GObject refactor for the entire page
 class ActionListPage(ContentPage):
     __gtype_name__ = "ActionListPage"
 
@@ -50,46 +49,37 @@ class ActionListPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_actions = self.ros2_connector.get_available_actions()
-        return len(self.available_actions) > 0
+        return self.available_actions is not None and self.available_actions.get_n_items() > 0
 
     def refresh_ui(self):
-        for action_name, action_types in self.available_actions:
-            # action_types is a list, as multiple servers can advertise different types to the same action
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(action_types) == 1:
-                action_types = action_types[0]
-            else:
-                action_types = ", ".join(action_types)
-
-            # split action name into namespace and name
-            parts = action_name.rstrip("/").split("/")
-            namespace = "/".join(parts[:-1])  # Everything except the last part
-            name = "/" + parts[-1]  # The last part, prefixed with '/'
-
+        for action in self.available_actions:
             # put all actions in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-actions-by-namespace"):
                 namespace = ""
+            else:
+                namespace = action.namespace if action.namespace else "/"
 
             # get the namespace group of the action
             if namespace in self.action_ns_groups.keys():
                 group = self.action_ns_groups[namespace]
             else:
-                group = self.pref_page.add_group(title=namespace)
+                description = "global namespace" if action.namespace == "/" else ""
+                group = self.pref_page.add_group(title=namespace, description=description)
                 self.action_ns_groups[namespace] = group
 
             # TODO this somehow messes with the sorting :( again ...
 
-            row = PrefRow(title=action_name, subtitle=action_types)
+            row = PrefRow(title=action.full_name, subtitle=action.interface.full_name)
             row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.START)
-            row.subtitle_lbl.set_tooltip_text(action_name)
+            row.subtitle_lbl.set_tooltip_text(action.full_name)
 
-            if topic_or_service_is_hidden(action_name):
+            if action.hidden:
                 row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,
-                subpage_kwargs={"action_name": action_name, "action_types": action_types},
+                subpage_kwargs={"action": action},
             )
             group.add_row(row)
 

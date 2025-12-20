@@ -46,7 +46,14 @@ from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 
+from insight_gui.ros2_pages.node_info_page import NodeInfoPage
+from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
+from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
+from insight_gui.ros2_pages.action_info_page import ActionInfoPage
+from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 
+
+# TODO maybe change this to actually display the the XXInfoPage, like TopicInfoPage etc
 class CanvasSidebar(Gtk.Box):
     __gtype_name__ = "CanvasSidebar"
     __gsignals__ = {
@@ -55,7 +62,8 @@ class CanvasSidebar(Gtk.Box):
 
     def __init__(self, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0, **kwargs)
-        # super().connect("realize", self.on_realize)
+        super().connect("realize", self.on_realize)
+        super().connect("realize", self.on_realize)
 
         # Header with title and close button
         self.header_box = Gtk.Box(
@@ -90,6 +98,9 @@ class CanvasSidebar(Gtk.Box):
         self.pref_page = PrefPage()
         super().append(self.pref_page)
 
+    def on_realize(self, *args):
+        self.nav_view: Adw.NavigationView = super().get_ancestor(Adw.NavigationView)
+
     def update_content(self, block: BaseBlock):
         # Clear existing content from PrefPage
         self.pref_page.clear()
@@ -113,33 +124,85 @@ class CanvasSidebar(Gtk.Box):
         # Type-specific information
         if isinstance(block, NodeBlock):
             node_group = self.pref_page.add_group(title="Node Details")
-            node_group.add_row(PrefRow(title="Node Name", subtitle=block.node_name, css_classes=["property"]))
-            node_group.add_row(PrefRow(title="Namespace", subtitle=block.node_namespace, css_classes=["property"]))
+            node_row = node_group.add_row(
+                PrefRow(title="Node Name", subtitle=block.node.name, css_classes=["property"])
+            )
+            node_row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=NodeInfoPage,
+                subpage_kwargs={"node": block.node},
+            )
+            node_group.add_row(
+                PrefRow(title="Namespaced Name", subtitle=block.node.full_name, css_classes=["property"])
+            )
 
         elif isinstance(block, TopicBlock):
             topic_group = self.pref_page.add_group(title="Topic Details")
-            topic_group.add_row(PrefRow(title="Topic Name", subtitle=block.topic_name, css_classes=["property"]))
-            types_text = block.topic_types if isinstance(block.topic_types, str) else ", ".join(block.topic_types)
-            topic_group.add_row(PrefRow(title="Message Types", subtitle=types_text, css_classes=["property"]))
+            topic_row = topic_group.add_row(
+                PrefRow(title="Topic Name", subtitle=block.topic.name, css_classes=["property"])
+            )
+            topic_row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=TopicInfoPage,
+                subpage_kwargs={"topic": block.topic},
+            )
+            # TODO add subpage link to topic info page
+
+            interface_type_row = topic_group.add_row(
+                PrefRow(title="Topic Type", subtitle=block.topic.interface.full_name, css_classes=["property"])
+            )
+            interface_type_row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=InterfaceInfoPage,
+                subpage_kwargs={"interface": block.topic.interface},
+            )
 
         elif isinstance(block, ServiceBlock):
             service_group = self.pref_page.add_group(title="Service Details")
-            service_group.add_row(PrefRow(title="Service Name", subtitle=block.service_name, css_classes=["property"]))
-            types_text = block.service_types if isinstance(block.service_types, str) else ", ".join(block.service_types)
-            service_group.add_row(PrefRow(title="Service Types", subtitle=types_text, css_classes=["property"]))
+            service_row = service_group.add_row(
+                PrefRow(title="Service Name", subtitle=block.service.name, css_classes=["property"])
+            )
+            service_row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=ServiceInfoPage,
+                subpage_kwargs={"service": block.service},
+            )
+
+            interface_type_row = service_group.add_row(
+                PrefRow(title="Service Type", subtitle=block.service.interface.full_name, css_classes=["property"])
+            )
+            interface_type_row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=InterfaceInfoPage,
+                subpage_kwargs={"interface": block.service.interface},
+            )
 
         elif isinstance(block, ActionBlock):
             action_group = self.pref_page.add_group(title="Action Details")
-            action_group.add_row(PrefRow(title="Action Name", subtitle=block.action_name, css_classes=["property"]))
-            types_text = block.action_types if isinstance(block.action_types, str) else ", ".join(block.action_types)
-            action_group.add_row(PrefRow(title="Action Types", subtitle=types_text, css_classes=["property"]))
+            action_row = action_group.add_row(
+                PrefRow(title="Action Name", subtitle=block.action.name, css_classes=["property"])
+            )
+            action_row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=ActionInfoPage,
+                subpage_kwargs={"action": block.action},
+            )
+
+            interface_type_row = action_group.add_row(
+                PrefRow(title="Action Type", subtitle=block.action.interface.full_name, css_classes=["property"])
+            )
+            interface_type_row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=InterfaceInfoPage,
+                subpage_kwargs={"interface": block.action.interface},
+            )
 
         elif isinstance(block, ParameterBlock):
             param_group = self.pref_page.add_group(title="Parameter Details")
             param_group.add_row(
-                PrefRow(title="Parameter Name", subtitle=block.parameter_name, css_classes=["property"])
+                PrefRow(title="Parameter Name", subtitle=block.parameter.name, css_classes=["property"])
             )
-            param_group.add_row(PrefRow(title="Node", subtitle=block.node_full_name, css_classes=["property"]))
+            param_group.add_row(PrefRow(title="Node", subtitle=block.node.full_name, css_classes=["property"]))
 
         elif isinstance(block, TransformBlock):
 

@@ -170,5 +170,5 @@ class MulticastPage(ContentPage):
         self.receiver_thread.start()
 
     def _current_time_to_datetime(self) -> datetime:
-        time_s, time_ns = self.ros2_connector.node.get_clock().now().seconds_nanoseconds()
+        time_s, time_ns = self.ros2_connector.ros2_node.get_clock().now().seconds_nanoseconds()
         return datetime.fromtimestamp(float(time_s + time_ns / 1e9))

@@ -53,6 +53,7 @@ ANGLE_FORMAT_DEG = "DEG"
 ANGLE_FORMAT_RAD = "RAD"
 
 
+# TODO do the GObject refactor for the entire page
 class TFTreePage(ContentPage):
     __gtype_name__ = "TFTreePage"
 
@@ -78,10 +79,10 @@ class TFTreePage(ContentPage):
 
         # TODO move these tf calls to the connector and enable caching
         self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
+        self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.ros2_node)
         if self.wait_for_refresh_cancel(timeout=5.0, cancel_event=cancel_event):
             raise RefreshCancelled()
-        self.lookup_time = self.ros2_connector.node.get_clock().now()
+        self.lookup_time = self.ros2_connector.ros2_node.get_clock().now()
 
         # Get the frames from the buffer as YAML
         result = self.tf_buffer.all_frames_as_yaml()

@@ -20,16 +20,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from operator import itemgetter
-
-from ros2node.api import _is_hidden_name
-
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
+from insight_gui.models.action_item import ActionItem
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
@@ -41,88 +38,77 @@ from insight_gui.widgets.pref_rows import PrefRow
 class ActionInfoPage(ContentPage):
     __gtype_name__ = "ActionInfoPage"
 
-    def __init__(self, action_name: str, action_types: str | list[str], **kwargs):
+    def __init__(self, action: ActionItem, **kwargs):
         super().__init__(searchable=True, refreshable=True, **kwargs)
-        super().set_title(f"Action {action_name}")
+        super().set_title(f"Action {action.full_name}")
 
-        self.action_name = action_name
-        self.action_types = action_types
-        self.detach_kwargs = {
-            "action_name": action_name,
-            "action_types": action_types,
-        }
+        self.action = action
+        self.detach_kwargs = {"action": action}
 
-        self.open_goal_page = super().add_bottom_left_btn(
+        self.open_goal_page_btn = super().add_bottom_left_btn(
             label="Open Action Goal",
             icon_name="emoji-flags-symbolic",
-            func=self.on_goto_action_goal_page,
+            func=self._on_goto_action_goal_page,
             tooltip_text="Go to action goal page",
         )
 
-        # Action Type
-        self.action_type_group = self.pref_page.add_group(title="Action Type")
+        # Action Interface Type
+        self.action_interface_type_group = self.pref_page.add_group(title="Action Interface Type")
 
         # Action Servers
         self.action_servers_group = self.pref_page.add_group(
-            title="Action Servers", placeholder_text="action has no servers"
+            title="Action Servers", placeholder_text="This action has no servers."
         )
 
-        # Subscribers
+        # Action Clients
         self.action_clients_group = self.pref_page.add_group(
-            title="Action Clients", placeholder_text="action has no clients"
+            title="Action Clients", placeholder_text="This action has no clients."
         )
 
     def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a server/client of this action
         self.available_nodes = self.ros2_connector.get_available_nodes()
-        return len(self.available_nodes) > 0
+        return self.available_nodes is not None and self.available_nodes.get_n_items() > 0
 
     def refresh_ui(self):
-        def add_act_type_row(msg_type_full_name: str):
-            msg_row = PrefRow(title=msg_type_full_name)  # , subtitle=node_full_name)
-            msg_row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=InterfaceInfoPage,
-                subpage_kwargs={"interface_full_name": msg_type_full_name},
-            )
-            self.action_type_group.add_row(msg_row)
+        # create a row for the action type # TODO maybe rather add the request/response/feedback as rows?
+        interface_type_row = PrefRow(title=self.action.interface.full_name)
+        interface_type_row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=InterfaceInfoPage,
+            subpage_kwargs={"interface": self.action.interface},
+        )
+        self.action_interface_type_group.add_row(interface_type_row)
 
-        if isinstance(self.action_types, str):
-            add_act_type_row(self.action_types)
-        elif isinstance(self.action_types, list):
-            for msg_type in self.action_types:
-                add_act_type_row(msg_type)
-
-        for node_name, node_namespace, node_full_name in sorted(self.available_nodes, key=itemgetter(0)):
-            # add those nodes, that are servers to the action
-            action_servers_list = self.ros2_connector.get_action_servers_by_node(
-                node_name=node_name, node_namespace=node_namespace
-            )
-            if any(self.action_name in server for server in action_servers_list):
-                row = PrefRow(title=node_name, subtitle=node_full_name)
-                if _is_hidden_name(node_name):
-                    row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
+        # populate the servers and clients
+        for node in self.available_nodes:
+            # add those nodes, that are servers to the action # TODO this could probably be optimized
+            action_servers_list = self.ros2_connector.get_action_servers_by_node(node=node)
+            found, index = action_servers_list.find(self.action)
+            if found:
+                row = PrefRow(title=node.name, subtitle=node.full_name)
+                if node.hidden:
+                    row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden node")
 
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    subpage_kwargs={"node_full_name": node_full_name},
+                    subpage_kwargs={"node": node},
                 )
                 self.action_servers_group.add_row(row)
 
-            # add those nodes, that are clients to the action
-            action_clients_list = self.ros2_connector.get_action_clients_by_node(
-                node_name=node_name, node_namespace=node_namespace
-            )
-            if any(self.action_name in client for client in action_clients_list):
-                row = PrefRow(title=node_name, subtitle=node_full_name)
-                if _is_hidden_name(node_name):
-                    row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
+            # add those nodes, that are clients to the action # TODO this could probably be optimized
+            action_clients_list = self.ros2_connector.get_action_clients_by_node(node=node)
+            found, index = action_clients_list.find(self.action)
+            if found:
+                row = PrefRow(title=node.name, subtitle=node.full_name)
+                if node.hidden:
+                    row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden node")
 
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=NodeInfoPage,
-                    subpage_kwargs={"node_full_name": node_full_name},
+                    subpage_kwargs={"node": node},
                 )
                 self.action_clients_group.add_row(row)
 
@@ -131,9 +117,12 @@ class ActionInfoPage(ContentPage):
         self.action_clients_group.set_description_to_row_count()
 
     def reset_ui(self):
-        self.action_type_group.clear()
+        self.action_interface_type_group.clear()
         self.action_servers_group.clear()
         self.action_clients_group.clear()
 
-    def on_goto_action_goal_page(self):
-        self.nav_view.push(ActionGoalPage(preselect_action=self.action_name))
+    # def trigger(self): # TODO
+    #     self._on_goto_action_goal_page()
+
+    def _on_goto_action_goal_page(self):
+        self.nav_view.push(ActionGoalPage(preselect_action=self.action))

@@ -31,6 +31,7 @@ from gi.repository import Gtk, Adw, Gio
 from insight_gui.widgets.content_page import ContentPage
 
 
+# TODO do the GObject refactor for the entire page
 class JointStatesPage(ContentPage):
     __gtype_name__ = "JointStatesPage"
 
@@ -61,16 +62,10 @@ class JointStatesPage(ContentPage):
 
         available_topics = self.ros2_connector.get_available_topics()
 
-        for i, (topic_name, topic_types) in enumerate(available_topics):
-            # topic_types is a list, as multiple servers can advertise different types to the same topic
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(topic_types) == 1:
-                topic_types = topic_types[0]
-            else:
-                topic_types = ", ".join(topic_types)
-
-            if topic_types == "sensor_msgs/msg/JointState":
-                self.joint_states_topic_list.append(topic_name)
+        if available_topics:
+            for topic in available_topics:
+                if any(t == "sensor_msgs/msg/JointState" for t in getattr(topic, "type_names", [])):
+                    self.joint_states_topic_list.append(topic.full_name)
         return len(self.joint_states_topic_list) > 0
 
     def refresh_ui(self):

@@ -22,8 +22,6 @@
 
 from typing import Dict
 
-from ros2node.api import _is_hidden_name
-
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -52,11 +50,7 @@ class NodeListPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.nodes = self.ros2_connector.get_available_nodes()
-
-        if self.nodes is None or self.nodes.get_n_items() == 0:
-            # self.node_list_group.set_placeholder_text("No nodes found. Refresh to try again.")
-            return False
-        return True
+        return self.nodes is not None and self.nodes.get_n_items() > 0
 
     def refresh_ui(self):
         for node in self.nodes:

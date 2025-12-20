@@ -124,6 +124,21 @@
 - change all "prints" into ros2_connector.logs
 - add groups for common ros2 interfaces formats (Pose/Quaternion/Transform etc) where exisiting rows that are implemented (like tf calc page normalize quat etc) can be reused
     - maybe even for images??
+- GObject refactor pages todo:
+    - action_goal_page
+    - action_list_page
+    - controller_manager
+    - img_viewer
+    - joint_states_page
+    - service_call_page
+    - service_list_page
+    - teleop_page
+    - tf_page
+    - tf_static_broadcaster
+    - tf_tree_page
+    - topic_pub_page
+    - topic_remoap_page
+    - topic_sub_page
 
 
 ## Bugs

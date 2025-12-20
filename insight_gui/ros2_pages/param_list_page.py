@@ -21,7 +21,6 @@
 # =============================================================================
 
 from typing import Dict
-from operator import itemgetter
 
 from rclpy.parameter import Parameter
 from rclpy.exceptions import ParameterNotDeclaredException
@@ -31,8 +30,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Gio
 
+from insight_gui.models.parameter_item import ParameterItem
 from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
@@ -53,45 +53,35 @@ class ParameterListPage(ContentPage):
     def refresh_bg(self):
         available_nodes = self.ros2_connector.get_available_nodes()
 
-        if len(available_nodes) == 0:
+        if available_nodes is None or available_nodes.get_n_items() == 0:
             return False
 
-        parameters_by_node: Dict[str, list[tuple[str, Dict[str, object]]]] = {}
+        self.parameters_by_node: Dict[str, Gio.ListStore] = {}
 
-        for node_name, _node_namespace, _node_full_name in sorted(available_nodes):
-            param_names = self.ros2_connector.get_parameters_by_node(node_name=node_name)
-            if not param_names:
-                continue
+        for node in available_nodes:
+            parameters = self.ros2_connector.get_parameters_by_node(node=node)
 
-            param_entries: list[tuple[str, Dict[str, object]]] = []
-            for param_name in sorted(param_names):
-                param_info = self.ros2_connector.get_parameter_info(node_name=node_name, parameter_name=param_name)
-                param_entries.append((param_name, param_info))
+            if parameters and parameters.get_n_items() > 0:
+                self.parameters_by_node[node.full_name] = parameters
 
-            if param_entries:
-                parameters_by_node[node_name] = param_entries
+        return self.parameters_by_node if self.parameters_by_node else False
 
-        return parameters_by_node if parameters_by_node else False
-
-    def refresh_ui(self, parameters_by_node: Dict[str, list[tuple[str, Dict[str, object]]]]):
+    def refresh_ui(self):
         # for every node with params add a group
-        for node_name, param_entries in sorted(parameters_by_node.items(), key=itemgetter(0)):
+        for node_full_name, param_store in self.parameters_by_node.items():
             # create a group and add all parameters
-            group = self.pref_page.add_group(title=node_name)
-            for param_name, param_info in param_entries:
-                param_type = param_info.get("type", "")
-                param_value = param_info.get("value")
-                param_read_only = bool(param_info.get("read_only", False))
+            group = self.pref_page.add_group(title=node_full_name)
 
-                row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
+            for param in param_store:
+                row = PrefRow(title=param.name, subtitle=f"{param.type}: {param.value}")
                 row.set_subpage_link(
                     nav_view=self.nav_view,
                     subpage_class=ParamEditPage,
-                    subpage_kwargs={"node_name": node_name, "param_name": param_name},
+                    subpage_kwargs={"parameter": param},
                 )
 
                 # if the parameter is read-only, a prefix icon is added to the row
-                if param_read_only:
+                if param.read_only:
                     row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
 
                 group.add_row(row)

@@ -33,16 +33,18 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, Pango
 
+from insight_gui.models.topic_item import TopicItem
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
+# TODO do the GObject refactor for the entire page
 class TopicRemapPage(ContentPage):
     __gtype_name__ = "TopicRemapPage"
 
-    def __init__(self, preselect_topic: str = "", **kwargs):
+    def __init__(self, preselect_topic: TopicItem = None, **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Remap Topic")
         super().set_refresh_fail_text("No topics found. Refresh to try again.")
@@ -50,7 +52,6 @@ class TopicRemapPage(ContentPage):
         self.preselect_topic = preselect_topic
         self.detach_kwargs = {"preselect_topic": preselect_topic}
 
-        self.available_topics: list[tuple[str, list[str]]] = []
         self.selected_topic: str = ""
         self.selected_topic_type: str = ""
         self.target_topic_full: str = ""
@@ -124,13 +125,13 @@ class TopicRemapPage(ContentPage):
     # ------------------------------------------------------------------
     def refresh_bg(self) -> bool:
         self.available_topics = self.ros2_connector.get_available_topics()
-        return len(self.available_topics) > 0
+        return self.available_topics is not None and self.available_topics.get_n_items() > 0
 
     def refresh_ui(self):
         self.topic_list_store.remove_all()
 
-        for topic_name, _ in self.available_topics:
-            self.topic_list_store.append(Gtk.StringObject.new(topic_name))
+        for topic in self.available_topics:
+            self.topic_list_store.append(Gtk.StringObject.new(topic.full_name))
 
         found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
         if found_index >= 0:
@@ -197,13 +198,16 @@ class TopicRemapPage(ContentPage):
             return False
 
         msg_class = self.ros2_connector.get_message_class(self.selected_topic)
-        if not msg_class:
+        if not msg_class or not msg_class.python_class:
             self.show_toast("Could not determine message type")
             return False
+        msg_class_python = msg_class.python_class
 
         try:
-            self.remap_pub = self.ros2_connector.add_publisher(msg_class, target_topic)
-            self.remap_sub = self.ros2_connector.add_subsciption(msg_class, self.selected_topic, self._on_remap_message)
+            self.remap_pub = self.ros2_connector.add_publisher(msg_class_python, target_topic)
+            self.remap_sub = self.ros2_connector.add_subsciption(
+                msg_class_python, self.selected_topic, self._on_remap_message
+            )
         except Exception as exc:
             self.show_toast(f"Failed to start remap: {exc}")
             self.stop_remap()
@@ -249,11 +253,11 @@ class TopicRemapPage(ContentPage):
     # Helpers
     # ------------------------------------------------------------------
     def _get_topic_type(self, topic_name: str) -> Optional[str]:
-        for name, types in self.available_topics:
-            if name == topic_name and types:
-                if len(types) == 1:
-                    return types[0]
-                return ", ".join(types)
+        for topic in self.available_topics:
+            if topic.full_name == topic_name and topic.type_names:
+                if len(topic.type_names) == 1:
+                    return topic.type_names[0]
+                return ", ".join(topic.type_names)
         return None
 
     def _build_target_topic(self) -> str:

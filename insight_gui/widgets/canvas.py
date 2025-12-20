@@ -687,7 +687,7 @@ class Canvas(Adw.Bin):
                 args="-Grankdir=LR -Granksep=2.0 -Gnodesep=0.5",
             )
 
-        except (ImportError, Exception) as e:
+        except ImportError as e:
             print(f"Graphviz layout failed: {e}, falling back to spring layout")
             self._graph_node_positions = nx.spring_layout(self._nx_graph, seed=42, k=3, iterations=50)
 

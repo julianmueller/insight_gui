@@ -200,6 +200,9 @@ class ContentPage(Adw.NavigationPage):
             return False
         return event.wait(timeout)
 
+    # TODO maybe change the whole refresh thing, so that there is only one refresh method, which always happens in the
+    # bg and every update on the ui is performed with 'idle_add'. with this, the refresh is progressive and not all at
+    # once, which might again freeze the ui, when many many ui changes all need to happen at once
     def refresh(self):
         if self.refreshing:
             return
@@ -247,6 +250,7 @@ class ContentPage(Adw.NavigationPage):
                     self.ros2_connector.log(f"Refresh UI failed! Error: {ui_exc}", level="error")
                     self.show_banner(self.refresh_fail_text)
                     self._latest_refresh_successful = False
+                    raise ui_exc  # reraise it
 
             finally:
                 # Update the stack to show the relevant status/content page

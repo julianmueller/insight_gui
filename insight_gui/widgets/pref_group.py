@@ -100,7 +100,9 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
     @GObject.Property(type=int, default=0)
     def num_rows(self):
         # return the number of items in the ListStore
-        return self.rows.get_n_items()
+        return (
+            self.rows.get_n_items()
+        )  # TODO this should be deferred, when rows have been populated (problems with multithreading)
 
     @GObject.Property(type=bool, default=True)
     def is_empty(self):

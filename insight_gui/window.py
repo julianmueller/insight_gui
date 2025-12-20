@@ -283,7 +283,7 @@ class MainWindow(BaseWindow):
             self.time_box.set_visible(True)
             current_time = 0
             try:
-                current_time = self.ros2_connector.node.get_clock().now()
+                current_time = self.ros2_connector.ros2_node.get_clock().now()
             except AttributeError as e:
                 return True
             elapsed = current_time - self.ros2_connector.start_time

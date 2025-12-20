@@ -37,8 +37,12 @@ from insight_gui.widgets.pref_rows import MultiToggleButtonRow, ColumnViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
-class LogMessage(GObject.Object):
-    """A GObject that represents a log message with timestamp, severity, and message."""
+# TODO maybe move this also into the models folder?
+class LogMessageItem(GObject.Object):
+    timestamp = GObject.Property(type=str, default="")
+    severity = GObject.Property(type=str)
+    message = GObject.Property(type=str)
+    node_name = GObject.Property(type=str)
 
     def __init__(
         self,
@@ -50,26 +54,10 @@ class LogMessage(GObject.Object):
     ):
         super().__init__()
 
-        self._timestamp = datetime.fromtimestamp(unix_time).strftime("%Y-%m-%d %H:%M:%S.%f")
-        self._severity = str(severity.name)
-        self._message = str(message)
-        self._node_name = node_name
-
-    @GObject.Property(type=str)
-    def timestamp(self) -> str:
-        return self._timestamp
-
-    @GObject.Property(type=str)
-    def severity(self) -> str:
-        return self._severity
-
-    @GObject.Property(type=str)
-    def message(self) -> str:
-        return self._message
-
-    @GObject.Property(type=str)
-    def node(self) -> str:
-        return self._node_name
+        self.timestamp = datetime.fromtimestamp(unix_time).strftime("%Y-%m-%d %H:%M:%S.%f")
+        self.severity = str(severity.name)
+        self.message = str(message)
+        self.node_name = node_name
 
 
 class LoggerPage(ContentPage):
@@ -160,7 +148,7 @@ class LoggerPage(ContentPage):
         log_group: PrefGroup = self.pref_page.add_group(title="Logs", filterable=False)
         # TODO add a limit of row, that old ones are deleted after a while
         # TODO vextend this to fill out the whole screen
-        self.column_view_row: ColumnViewRow = log_group.add_row(ColumnViewRow(row_object=LogMessage))
+        self.column_view_row: ColumnViewRow = log_group.add_row(ColumnViewRow(row_object=LogMessageItem))
         self.column_view_row.add_column("Timestamp", "timestamp", is_sortable=True, is_numeric=False)
         self.column_view_row.add_column("Severity", "severity", is_sortable=True, is_numeric=False)
         self.column_view_row.add_column("Message", "message", is_sortable=False, is_numeric=False, expand=True)
@@ -219,7 +207,7 @@ class LoggerPage(ContentPage):
     # TODO do i need this?
     # def on_refresh_node_list(self, *args):
     #     self.node_list_store.remove_all()
-    #     available_nodes = get_node_names(node=self.ros2_connector.node, include_hidden_nodes=True)
+    #     available_nodes = get_node_names(node=self.ros2_connector.ros2_node, include_hidden_nodes=True)
     #     for node_name, node_namespace, node_full_name in sorted(available_nodes):
     #         self.node_list_store.append(Gtk.StringObject.new(node_full_name))
     #     self.node_filter_row.set_model(self.node_list_store)
@@ -227,14 +215,14 @@ class LoggerPage(ContentPage):
     def on_logging_btn_toggled(self, btn: Gtk.Widget, playing: bool, *args):
         self.is_logging = playing
 
-    def log_callback(self, msg: Log):
+    def log_callback(self, log_msg: Log):
         def _idle():
             self.column_view_row.add_row(
-                LogMessage(
-                    unix_time=float(msg.stamp.sec + msg.stamp.nanosec / 1e9),
-                    severity=LoggingSeverity(msg.level),
-                    message=msg.msg,
-                    node_name=msg.name,
+                LogMessageItem(
+                    unix_time=float(log_msg.stamp.sec + log_msg.stamp.nanosec / 1e9),
+                    severity=LoggingSeverity(log_msg.level),
+                    message=log_msg.msg,
+                    node_name=log_msg.name,
                 )
             )
 

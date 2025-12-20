@@ -44,6 +44,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GLib
 
+from insight_gui.models.parameter_item import ParameterItem
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ScaleRow, MultiButtonRow
@@ -52,20 +53,16 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ScaleRow, MultiBut
 class ParamEditPage(ContentPage):
     __gtype_name__ = "ParamEditPage"
 
-    def __init__(self, node_name: str, param_name: str, **kwargs):
+    def __init__(self, parameter: ParameterItem, **kwargs):
         super().__init__(searchable=False, **kwargs)
-        super().set_title(f"Parameter {param_name}")
+        super().set_title(f"Parameter {parameter.name}")
 
-        self.node_name = node_name
-        self.param_name = param_name
-        self.detach_kwargs = {
-            "node_name": node_name,
-            "param_name": param_name,
-        }
+        self.parameter = parameter
+        self.detach_kwargs = {"parameter": parameter}
 
         # the message that holds the parameter
         self.param_msg = Parameter()
-        self.param_msg.name = self.param_name
+        self.param_msg.name = self.parameter.name
         self.param_msg.value: ParameterValue = ParameterValue()  # is this okay to leave it empty here?
 
     def on_realize(self, *args):
@@ -84,13 +81,13 @@ class ParamEditPage(ContentPage):
         )
 
         self.name_row = self.group.add_row(
-            PrefRow(title="Parameter Name", subtitle=self.param_name, css_classes=["property"])
+            PrefRow(title="Parameter Name", subtitle=self.parameter.name, css_classes=["property"])
         )
         self.node_name_row = self.group.add_row(
-            PrefRow(title="Param of Node", subtitle=self.node_name, css_classes=["property"])
+            PrefRow(title="Param of Node", subtitle=self.parameter.node.name, css_classes=["property"])
         )
-        self.description_row = self.group.add_row(PrefRow(title="Description", css_classes=["property"]))
-        self.type_row = self.group.add_row(PrefRow(title="Type", css_classes=["property"]))
+        self.description_row = self.group.add_row(PrefRow(title="Description", css_classes=["property"], visible=False))
+        self.type_str_row = self.group.add_row(PrefRow(title="Type", css_classes=["property"]))
 
         # rows, if the param is a bool
         self.current_bool_row = self.group.add_row(Adw.SwitchRow(title="Current Value", visible=False, sensitive=False))
@@ -128,39 +125,43 @@ class ParamEditPage(ContentPage):
     def refresh_bg(self):
         # get parameter infos
         # TODO this call could be done async without waiting the 5 seconds timeout
-        self.param_descriptor = call_describe_parameters(
-            node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[self.param_name]
-        ).descriptors[0]
-
-        return self.param_descriptor is not None
+        # self.param_descriptor = call_describe_parameters(
+        #     node=self.ros2_connector.ros2_node,
+        #     node_name=self.parameter.node.full_name,
+        #     parameter_names=[self.param.name],
+        # ).descriptors[0]
+        # success = self.ros2_connector.update_parameter_info(self.parameter)
+        # return success
+        return self.parameter.type is not None
 
     def refresh_ui(self):
         # get the current value of the parameter
         self.current_param_value = get_value(
             parameter_value=call_get_parameters(
-                node=self.ros2_connector.node, node_name=self.node_name, parameter_names=[self.param_name]
+                node=self.ros2_connector.ros2_node,
+                node_name=self.parameter.node.full_name,
+                parameter_names=[self.parameter.name],
             ).values[0]
         )
 
         # Parameter Description
-        if self.param_descriptor.description:
-            self.param_description = str(self.param_descriptor.description)
-            self.description_row.set_subtitle(subtitle=self.param_description)
+        if self.parameter.description:
+            self.description_row.set_subtitle(subtitle=self.parameter.description)
+            self.description_row.set_visible(True)
 
         # Parameter Type
-        if self.param_descriptor.type:
-            self.param_type = self.param_descriptor.type
-            self.param_type_str = str(get_parameter_type_string(self.param_descriptor.type))
+        if self.parameter.type:
+            param_type_str = self.parameter.type_str
 
             # check if param type is dynamic
-            if self.param_descriptor.dynamic_typing:
-                # TODO dynamic typing is not supported by the gui
-                self.param_type_str += " (dynamic, allowed to change type)"
+            if self.parameter.dynamic_typing:
+                # TODO dynamic typing is not yet supported by the gui
+                param_type_str += " (dynamic, allowed to change type)"
 
-            self.type_row.set_subtitle(self.param_type_str)
+            self.type_str_row.set_subtitle(param_type_str)
 
         # depending on whether the param is a bool, show different rows
-        if self.param_type == ParameterType.PARAMETER_BOOL:
+        if self.parameter.type == ParameterType.PARAMETER_BOOL:
             self.current_bool_value = True if self.current_param_value == "true" else False
             self.param_msg.value.type = ParameterType.PARAMETER_BOOL
             self.param_msg.value.bool_value = self.current_bool_value
@@ -171,14 +172,14 @@ class ParamEditPage(ContentPage):
             self.new_bool_row.set_active(self.current_bool_value)
 
         # parameter is an integer
-        elif self.param_type == ParameterType.PARAMETER_INTEGER:
+        elif self.parameter.type == ParameterType.PARAMETER_INTEGER:
             self.current_number_value = int(self.current_param_value)
             self.param_msg.value.type = ParameterType.PARAMETER_INTEGER
             self.param_msg.value.integer_value = self.current_number_value
 
             # param constraints are used to create a scale widget
-            if self.param_descriptor.integer_range:
-                int_range = self.param_descriptor.integer_range[0]  # TODO why is this a list?
+            if self.parameter.integer_range:
+                int_range = self.parameter.integer_range[0]  # TODO why is this a list?
                 from_value = int(int_range.from_value)
                 to_value = int(int_range.to_value)
                 step = int(int_range.step)
@@ -213,14 +214,14 @@ class ParamEditPage(ContentPage):
                 self.new_number_text_row.set_text(str(self.current_number_value))
 
         # parameter is a float
-        elif self.param_type == ParameterType.PARAMETER_DOUBLE:
+        elif self.parameter.type == ParameterType.PARAMETER_DOUBLE:
             self.current_number_value = float(self.current_param_value)
             self.param_msg.value.type = ParameterType.PARAMETER_DOUBLE
             self.param_msg.value.double_value = self.current_number_value
 
             # param constraints are used to create a scale widget
-            if self.param_descriptor.floating_point_range:
-                float_range = self.param_descriptor.floating_point_range[0]  # TODO why is this a list?
+            if self.parameter.floating_point_range:
+                float_range = self.parameter.floating_point_range[0]  # TODO why is this a list?
                 from_value = float(float_range.from_value)
                 to_value = float(float_range.to_value)
                 step = float(float_range.step)
@@ -266,15 +267,12 @@ class ParamEditPage(ContentPage):
             self.new_text_row.set_text(str(self.current_text_value))
 
         # Additional Contraints as plain text
-        if self.param_descriptor.additional_constraints:
+        if self.parameter.additional_constraints:
             self.additional_constraints_row.set_visible(True)
-            self.additional_constraints_row.set_subtitle(str(self.param_descriptor.additional_constraints))
-
-        # check if param is read only
-        self.is_read_only = self.param_descriptor.read_only
+            self.additional_constraints_row.set_subtitle(str(self.parameter.additional_constraints))
 
         # disable the change button
-        if self.is_read_only:
+        if self.parameter.read_only:
             self.show_banner("This parameter is read-only and cannot be changed.")
 
             self.new_bool_row.set_visible(False)
@@ -296,10 +294,10 @@ class ParamEditPage(ContentPage):
             self.apply_btn.set_sensitive(True)
 
     def on_number_value_changed(self, *args):
-        if self.param_type == ParameterType.PARAMETER_INTEGER:
+        if self.parameter.type == ParameterType.PARAMETER_INTEGER:
             new_number_value = int(self.new_number_range_row.get_value())
             self.param_msg.value.integer_value = new_number_value
-        elif self.param_type == ParameterType.PARAMETER_DOUBLE:
+        elif self.parameter.type == ParameterType.PARAMETER_DOUBLE:
             new_number_value = float(self.new_number_range_row.get_value())
             self.param_msg.value.double_value = new_number_value
 
@@ -309,10 +307,10 @@ class ParamEditPage(ContentPage):
             self.apply_btn.set_sensitive(True)
 
     def on_number_text_value_change(self, *args):
-        if self.param_type == ParameterType.PARAMETER_INTEGER:
+        if self.parameter.type == ParameterType.PARAMETER_INTEGER:
             new_number_value = int(self.new_number_text_row.get_text())
             self.param_msg.value.integer_value = new_number_value
-        elif self.param_type == ParameterType.PARAMETER_DOUBLE:
+        elif self.parameter.type == ParameterType.PARAMETER_DOUBLE:
             new_number_value = float(self.new_number_text_row.get_text())
             self.param_msg.value.double_value = new_number_value
 
@@ -333,7 +331,7 @@ class ParamEditPage(ContentPage):
     def on_apply(self, *args):
         try:
             resp: SetParameters_Response = call_set_parameters(
-                node=self.ros2_connector.node, node_name=self.node_name, parameters=[self.param_msg]
+                node=self.ros2_connector.ros2_node, node_name=self.parameter.node.full_name, parameters=[self.param_msg]
             )
             if resp.results[0].successful:
                 self.show_toast("Parameter changed successfully")

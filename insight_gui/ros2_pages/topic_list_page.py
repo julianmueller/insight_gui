@@ -20,10 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import re
 from typing import Dict
-
-from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 
 import gi
 
@@ -50,49 +47,40 @@ class TopicListPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_topics = self.ros2_connector.get_available_topics()
-        return len(self.available_topics) > 0
+        return self.available_topics is not None and self.available_topics.get_n_items() > 0
 
     def refresh_ui(self):
         # TODO this is ugly
         from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
 
-        for topic_name, topic_types in self.available_topics:
-            # topic_types is a list, as multiple servers can advertise different types to the same topic
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(topic_types) == 1:
-                topic_types = topic_types[0]
-            else:
-                topic_types = ", ".join(topic_types)
-
-            # split topic name into namespace and name
-            parts = topic_name.rstrip("/").split("/")
-            namespace = "/".join(parts[:-1])  # Everything except the last part
-            name = "/" + parts[-1]  # The last part, prefixed with '/'
-
+        for topic in self.available_topics:
             # put all topics in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-topics-by-namespace"):
                 namespace = ""
+            else:
+                namespace = topic.namespace if topic.namespace else "/"
 
             # get the namespace group of the topic
             if namespace in self.topic_ns_groups.keys():
                 group = self.topic_ns_groups[namespace]
             else:
-                group = self.pref_page.add_group(title=namespace)
+                description = "global namespace" if topic.namespace == "/" else ""
+                group = self.pref_page.add_group(title=namespace, description=description)
                 self.topic_ns_groups[namespace] = group
 
             # TODO this somehow messes with the sorting :( again ...
 
-            row = PrefRow(title=topic_name, subtitle=topic_types)
+            row = PrefRow(title=topic.full_name, subtitle=topic.interface.full_name)
             row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.START)
-            row.subtitle_lbl.set_tooltip_text(topic_name)
+            row.subtitle_lbl.set_tooltip_text(topic.full_name)
 
-            if topic_or_service_is_hidden(topic_name):
+            if topic.hidden:
                 row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
-                subpage_kwargs={"topic_name": topic_name, "topic_types": topic_types},
+                subpage_kwargs={"topic": topic},
             )
             group.add_row(row)
 

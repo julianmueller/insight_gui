@@ -31,19 +31,19 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
+from insight_gui.models.topic_item import TopicItem
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
-from insight_gui.utils.gtk_utils import find_str_in_list_store
 
-
+# TODO do the GObject refactor for the entire page
 class TopicSubscriberPage(ContentPage):
     __gtype_name__ = "TopicSubscriberPage"
 
-    def __init__(self, preselect_topic: str = "", **kwargs):
+    def __init__(self, preselect_topic: TopicItem = None, **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Subscribe to Topic")
         super().set_refresh_fail_text("No topics found. Refresh to try again.")
@@ -82,7 +82,7 @@ class TopicSubscriberPage(ContentPage):
 
         # select group
         self.select_group: PrefGroup = self.pref_page.add_group(title="Select Topic", filterable=False)
-        self.topic_row = self.select_group.add_row(
+        self.topic_combo_row = self.select_group.add_row(
             Adw.ComboRow(
                 title="Topic",
                 enable_search=True,
@@ -91,12 +91,8 @@ class TopicSubscriberPage(ContentPage):
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
-        self.topic_row.connect("notify::selected-item", self.on_topic_changed)
+        self.topic_combo_row.connect("notify::selected-item", self.on_topic_changed)
         self.topic_type_row = self.select_group.add_row(PrefRow(title="Service Type", css_classes=["property"]))
-
-        # Create a Gio.ListStore to fill the ComboBox with
-        self.topic_list_store = Gio.ListStore.new(Gtk.StringObject)
-        self.topic_row.set_model(self.topic_list_store)
 
         def _on_factory_setup(factory, list_item):
             label = Gtk.Label(
@@ -116,7 +112,7 @@ class TopicSubscriberPage(ContentPage):
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", _on_factory_setup)
         factory.connect("bind", _on_factory_bind)
-        self.topic_row.set_factory(factory)
+        self.topic_combo_row.set_factory(factory)
 
         self.msg_format_row = self.select_group.add_row(
             Adw.ComboRow(
@@ -151,23 +147,17 @@ class TopicSubscriberPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_topics = self.ros2_connector.get_available_topics()
-        return len(self.available_topics) > 0
+        return self.available_topics is not None and self.available_topics.get_n_items() > 0
 
     def refresh_ui(self):
         # fill the ComboBox/ListStore with available services
-        for topic_name, topic_types in self.available_topics:
-            self.topic_list_store.append(Gtk.StringObject.new(topic_name))
+        self.topic_combo_row.set_model(self.available_topics)
 
         # set the selected service to the preselected one
-        found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
-        # found, found_index = self.topic_list_store.find(Gtk.StringObject.new(self.preselect_topic))
-        if found_index >= 0:
-            self.topic_row.set_selected(found_index)
-        else:
-            self.topic_row.set_selected(0)
+        found, index = self.available_topics.find(self.preselect_topic)
+        self.topic_combo_row.set_selected(index if found else 0)
 
     def reset_ui(self):
-        self.topic_list_store.remove_all()
         self.single_echo_done = True
         self.echo_text_view_row.clear()
         self.remove_sub()
@@ -208,32 +198,36 @@ class TopicSubscriberPage(ContentPage):
     def on_toggle_stream(self, *args):
         self.is_echoing = self.toggle_stream_btn.playing
         if self.is_echoing:
-            self.topic_row.set_sensitive(False)
+            self.topic_combo_row.set_sensitive(False)
         else:
-            self.topic_row.set_sensitive(True)
+            self.topic_combo_row.set_sensitive(True)
 
     def on_topic_changed(self, *args):
-        if self.topic_list_store.get_n_items() <= 0:
+        if self.available_topics.get_n_items() <= 0:
             return
 
         self.remove_sub()
 
-        topic_name = self.topic_row.get_selected_item().get_string()
+        self.selected_topic: TopicItem = self.topic_combo_row.get_selected_item()
 
-        if topic_name:
-            msg_class = self.ros2_connector.get_message_class(topic_name=topic_name)
+        if self.selected_topic:
+            msg_item = self.selected_topic.interface.msg_fields
+            if not msg_item or not msg_item.python_class:
+                super().show_toast(f"Could not resolve message class for {self.selected_topic.name}")
+                return
+            msg_class = msg_item.python_class
 
-            self.selected_topic_type = self.ros2_connector.get_message_type_name(msg_class)
-            self.topic_type_row.set_subtitle(self.selected_topic_type)
+            self.selected_topic_type = msg_item.full_name or self.ros2_connector.get_message_type_name(msg_item)
+            self.topic_type_row.set_subtitle(self.selected_topic.interface.full_name)
             self.topic_type_row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=InterfaceInfoPage,
-                subpage_kwargs={"interface_full_name": self.selected_topic_type},
+                subpage_kwargs={"interface": self.selected_topic.interface},
             )
 
             # TODO maybe add special treatment for some "known topics?"
             self.ros2_sub = self.ros2_connector.add_subsciption(
-                msg_type=msg_class, topic_name=topic_name, callback=self.topic_callback
+                msg_type=msg_class, topic_name=self.selected_topic.name, callback=self.topic_callback
             )
             self.single_echo_done = True
             self.on_clear_text()

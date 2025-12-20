@@ -20,11 +20,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from operator import itemgetter
-
-from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
-from ros2node.api import parse_node_name
-
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -34,7 +29,6 @@ from gi.repository import GObject, Gtk, Adw
 from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
-
 from insight_gui.models.node_item import NodeItem
 
 
@@ -52,85 +46,64 @@ class NodeInfoPage(ContentPage):
             "node": self.node,
         }
 
-        # parsed_name = parse_node_name(node_full_name)
-        # self.node.name = parsed_name.name
-        # self.node.namespace = parsed_name.namespace
-
         # Publishers
-        self.publishers_group = self.pref_page.add_group(title="Publishers", placeholder_text="Node has no publishers")
+        self.publishers_group = self.pref_page.add_group(
+            title="Publishers", placeholder_text="This node has no publishers."
+        )
 
         # Subscribers
         self.subscribers_group = self.pref_page.add_group(
-            title="Subscribers", placeholder_text="Node has no subscribers"
+            title="Subscribers", placeholder_text="This node has no subscribers."
         )
 
         # Service Servers
         self.service_servers_group = self.pref_page.add_group(
-            title="Service Servers", description="", placeholder_text="Node has no service servers"
+            title="Service Servers", description="", placeholder_text="This node has no service servers."
         )
 
         # Service Clients
         self.service_clients_group = self.pref_page.add_group(
-            title="Service Clients", placeholder_text="Node has no service clients"
+            title="Service Clients", placeholder_text="This node has no service clients."
         )
 
         # Action Servers
         self.action_servers_group = self.pref_page.add_group(
-            title="Action Servers", placeholder_text="Node has no action servers"
+            title="Action Servers", placeholder_text="This node has no action servers."
         )
 
         # Action Clients
         self.action_clients_group = self.pref_page.add_group(
-            title="Action Clients", placeholder_text="Node has no action clients"
+            title="Action Clients", placeholder_text="This node has no action clients."
         )
 
         # Parameters
-        self.parameters_group = self.pref_page.add_group(title="Parameters", placeholder_text="Node has no parameters")
+        self.parameters_group = self.pref_page.add_group(
+            title="Parameters", placeholder_text="This node has no parameters."
+        )
 
     def refresh_bg(self) -> bool:
-        # Publishers
-        self.publisher_list = self.ros2_connector.get_publishers_by_node(
-            node_name=self.node.name, node_namespace=self.node.namespace
-        )
+        # Publishers/Subscribers
+        self.publisher_list = self.ros2_connector.get_publishers_by_node(node=self.node)
+        self.subscriber_list = self.ros2_connector.get_subscribers_by_node(node=self.node)
 
-        # Subscribers
-        self.subscriber_list = self.ros2_connector.get_subscribers_by_node(
-            node_name=self.node.name, node_namespace=self.node.namespace
-        )
+        # Service Servers/Clients
+        self.service_server_list = self.ros2_connector.get_service_servers_by_node(node=self.node)
+        self.service_client_list = self.ros2_connector.get_service_clients_by_node(node=self.node)
 
-        # Service Servers
-        self.service_server_list = self.ros2_connector.get_service_servers_by_node(
-            node_name=self.node.name, node_namespace=self.node.namespace
-        )
-
-        # Service Clients
-        self.service_client_list = self.ros2_connector.get_service_clients_by_node(
-            node_name=self.node.name, node_namespace=self.node.namespace
-        )
-
-        # Action Servers
-        self.action_servers_list = self.ros2_connector.get_action_servers_by_node(
-            node_name=self.node.name, node_namespace=self.node.namespace
-        )
-
-        # Action Clients
-        self.action_clients_list = self.ros2_connector.get_action_clients_by_node(
-            node_name=self.node.name, node_namespace=self.node.namespace
-        )
+        # Action Servers/Clients
+        self.action_servers_list = self.ros2_connector.get_action_servers_by_node(node=self.node)
+        self.action_clients_list = self.ros2_connector.get_action_clients_by_node(node=self.node)
 
         # Parameters
-        self.parameter_list = self.ros2_connector.get_parameters_by_node(node_name=self.node.name)
+        self.parameters_list = self.ros2_connector.get_parameters_by_node(node=self.node)
 
-        return (
-            len(self.publisher_list)
-            + len(self.subscriber_list)
-            + len(self.service_server_list)
-            + len(self.service_client_list)
-            + len(self.action_servers_list)
-            + len(self.action_clients_list)
-            + len(self.parameter_list)
-            > 0
-        )
+        return (self.publisher_list and self.publisher_list.get_n_items() or 0) + (
+            self.subscriber_list and self.subscriber_list.get_n_items() or 0
+        ) + (self.service_server_list and self.service_server_list.get_n_items() or 0) + (
+            self.service_client_list and self.service_client_list.get_n_items() or 0
+        ) + (self.action_servers_list and self.action_servers_list.get_n_items() or 0) + (
+            self.action_clients_list and self.action_clients_list.get_n_items() or 0
+        ) + (self.parameters_list and self.parameters_list.get_n_items() or 0) > 0
 
     def refresh_ui(self):
         # TODO this is ugly
@@ -139,103 +112,105 @@ class NodeInfoPage(ContentPage):
         from insight_gui.ros2_pages.action_info_page import ActionInfoPage
 
         # Publishers
-        for topic_name, topic_types in sorted(self.publisher_list, key=itemgetter(0)):
-            row = PrefRow(title=topic_name, subtitle=", ".join(topic_types))
-            if topic_or_service_is_hidden(topic_name):
+        for topic in self.publisher_list:
+            row = PrefRow(title=topic.full_name, subtitle=topic.interface.full_name)
+            if topic.hidden:
                 row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
-                subpage_kwargs={"topic_name": topic_name, "topic_types": topic_types},
+                subpage_kwargs={"topic": topic},
             )
             self.publishers_group.add_row(row)
         self.publishers_group.set_description_to_row_count()
 
         # Subscribers
-        for topic_name, topic_types in sorted(self.subscriber_list, key=itemgetter(0)):
-            row = PrefRow(title=topic_name, subtitle=", ".join(topic_types))
-            if topic_or_service_is_hidden(topic_name):
+        for topic in self.subscriber_list:
+            row = PrefRow(title=topic.full_name, subtitle=topic.interface.full_name)
+            if topic.hidden:
                 row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
-                subpage_kwargs={"topic_name": topic_name, "topic_types": topic_types},
+                subpage_kwargs={"topic": topic},
             )
             self.subscribers_group.add_row(row)
         self.subscribers_group.set_description_to_row_count()
 
         # Service Servers
-        for service_name, service_types in sorted(self.service_server_list, key=itemgetter(0)):
-            row = PrefRow(title=service_name, subtitle=", ".join(service_types))
-            if topic_or_service_is_hidden(service_name):
+        for service in self.service_server_list:
+            row = PrefRow(title=service.full_name, subtitle=service.interface.full_name)
+            if service.hidden:
                 row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
-                subpage_kwargs={"service_name": service_name, "service_types": service_types},
+                subpage_kwargs={"service": service},
             )
             self.service_servers_group.add_row(row)
         self.service_servers_group.set_description_to_row_count()
 
         # Service Clients
-        for service_name, service_types in sorted(self.service_client_list, key=itemgetter(0)):
-            row = PrefRow(title=service_name, subtitle=", ".join(service_types))
-            if topic_or_service_is_hidden(service_name):
+        for service in self.service_client_list:
+            row = PrefRow(title=service.full_name, subtitle=service.interface.full_name)
+            if service.hidden:
                 row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
-                subpage_kwargs={"service_name": service_name, "service_types": service_types},
+                subpage_kwargs={"service": service},
             )
             self.service_clients_group.add_row(row)
         self.service_clients_group.set_description_to_row_count()
 
         # Action Servers
-        for action_name, action_types in sorted(self.action_servers_list, key=itemgetter(0)):
-            row = PrefRow(title=action_name, subtitle=", ".join(action_types))
-            # if topic_or_service_is_hidden(action_name): # TODO is_hidden possible for actions?
-            #     row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
+        for action in self.action_servers_list:
+            row = PrefRow(title=action.full_name, subtitle=action.interface.full_name)
+            if action.hidden:
+                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden action")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,
-                subpage_kwargs={"action_name": action_name, "action_types": action_types},
+                subpage_kwargs={"action": action},
             )
             self.action_servers_group.add_row(row)
         self.action_servers_group.set_description_to_row_count()
 
         # Action Clients
-        for action_name, action_types in sorted(self.action_clients_list, key=itemgetter(0)):
-            row = PrefRow(title=action_name, subtitle=", ".join(action_types))
-            # if topic_or_service_is_hidden(action_name): # TODO is_hidden possible for actions?
-            #     row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
+        for action in self.action_clients_list:
+            row = PrefRow(title=action.full_name, subtitle=action.interface.full_name)
+            if action.hidden:
+                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden action")
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ActionInfoPage,
-                subpage_kwargs={"action_name": action_name, "action_types": action_types},
+                subpage_kwargs={"action": action},
             )
             self.action_clients_group.add_row(row)
         self.action_clients_group.set_description_to_row_count()
 
         # Parameters
-        for param_name in sorted(self.parameter_list):
-            param_info = self.ros2_connector.get_parameter_info(node_name=self.node.name, parameter_name=param_name)
-            param_type = param_info["type"]
-            param_value = param_info["value"]
-            param_read_only = param_info["read_only"]
+        for param in self.parameters_list:
+            # success = self.ros2_connector.update_parameter_info(parameter=param)
+            if not param.type:
+                continue  # param was not updated yet
+            # param_type = param_info["type"]
+            # param_value = param_info["value"]
+            # param_read_only = param_info["read_only"]
 
-            row = PrefRow(title=param_name, subtitle=f"{param_type}: {param_value}")
+            row = PrefRow(title=param.name, subtitle=f"{param.type_str}: {param.value}")
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ParamEditPage,
-                subpage_kwargs={"node_name": self.node.name, "param_name": param_name},
+                subpage_kwargs={"parameter": param},
             )
-            if param_read_only:
+            if param.read_only:
                 row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
 
             self.parameters_group.add_row(row)

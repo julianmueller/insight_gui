@@ -35,16 +35,17 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango
 
+from insight_gui.models.action_item import ActionItem
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
-from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
+# TODO do the GObject refactor for the entire page
 class ActionGoalPage(ContentPage):
     __gtype_name__ = "ActionGoalPage"
 
-    def __init__(self, preselect_action: str = "", **kwargs):
+    def __init__(self, preselect_action: ActionItem = None, **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Send Action Goal")
         super().set_refresh_fail_text("No actions found. Refresh to try again.")
@@ -63,7 +64,7 @@ class ActionGoalPage(ContentPage):
         self.action_client = None
         self.goal_handle = None
         self.feedback_text = ""
-        self.selected_action_name = None
+        self.selected_action: ActionItem | None = None
         self.action_class = None
 
         self.send_goal_btn = super().add_bottom_left_btn(
@@ -79,7 +80,7 @@ class ActionGoalPage(ContentPage):
 
         # select group
         self.select_group = self.pref_page.add_group(title="Select Action")
-        self.action_row = self.select_group.add_row(
+        self.action_combo_row = self.select_group.add_row(
             Adw.ComboRow(
                 title="Action",
                 enable_search=True,
@@ -88,12 +89,12 @@ class ActionGoalPage(ContentPage):
                 expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
             )
         )
-        self.action_row.connect("notify::selected-item", self.on_action_selected)
+        self.action_combo_row.connect("notify::selected-item", self.on_action_selected)
         self.action_type_row = self.select_group.add_row(PrefRow(title="Action Type", css_classes=["property"]))
 
         # Create a Gio.ListStore to fill the ComboBox with
-        self.action_list_store: Gio.ListStore = Gio.ListStore.new(Gtk.StringObject)
-        self.action_row.set_model(self.action_list_store)
+        # self.action_list_store: Gio.ListStore = Gio.ListStore.new(ActionItem)
+        # self.action_combo_row.set_model(self.action_list_store)
 
         def _on_factory_setup(factory, list_item):
             label = Gtk.Label(
@@ -104,15 +105,15 @@ class ActionGoalPage(ContentPage):
             list_item.set_child(label)
 
         def _on_factory_bind(factory, list_item):
-            item = list_item.get_item()
+            item: ActionItem = list_item.get_item()
             label = list_item.get_child()
             if item and label:
-                label.set_text(item.get_string())
+                label.set_text(item.full_name)
 
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", _on_factory_setup)
         factory.connect("bind", _on_factory_bind)
-        self.action_row.set_factory(factory)
+        self.action_combo_row.set_factory(factory)
 
         self.msg_format_row = self.select_group.add_row(
             Adw.ComboRow(
@@ -163,23 +164,18 @@ class ActionGoalPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_actions = self.ros2_connector.get_available_actions()
-        return len(self.available_actions) > 0
+        return self.available_actions is not None and self.available_actions.get_n_items() > 0
 
     def refresh_ui(self):
         # fill the ComboBox/ListStore with available actions
-        for action_name, _action_types in self.available_actions:
-            self.action_list_store.append(Gtk.StringObject.new(action_name))
+        self.action_combo_row.set_model(self.available_actions)
 
         # set the selected action to the preselected one
-        found_index = find_str_in_list_store(self.action_list_store, self.preselect_action)
-        if found_index >= 0:
-            self.action_row.set_selected(found_index)
-        else:
-            self.action_row.set_selected(0)
+        found, index = self.available_actions.find(self.preselect_action)
+        self.action_combo_row.set_selected(index if found else 0)
 
     def reset_ui(self):
         # clear previous action list
-        self.action_list_store.remove_all()
         self.goal_text_view_row.clear()
         self.feedback_text_view_row.clear()
         self.result_text_view_row.clear()
@@ -237,7 +233,7 @@ class ActionGoalPage(ContentPage):
                 # Wait for goal to be accepted
                 start = time.monotonic()
                 while not goal_future.done():
-                    rclpy.spin_once(self.ros2_connector.node, timeout_sec=0.01)
+                    rclpy.spin_once(self.ros2_connector.ros2_node, timeout_sec=0.01)
                     if (time.monotonic() - start) > 5.0:  # 5 second timeout
                         raise TimeoutError("Timeout waiting for goal acceptance")
 
@@ -251,7 +247,7 @@ class ActionGoalPage(ContentPage):
                 result_future = self.goal_handle.get_result_async()
                 start = time.monotonic()
                 while not result_future.done():
-                    rclpy.spin_once(self.ros2_connector.node, timeout_sec=0.01)
+                    rclpy.spin_once(self.ros2_connector.ros2_node, timeout_sec=0.01)
                     # No timeout for result - let it run until completion
 
                 result = result_future.result()
@@ -301,32 +297,44 @@ class ActionGoalPage(ContentPage):
         self.result_text_view_row.clear()
 
     def on_action_selected(self, *args):
-        if self.action_list_store.get_n_items() <= 0:
+        if self.available_actions.get_n_items() <= 0:
             return
 
-        self.selected_action_name = self.action_row.get_selected_item().get_string()
-        self.action_class = self.ros2_connector.get_action_class(action_name=self.selected_action_name)
+        print(*args)
 
-        if not self.action_class:
+        # TODO mkae use of args, the selected gobject will be in there
+
+        self.selected_action: ActionItem = self.action_combo_row.get_selected_item()
+        self.selected_action_item = next(
+            (a for a in self.available_actions if a.full_name == self.selected_action_name), None
+        )
+
+        action_message_item = self.ros2_connector.get_action_class(action=self.selected_action)
+
+        if not action_message_item or not action_message_item.python_class:
             self.send_goal_btn.set_sensitive(False)
             super().show_toast(f"Could not load action class for {self.selected_action_name}")
             return
 
-        selected_action_type = self.ros2_connector.get_action_type_name(self.action_class)
+        self.action_class = action_message_item.python_class
+        selected_action_type = action_message_item.full_name or self.ros2_connector.get_action_type_name(
+            action_message_item
+        )
         self.action_type_row.set_subtitle(selected_action_type)
 
         # Get action types for ActionInfoPage
         available_actions = self.ros2_connector.get_available_actions()
-        action_types = None
-        for name, types in available_actions:
-            if name == self.selected_action_name:
-                action_types = types
-                break
+        action_type_name = selected_action_type
+        if available_actions:
+            for action in available_actions:
+                if action.full_name == self.selected_action_name and action.type_names:
+                    action_type_name = action.type_names[0]
+                    break
 
         self.action_type_row.set_subpage_link(
             nav_view=self.nav_view,
             subpage_class=InterfaceInfoPage,
-            subpage_kwargs={"interface_full_name": action_types[0]},
+            subpage_kwargs={"interface": action.interface},
         )
 
         self.goal_class = self.action_class.Goal

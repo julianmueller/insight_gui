@@ -66,6 +66,7 @@ class ControllerManager:
     switch_service: str
 
 
+# TODO do the GObject refactor for the entire page
 class ControllerManagerPage(ContentPage):
     __gtype_name__ = "ControllerManagerPage"
 
@@ -231,17 +232,20 @@ class ControllerManagerPage(ContentPage):
         services = self.ros2_connector.get_available_services()
         suffix = "/list_controllers"
 
-        for service_name, service_types in services:
-            if not service_name.endswith(suffix):
+        if not services:
+            return managers
+
+        for service in services:
+            if not service.full_name.endswith(suffix):
                 continue
 
-            if not any(type_name.endswith("/ListControllers") for type_name in service_types):
+            if not any(type_name.endswith("/ListControllers") for type_name in service.type_names):
                 continue
 
-            prefix = service_name[: -len(suffix)]
+            prefix = service.full_name[: -len(suffix)]
             display_name = prefix if prefix else "/"
 
-            list_service = service_name
+            list_service = service.full_name
             switch_service = self._build_service_name(prefix, "switch_controller")
 
             managers[prefix] = ControllerManager(

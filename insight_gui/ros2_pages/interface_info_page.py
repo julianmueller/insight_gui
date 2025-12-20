@@ -48,6 +48,12 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, Gdk
 
+from insight_gui.models.interface_item import (
+    InterfaceTypeItem,
+    TopicInterfaceTypeItem,
+    ServiceInterfaceTypeItem,
+    ActionInterfaceTypeItem,
+)
 from insight_gui.ros2_pages.interface_definition_page import InterfaceDefinitionPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
@@ -72,34 +78,30 @@ class InterfaceType(Enum):
 class InterfaceInfoPage(ContentPage):
     __gtype_name__ = "InterfaceInfoPage"
 
-    def __init__(self, interface_full_name: str, interface_type: InterfaceType = None, **kwargs):
+    def __init__(self, interface: InterfaceTypeItem, **kwargs):
         super().__init__(searchable=True, refreshable=False, **kwargs)
 
-        if interface_type is None:
-            interface_type = InterfaceType.infer_from_name(interface_full_name)
+        if isinstance(interface, TopicInterfaceTypeItem):
+            super().set_title(f"Topic Type {interface.full_name}")
+            super().set_search_entry_placeholder_text("Search for topic types")
 
-        if interface_type == InterfaceType.MSG:
-            super().set_title(f"Message Type {interface_full_name}")
-            super().set_search_entry_placeholder_text("Search for message types")
-
-        elif interface_type == InterfaceType.SRV:
-            super().set_title(f"Service Type {interface_full_name}")
+        elif isinstance(interface, ServiceInterfaceTypeItem):
+            super().set_title(f"Service Type {interface.full_name}")
             super().set_search_entry_placeholder_text("Search for service types")
 
-        elif interface_type == InterfaceType.ACT:
-            super().set_title(f"Action Type {interface_full_name}")
+        elif isinstance(interface, ActionInterfaceTypeItem):
+            super().set_title(f"Action Type {interface.full_name}")
             super().set_search_entry_placeholder_text("Search for action types")
 
-        self.interface_full_name = interface_full_name
-        self.interface_type = interface_type
-        self.detach_kwargs = {"interface_full_name": interface_full_name, "interface_type": interface_type}
+        self.interface = interface
+        self.detach_kwargs = {"interface": interface}
 
         # Btn for opening the definition file
         self.open_file_btn = super().add_bottom_left_btn(
             label="Open Definition File",
             icon_name="folder-documents-symbolic",
             tooltip_text="Open file that defines the interface",
-            func=self.on_open_interface_file,
+            func=self._on_open_interface_file,
         )
 
         # Btn for opening the online link to msg definition
@@ -107,105 +109,141 @@ class InterfaceInfoPage(ContentPage):
             label="Online Definition",
             icon_name="web-browser-symbolic",
             tooltip_text="Open definition online",
-            func=self.on_open_weblink,
+            func=self._on_open_weblink,
         )
 
     def refresh_bg(self):
         return True
 
     def refresh_ui(self):
-        interface_classes = {}
+        # interface_classes = {}
+
+        def _populate_group_with_field(group, field_list):
+            for field in field_list:
+                row = PrefRow(title=field.name, subtitle=field.dds_type)
+                row.set_subpage_link(
+                    nav_view=self.nav_view,
+                    subpage_class=InterfaceInfoPage,
+                    subpage_kwargs={"interface": field.field_obj},
+                )
+                group.add_row(row)
 
         # Message
-        if self.interface_type == InterfaceType.MSG:
-            msg_class = get_message(self.interface_full_name)
-            interface_classes["Message"] = msg_class
-            constants = self.get_constants(msg_class)
+        if isinstance(self.interface, TopicInterfaceTypeItem):
+            msg_group = self.pref_page.add_group(title="Message", placeholder_text="This message has no fields.")
+            _populate_group_with_field(msg_group, self.interface.msg_fields)
+
+        # if self.interface_type == InterfaceType.MSG:
+        #     msg_class = get_message(self.interface_full_name)
+        #     interface_classes["Message"] = msg_class
+        #     constants = self.get_constants(msg_class)
 
         # Service
-        elif self.interface_type == InterfaceType.SRV:
-            srv_class = get_service(self.interface_full_name)
-            interface_classes["Request"] = srv_class.Request
-            interface_classes["Response"] = srv_class.Response
-            constants = self.get_constants(srv_class.Request) | self.get_constants(srv_class.Response)
-
-        # Action
-        elif self.interface_type == InterfaceType.ACT:
-            act_class = get_action(self.interface_full_name)
-            interface_classes["Goal"] = act_class.Goal
-            interface_classes["Feedback"] = act_class.Feedback
-            interface_classes["Result"] = act_class.Result
-            constants = (
-                self.get_constants(act_class.Goal)
-                | self.get_constants(act_class.Feedback)
-                | self.get_constants(act_class.Result)
+        elif isinstance(self.interface, ServiceInterfaceTypeItem):
+            request_group = self.pref_page.add_group(
+                title="Request", placeholder_text="This request message has no fields."
             )
+            response_group = self.pref_page.add_group(
+                title="Response", placeholder_text="This response message has no fields."
+            )
+            _populate_group_with_field(request_group, self.interface.request_fields)
+            _populate_group_with_field(response_group, self.interface.response_fields)
+
+        # elif self.interface_type == InterfaceType.SRV:
+        #     srv_class = get_service(self.interface_full_name)
+        #     interface_classes["Request"] = srv_class.Request
+        #     interface_classes["Response"] = srv_class.Response
+        #     constants = self.get_constants(srv_class.Request) | self.get_constants(srv_class.Response)
+
+        # # Action
+        elif isinstance(self.interface, ServiceInterfaceTypeItem):
+            goal_group = self.pref_page.add_group(title="Goal", placeholder_text="This goal message has no fields.")
+            feedback_group = self.pref_page.add_group(
+                title="Feedback", placeholder_text="This feedback message has no fields."
+            )
+            result_group = self.pref_page.add_group(
+                title="Result", placeholder_text="This result message has no fields."
+            )
+            _populate_group_with_field(goal_group, self.interface.goal_fields)
+            _populate_group_with_field(feedback_group, self.interface.feedback_fields)
+            _populate_group_with_field(result_group, self.interface.result_fields)
+
+        # elif self.interface_type == InterfaceType.ACT:
+        #     act_class = get_action(self.interface_full_name)
+        #     interface_classes["Goal"] = act_class.Goal
+        #     interface_classes["Feedback"] = act_class.Feedback
+        #     interface_classes["Result"] = act_class.Result
+        #     constants = (
+        #         self.get_constants(act_class.Goal)
+        #         | self.get_constants(act_class.Feedback)
+        #         | self.get_constants(act_class.Result)
+        #     )
 
         # Constants Group
-        if len(constants) > 0:
-            constants_group = self.pref_page.add_group(title="Constants")
-            for const_name, const_value in constants.items():
-                row: PrefRow = constants_group.add_row(PrefRow(title=const_name))
-                row.add_suffix_lbl(label=const_value)
+        # if len(constants) > 0:
+        #     constants_group = self.pref_page.add_group(title="Constants")
+        #     for const_name, const_value in constants.items():
+        #         row: PrefRow = constants_group.add_row(PrefRow(title=const_name))
+        #         row.add_suffix_lbl(label=const_value)
 
-        for class_type, interface_class in interface_classes.items():
-            group = self.pref_page.add_group(title=class_type, placeholder_text=f"Empty {class_type}")
-            self.populate_group_w_msg_rows(interface_class=interface_class, pref_group=group)
+        # for class_type, interface_class in self.interface.fields:
+        #     group = self.pref_page.add_group(title=class_type, placeholder_text=f"Empty {class_type}")
+        #     self.populate_group_w_msg_rows(interface_class=interface_class, pref_group=group)
 
-            # Btn for opening the raw msg text dialog
-            subpage_btn = group.add_suffix_widget(
-                Gtk.Button(
-                    icon_name="go-next-symbolic",
-                    tooltip_text=f"Open {class_type} Definition",
-                )
-            )
+        #     # Btn for opening the raw msg text dialog
+        #     subpage_btn = group.add_suffix_widget(
+        #         Gtk.Button(
+        #             icon_name="go-next-symbolic",
+        #             tooltip_text=f"Open {class_type} Definition",
+        #         )
+        #     )
 
-            def _on_pressed(controller: Gtk.GestureClick, n_press: int, x: float, y: float):
-                state = controller.get_current_event_state()
-                subpage = InterfaceDefinitionPage(
-                    interface_full_name=self.interface_full_name, interface_class=interface_class
-                )
+        #     def _on_pressed(controller: Gtk.GestureClick, n_press: int, x: float, y: float):
+        #         state = controller.get_current_event_state()
+        #         subpage = InterfaceDefinitionPage(
+        #             interface_full_name=self.interface_full_name, interface_class=interface_class
+        #         )
 
-                # add CTRL+click functionality to open in detached window
-                if state & Gdk.ModifierType.CONTROL_MASK:
-                    subpage.detach()
+        #         # add CTRL+click functionality to open in detached window
+        #         if state & Gdk.ModifierType.CONTROL_MASK:
+        #             subpage.detach()
 
-                # regular click
-                else:
-                    self.nav_view.push(subpage)
+        #         # regular click
+        #         else:
+        #             self.nav_view.push(subpage)
 
-            if hasattr(subpage_btn, "subpage_signal_handler"):
-                subpage_btn.disconnect(self.subpage_signal_handler)
+        #     if hasattr(subpage_btn, "subpage_signal_handler"):
+        #         subpage_btn.disconnect(self.subpage_signal_handler)
 
-            gesture_click = Gtk.GestureClick(
-                propagation_phase=Gtk.PropagationPhase.CAPTURE, propagation_limit=Gtk.PropagationLimit.NONE
-            )
-            self.subpage_signal_handler = gesture_click.connect("pressed", _on_pressed)
-            subpage_btn.add_controller(gesture_click)
+        #     gesture_click = Gtk.GestureClick(
+        #         propagation_phase=Gtk.PropagationPhase.CAPTURE, propagation_limit=Gtk.PropagationLimit.NONE
+        #     )
+        #     self.subpage_signal_handler = gesture_click.connect("pressed", _on_pressed)
+        #     subpage_btn.add_controller(gesture_click)
 
-    def on_open_interface_file(self, *args):
-        interface_file_path = get_interface_path(self.interface_full_name)
+    def _on_open_interface_file(self, *args):
+        interface_file_path = get_interface_path(self.interface.full_name)
         if os.path.exists(interface_file_path):
             file = Gio.File.new_for_path(interface_file_path)
             Gtk.FileLauncher(file=file, always_ask=True, writable=False).launch(self.app.main_window, None)
         else:
             super().show_toast(f"Path '{interface_file_path}' does not exist!")
 
-    def on_open_weblink(self, *args):
+    def _on_open_weblink(self, *args):
         Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/jazzy/p/{self.interface_full_name}.html", None)
 
-    def get_constants(self, interface_class: Type) -> dict:
-        interface_instance = interface_class()
-        constants = {}
+    # def get_constants(self, interface_class: Type) -> dict:
+    #     interface_instance = interface_class()
+    #     constants = {}
 
-        for field_name in dir(interface_instance):
-            if field_name == "SLOT_TYPES":
-                continue
+    #     for field_name in dir(interface_instance):
+    #         if field_name == "SLOT_TYPES":
+    #             continue
 
-            if re.match(r"^([A-Z]+(?:_|[A-Z]|[0-9])*)+", field_name):
-                constants[field_name] = getattr(interface_instance, field_name)
+    #         if re.match(r"^([A-Z]+(?:_|[A-Z]|[0-9])*)+", field_name):
+    #             constants[field_name] = getattr(interface_instance, field_name)
 
-        return constants
+    #     return constants
 
     # TODO this can be improved, especially the nested messages
     # maybe use rosidl_runtime_py.convert.get_message_slot_types

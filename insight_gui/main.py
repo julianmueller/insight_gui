@@ -26,7 +26,7 @@ import sys
 import signal
 import argparse
 
-from insight_gui.application import InsightApplication
+# from insight_gui.application import InsightApplication
 
 
 def main(args=None):
@@ -93,6 +93,8 @@ def main(args=None):
 
     # Start the application
     try:
+        from insight_gui.application import InsightApplication
+
         gui_app = InsightApplication(start_page_id=start_page_id)
         signal.signal(signal.SIGINT, gui_app.shutdown)
         gui_app.run(None)

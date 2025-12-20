@@ -40,6 +40,7 @@ from insight_gui.exceptions import RefreshCancelled
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 
 
+# TODO do the GObject refactor for the entire page
 class TransformsPage(ContentPage):
     __gtype_name__ = "TransformsPage"
 
@@ -110,10 +111,10 @@ class TransformsPage(ContentPage):
         cancel_event = self._refresh_cancel_event
         super().show_toast("Listening to tf data for 5.0 seconds...")
         self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
+        self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.ros2_node)
         if self.wait_for_refresh_cancel(timeout=5.0, cancel_event=cancel_event):
             raise RefreshCancelled()
-        self.lookup_time = self.ros2_connector.node.get_clock().now()
+        self.lookup_time = self.ros2_connector.ros2_node.get_clock().now()
 
         # Get the frames from the buffer as YAML
         result = self.tf_buffer.all_frames_as_yaml()

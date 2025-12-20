@@ -25,7 +25,6 @@ import time
 import threading
 import importlib
 from typing import Callable, Dict, Any, Tuple, List
-from operator import itemgetter
 from functools import wraps, lru_cache
 
 import rclpy
@@ -38,14 +37,18 @@ from rclpy.timer import Timer
 from rclpy.action import ActionClient
 from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 from rclpy.action import get_action_names_and_types
-from rclpy.action.graph import get_action_client_names_and_types_by_node, get_action_server_names_and_types_by_node
+from rclpy.action.graph import (
+    get_action_client_names_and_types_by_node,
+    get_action_server_names_and_types_by_node,
+)
+from rclpy.parameter_client import AsyncParameterClient
 
 # from rosidl_runtime_py.utilities import get_action
 
-# ROS2 API imports for data collection
+# ROS2 API imports for data collection # TODO replace all of them with rclpy implementations
 from ros2node.api import get_node_names, _is_hidden_name
-from ros2topic.api import get_topic_names_and_types, get_msg_class
-from ros2service.api import get_service_names_and_types, get_service_class
+from ros2topic.api import get_topic_names_and_types  # , get_msg_class
+from ros2service.api import get_service_names_and_types  # , get_service_class
 from ros2param.api import (
     call_describe_parameters,
     get_parameter_type_string,
@@ -57,10 +60,21 @@ from ros2param.api import (
 import gi
 
 gi.require_version("GLib", "2.0")
-from gi.repository import GLib, Gio
+gi.require_version("Gtk", "4.0")
+from gi.repository import GLib, Gio, Gtk
 
 from insight_gui.utils.chache import ttl_cache
 from insight_gui.models.node_item import NodeItem
+from insight_gui.models.topic_item import TopicItem
+from insight_gui.models.service_item import ServiceItem
+from insight_gui.models.action_item import ActionItem
+from insight_gui.models.interface_item import (
+    InterfaceTypeItem,
+    TopicInterfaceTypeItem,
+    ServiceInterfaceTypeItem,
+    ActionInterfaceTypeItem,
+)
+from insight_gui.models.parameter_item import ParameterItem
 
 
 def cached(_func=None, *, use_ttl: bool = True):
@@ -116,7 +130,7 @@ class ROS2Connector:
         super().__init__()
         self.app = Gio.Application.get_default()
 
-        self.node: Node = None
+        self.ros2_node: Node = None
         self.thread: GLib.Thread = None
         self.is_running = False
         self.start_time = None
@@ -133,12 +147,12 @@ class ROS2Connector:
             return
 
         # print(f"Starting ROS2 Node with name '{node_name}'")
-        self.node = Node(
+        self.ros2_node = Node(
             node_name=self.app.settings.get_string("gui-node-name"),
             namespace=self.app.settings.get_string("gui-node-namespace"),
             allow_undeclared_parameters=True,
         )
-        self.start_time = self.node.get_clock().now()
+        self.start_time = self.ros2_node.get_clock().now()
         self.thread = GLib.Thread.new("ros2-thread", self.spin, None)
         self.is_running = True
         self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(True))
@@ -148,12 +162,12 @@ class ROS2Connector:
             return
 
         self.is_running = False
-        # print(f"Stopping ROS2 Node with name '{self.node.get_name()}'")
+        # print(f"Stopping ROS2 Node with name '{self.ros2_node.get_name()}'")
         if self.thread:
             self.thread.join()
             self.thread = None
-        self.node.destroy_node()
-        self.node = None
+        self.ros2_node.destroy_node()
+        self.ros2_node = None
         self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(False))
 
     def restart_node(self, *args, **kwargs):
@@ -165,7 +179,7 @@ class ROS2Connector:
     def spin(self, *args, **kwargs):
         try:
             while rclpy.ok() and self.is_running:
-                rclpy.spin_once(self.node, timeout_sec=0.1)
+                rclpy.spin_once(self.ros2_node, timeout_sec=0.1)
             return True  # Keep the timeout function/thread active
 
         except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
@@ -178,8 +192,8 @@ class ROS2Connector:
         return False
 
     def shutdown(self):
-        # for sub in list(self.node.subscriptions):
-        #     self.node.destroy_subscription(sub)
+        # for sub in list(self.ros2_node.subscriptions):
+        #     self.ros2_node.destroy_subscription(sub)
 
         self.clear_cache()
         self.stop_node()
@@ -189,34 +203,38 @@ class ROS2Connector:
         action.set_state(GLib.Variant.new_boolean(self.is_running))
 
     def add_publisher(
-        self, msg_type: MsgType, topic_name: str, qos_profile: QoSProfile | int = 10, **kwargs
+        self,
+        msg_type: MsgType,
+        topic_name: str,
+        qos_profile: QoSProfile | int = 10,
+        **kwargs,
     ) -> Publisher:
         if isinstance(qos_profile, int):
             qos_profile = QoSProfile(depth=qos_profile)
-        return self.node.create_publisher(msg_type, topic_name, qos_profile=qos_profile)
+        return self.ros2_node.create_publisher(msg_type, topic_name, qos_profile=qos_profile)
 
     def destroy_publisher(self, pub: Publisher) -> bool:
-        if not self.node:
+        if not self.ros2_node:
             return
 
-        if pub in list(self.node.publishers):
-            return self.node.destroy_publisher(pub)
+        if pub in list(self.ros2_node.publishers):
+            return self.ros2_node.destroy_publisher(pub)
         else:
             raise RuntimeError("Publisher cannot be destroyed")
             return False
 
     def add_timer_callback(self, period: float, callback: Callable) -> Timer:
-        return self.node.create_timer(period, callback)
+        return self.ros2_node.create_timer(period, callback)
 
     def add_subsciption(self, msg_type: MsgType, topic_name: str, callback: Callable) -> Subscription:
-        return self.node.create_subscription(msg_type, topic_name, callback, 10)
+        return self.ros2_node.create_subscription(msg_type, topic_name, callback, 10)
 
     def destroy_subscription(self, sub: Subscription) -> bool:
-        if not self.node:
+        if not self.ros2_node:
             return
 
-        if sub in list(self.node.subscriptions):
-            return self.node.destroy_subscription(sub)
+        if sub in list(self.ros2_node.subscriptions):
+            return self.ros2_node.destroy_subscription(sub)
         else:
             raise RuntimeError("Subscription cannot be destroyed")
             return False
@@ -224,21 +242,25 @@ class ROS2Connector:
     # TODO this needs some refactoring and threading
     # from ros2service.verb.call import requester  # could also be used for that
     def call_service(
-        self, srv_type: SrvType, srv_name: str, request: SrvTypeRequest, timeout_sec: int = -1
+        self,
+        srv_type: SrvType,
+        srv_name: str,
+        request: SrvTypeRequest,
+        timeout_sec: int = -1,
     ) -> SrvTypeResponse:
         if not self.is_running:
             return
 
-        client = self.node.create_client(srv_type, srv_name)
+        client = self.ros2_node.create_client(srv_type, srv_name)
 
         if not client.service_is_ready():
             client.wait_for_service(timeout_sec=2)
 
         future = client.call_async(request)
-        # rclpy.spin_until_future_complete(self.node, future, timeout_sec=timeout_sec)
+        # rclpy.spin_until_future_complete(self.ros2_node, future, timeout_sec=timeout_sec)
         start = time.monotonic()
         while not future.done():
-            rclpy.spin_once(self.node, timeout_sec=0.01)
+            rclpy.spin_once(self.ros2_node, timeout_sec=0.01)
             if timeout_sec > 0 and (time.monotonic() - start) > timeout_sec:
                 raise TimeoutError(f"Timeout while waiting for response from '{srv_name}'.")
 
@@ -247,12 +269,19 @@ class ROS2Connector:
         else:
             raise RuntimeError(f"Service call failed: {future.exception()}")
 
-    def send_action_goal(self, action_type, action_name: str, goal, feedback_callback=None, timeout_sec: int = -1):
+    def send_action_goal(
+        self,
+        action_type,
+        action_name: str,
+        goal,
+        feedback_callback=None,
+        timeout_sec: int = -1,
+    ):
         """Send an action goal and return the action client for managing the goal."""
         if not self.is_running:
             return None
 
-        action_client = ActionClient(self.node, action_type, action_name)
+        action_client = ActionClient(self.ros2_node, action_type, action_name)
 
         if not action_client.wait_for_server(timeout_sec=2.0):
             raise RuntimeError(f"Action server '{action_name}' not available")
@@ -285,17 +314,21 @@ class ROS2Connector:
     @cached
     def get_available_nodes(self) -> Gio.ListStore:
         """Get available nodes with caching support."""
-        if not self.is_running or not self.node:
-            return None
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         nodes = Gio.ListStore.new(NodeItem)
 
         try:
+            node_names = get_node_names(node=self.ros2_node, include_hidden_nodes=True)
             # returned as a List['name', 'namespace', 'full_name']
-            node_names = get_node_names(node=self.node, include_hidden_nodes=True)
 
             for name, namespace, full_name in node_names:
-                n = NodeItem(namespace=namespace, name=name, hidden=_is_hidden_name(full_name))
+                n = NodeItem(
+                    namespace=namespace,
+                    name=name,
+                    hidden=_is_hidden_name(full_name),
+                )
                 nodes.append(n)
 
             nodes.sort(compare_func=lambda a, b: a.full_name < b.full_name)
@@ -303,487 +336,466 @@ class ROS2Connector:
 
         except Exception as e:
             print(f"Error getting nodes: {e}")
-            return None
+            return Gio.ListStore()
 
     @cached
-    def get_available_topics(self) -> List[Tuple[str, List[str]]]:
+    def get_available_topics(self) -> Gio.ListStore:
         """Get available topics with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
-            topics = get_topic_names_and_types(node=self.node, include_hidden_topics=True)
-            topics = sorted(topics, key=itemgetter(0))
+            topics = get_topic_names_and_types(node=self.ros2_node, include_hidden_topics=True)
+            topics_store = Gio.ListStore.new(TopicItem)
 
-            # Apply filters to the data
-            if not self.app.settings.get_boolean("show-hidden-topics"):
-                topics = self._filter_hidden_topics(topics)
+            for topic_full_name, topic_types in topics:
+                topic_namespace, topic_name = topic_full_name.rsplit("/", 1)
+                topic = TopicItem(
+                    name=topic_name,
+                    namespace=topic_namespace,
+                    interface_full_name=topic_types[0],
+                    hidden=topic_or_service_is_hidden(topic_name),
+                )
 
-            if not self.app.settings.get_boolean("show-action-topics"):
-                topics = self._filter_action_topics(topics)
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-hidden-topics") and item.hidden:
+                #     continue
+                # if not self.app.settings.get_boolean("show-action-topics") and item.is_action_topic:
+                #     continue
 
-            return topics
+                topics_store.append(topic)
+
+            topics_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return topics_store
 
         except Exception as e:
             print(f"Error getting topics: {e}")
-            return []
+            return Gio.ListStore()
 
     @cached
-    def get_publishers_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
+    def get_publishers_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get publishers for a specific node with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
-            publishers = self.node.get_publisher_names_and_types_by_node(
-                node_name=node_name, node_namespace=node_namespace
+            publishers = self.ros2_node.get_publisher_names_and_types_by_node(
+                node_name=node.name, node_namespace=node.namespace
             )
-            publishers = sorted(publishers, key=itemgetter(0))
+            # publishers: List[Tuple(topic_full_name, List[topic_types])]
+            # this function also returns service and action clients/servers of this node
+            publisher_store = Gio.ListStore.new(TopicItem)
 
-            # Filter action-related topics if requested
-            if not self.app.settings.get_boolean("show-action-topics"):
-                publishers = self._filter_action_topics(publishers)
+            for topic_full_name, topic_types in publishers:
+                if not re.search("/msg/", topic_types[0]):
+                    continue
 
-            return publishers
+                topic_namespace, topic_name = topic_full_name.rsplit("/", 1)
+                topic = TopicItem(
+                    name=topic_name,
+                    namespace=topic_namespace,
+                    interface_full_name=topic_types[0],
+                    hidden=topic_or_service_is_hidden(topic_name),
+                )
+
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-action-topics") and item.is_action_topic:
+                #     continue
+
+                publisher_store.append(topic)
+
+            publisher_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return publisher_store
 
         except Exception as e:
-            print(f"Error getting publishers for node {node_namespace}/{node_name}: {e}")
-            return []
+            print(f"Error getting publishers for node '{node.full_name}': {e}")
+            return Gio.ListStore()
 
     @cached
-    def get_subscribers_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
+    def get_subscribers_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get subscribers for a specific node with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
-            subscribers = self.node.get_subscriber_names_and_types_by_node(
-                node_name=node_name, node_namespace=node_namespace
+            subscribers = self.ros2_node.get_subscriber_names_and_types_by_node(
+                node_name=node.name, node_namespace=node.namespace
             )
-            subscribers = sorted(subscribers, key=itemgetter(0))
+            subscriber_store = Gio.ListStore.new(TopicItem)
 
-            # Filter action-related topics if requested
-            if not self.app.settings.get_boolean("show-action-topics"):
-                subscribers = self._filter_action_topics(subscribers)
+            for topic_full_name, topic_types in subscribers:
+                if not re.search("/msg/", topic_types[0]):
+                    continue
 
-            return subscribers
+                topic_namespace, topic_name = topic_full_name.rsplit("/", 1)
+                topic = TopicItem(
+                    name=topic_name,
+                    namespace=topic_namespace,
+                    interface_full_name=topic_types[0],
+                    hidden=topic_or_service_is_hidden(topic_name),
+                )
+
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-action-topics") and toppic.is_action_topic:
+                #     continue
+
+                subscriber_store.append(topic)
+
+            subscriber_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return subscriber_store
 
         except Exception as e:
-            print(f"Error getting subscribers for node {node_namespace}/{node_name}: {e}")
-            return []
+            print(f"Error getting subscribers for node '{node.full_name}': {e}")
+            return Gio.ListStore()
 
     @cached
-    def get_available_services(self) -> List[Tuple[str, List[str]]]:
+    def get_available_services(self) -> Gio.ListStore:
         """Get available services with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
-            services = get_service_names_and_types(node=self.node, include_hidden_services=True)
-            services = sorted(services, key=itemgetter(0))
+            services = get_service_names_and_types(node=self.ros2_node, include_hidden_services=True)
+            service_store = Gio.ListStore.new(ServiceItem)
 
-            # Filter hidden services if requested
-            if not self.app.settings.get_boolean("show-hidden-services"):
-                services = self._filter_hidden_services(services)
+            for service_full_name, service_types in services:
+                service_namespace, service_name = service_full_name.rsplit("/", 1)
+                service = ServiceItem(
+                    name=service_name,
+                    namespace=service_namespace,
+                    interface_full_name=service_types[0],
+                    hidden=topic_or_service_is_hidden(service_name),
+                )
 
-            # Filter action-related services if requested
-            if not self.app.settings.get_boolean("show-action-services"):
-                services = self._filter_action_services(services)
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-hidden-services") and service.hidden:
+                #     continue
+                # if not self.app.settings.get_boolean("show-action-services") and service.is_action_service:
+                #     continue
+                # if not self.app.settings.get_boolean("show-parameter-services") and service.is_parameter_service:
+                #     continue
 
-            # Filter parameter-related services if requested
-            if not self.app.settings.get_boolean("show-parameter-services"):
-                services = self._filter_param_services(services)
+                service_store.append(service)
 
-            return services
+            service_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return service_store
 
         except Exception as e:
             print(f"Error getting services: {e}")
-            return []
+            return Gio.ListStore()
 
     @cached
-    def get_service_clients_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
+    def get_service_clients_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get service clients for a specific node with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
-            service_clients = self.node.get_client_names_and_types_by_node(
-                node_name=node_name, node_namespace=node_namespace
+            service_clients = self.ros2_node.get_client_names_and_types_by_node(
+                node_name=node.name, node_namespace=node.namespace
             )
-            service_clients = sorted(service_clients, key=itemgetter(0))
+            client_store = Gio.ListStore.new(ServiceItem)
 
-            # Filter action-related services if requested
-            if not self.app.settings.get_boolean("show-action-services"):
-                service_clients = self._filter_action_services(service_clients)
+            for service_full_name, service_types in service_clients:
+                if not re.search("/srv/", service_types[0]):
+                    continue
 
-            # Filter parameter-related services if requested
-            if not self.app.settings.get_boolean("show-parameter-services"):
-                service_clients = self._filter_param_services(service_clients)
+                service_namespace, service_name = service_full_name.rsplit("/", 1)
+                service = ServiceItem(
+                    name=service_name,
+                    namespace=service_namespace,
+                    interface_full_name=service_types[0],
+                    hidden=topic_or_service_is_hidden(service_name),
+                )
 
-            return service_clients
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-action-services") and service.is_action_service:
+                #     continue
+
+                # if not self.app.settings.get_boolean("show-parameter-services") and service.is_parameter_service:
+                #     continue
+
+                client_store.append(service)
+
+            client_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return client_store
 
         except Exception as e:
-            print(f"Error getting service clients for node {node_namespace}/{node_name}: {e}")
-            return []
+            print(f"Error getting service clients for node '{node.full_name}': {e}")
+            return Gio.ListStore()
 
     @cached
-    def get_service_servers_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
+    def get_service_servers_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get service servers for a specific node with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
-            service_servers = self.node.get_service_names_and_types_by_node(
-                node_name=node_name, node_namespace=node_namespace
+            service_servers = self.ros2_node.get_service_names_and_types_by_node(
+                node_name=node.name, node_namespace=node.namespace
             )
-            service_servers = sorted(service_servers, key=itemgetter(0))
+            server_store = Gio.ListStore.new(ServiceItem)
 
-            # Filter action-related services if requested
-            if not self.app.settings.get_boolean("show-action-services"):
-                service_servers = self._filter_action_services(service_servers)
+            for service_full_name, service_types in service_servers:
+                if not re.search("/srv/", service_types[0]):
+                    continue
 
-            # Filter parameter-related services if requested
-            if not self.app.settings.get_boolean("show-parameter-services"):
-                service_servers = self._filter_param_services(service_servers)
+                service_namespace, service_name = service_full_name.rsplit("/", 1)
+                service = ServiceItem(
+                    name=service_name,
+                    namespace=service_namespace,
+                    interface_full_name=service_types[0],
+                    hidden=topic_or_service_is_hidden(service_name),
+                )
 
-            return service_servers
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-action-services") and service.is_action_service:
+                #     continue
+                # if not self.app.settings.get_boolean("show-parameter-services") and service.is_parameter_service:
+                #     continue
+
+                server_store.append(service)
+
+            server_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return server_store
 
         except Exception as e:
-            print(f"Error getting service servers for node {node_namespace}/{node_name}: {e}")
-            return []
+            print(f"Error getting service servers for node '{node.full_name}': {e}")
+            return Gio.ListStore()
 
     @cached
-    def get_available_actions(self) -> List[Tuple[str, List[str]]]:
+    def get_available_actions(self) -> Gio.ListStore:
         """Get available actions with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
-            actions = get_action_names_and_types(node=self.node)
-            actions = sorted(actions, key=itemgetter(0))
+            available_actions = get_action_names_and_types(node=self.ros2_node)
+            action_store = Gio.ListStore.new(ActionItem)
 
-            # Filter hidden actions if requested
-            if not self.app.settings.get_boolean("show-hidden-actions"):
-                actions = self._filter_hidden_actions(actions)
+            for action_full_name, action_types in available_actions:
+                action_namespace, action_name = action_full_name.rsplit("/", 1)
+                action = ActionItem(
+                    name=action_name,
+                    namespace=action_namespace,
+                    interface_full_name=action_types[0],
+                    hidden=topic_or_service_is_hidden(action_name),
+                )
 
-            return actions
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-hidden-actions") and action.hidden:
+                #     continue
+
+                action_store.append(action)
+
+            action_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return action_store
 
         except Exception as e:
             print(f"Error getting actions: {e}")
-            return []
+            return Gio.ListStore()
 
     @cached
-    def get_action_clients_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
+    def get_action_clients_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get action clients for a specific node with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
             action_clients = get_action_client_names_and_types_by_node(
-                node=self.node, remote_node_name=node_name, remote_node_namespace=node_namespace
+                node=self.ros2_node,
+                remote_node_name=node.name,
+                remote_node_namespace=node.namespace,
             )
-            action_clients = sorted(action_clients, key=itemgetter(0))
+            client_store = Gio.ListStore.new(ActionItem)
 
-            # Filter hidden actions if requested
-            if not self.app.settings.get_boolean("show-hidden-actions"):
-                action_clients = self._filter_hidden_actions(action_clients)
+            for action_full_name, action_types in action_clients:
+                if not re.search("/action/", action_types[0]):
+                    continue
 
-            return action_clients
+                action_namespace, action_name = action_full_name.rsplit("/", 1)
+                action = ActionItem(
+                    name=action_name,
+                    namespace=action_namespace,
+                    interface_full_name=action_types[0],
+                    hidden=topic_or_service_is_hidden(action_name),
+                )
+
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-hidden-actions") and item.hidden:
+                #     continue
+
+                client_store.append(action)
+
+            client_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return client_store
 
         except Exception as e:
-            print(f"Error getting action clients for node {node_namespace}/{node_name}: {e}")
-            return []
+            print(f"Error getting action clients for node '{node.full_name}': {e}")
+            return Gio.ListStore()
 
     @cached
-    def get_action_servers_by_node(self, node_name: str, node_namespace: str = "/") -> List[Tuple[str, List[str]]]:
+    def get_action_servers_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get action servers for a specific node with caching support."""
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
             action_servers = get_action_server_names_and_types_by_node(
-                node=self.node, remote_node_name=node_name, remote_node_namespace=node_namespace
+                node=self.ros2_node,
+                remote_node_name=node.name,
+                remote_node_namespace=node.namespace,
             )
-            action_servers = sorted(action_servers, key=itemgetter(0))
+            server_store = Gio.ListStore.new(ActionItem)
 
-            # Filter hidden actions if requested
-            if not self.app.settings.get_boolean("show-hidden-actions"):
-                action_servers = self._filter_hidden_actions(action_servers)
+            for action_full_name, action_types in action_servers:
+                if not re.search("/action/", action_types[0]):
+                    continue
 
-            return action_servers
+                action_namespace, action_name = action_full_name.rsplit("/", 1)
+                action = ActionItem(
+                    name=action_name,
+                    namespace=action_namespace,
+                    interface_full_name=action_types[0],
+                    hidden=topic_or_service_is_hidden(action_name),
+                )
+
+                # TODO move this in the appropriate gui place
+                # if not self.app.settings.get_boolean("show-hidden-actions") and action.hidden:
+                #     continue
+
+                server_store.append(action)
+
+            server_store.sort(compare_func=lambda a, b: a.full_name < b.full_name)
+            return server_store
 
         except Exception as e:
-            print(f"Error getting action servers for node {node_namespace}/{node_name}: {e}")
-            return []
+            print(f"Error getting action servers for node '{node.full_name}': {e}")
+            return Gio.ListStore()
 
     # Node-specific parameter methods with caching
     @cached
-    def get_parameters_by_node(self, node_name: str) -> List[str]:
+    def get_parameters_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get parameters for a specific node with caching support."""
-        return []  # FIXME
-
-        if not self.is_running or not self.node:
-            return []
+        if not self.is_running or not self.ros2_node:
+            return Gio.ListStore()
 
         try:
-            with self._rpc_lock:
-                future = call_list_parameters(node=self.node, node_name=node_name)
+            parameters: Gio.ListStore = Gio.ListStore.new(ParameterItem)
+
+            client = AsyncParameterClient(node=self.ros2_node, remote_node_name=node.full_name)
+            ready = client.wait_for_services(timeout_sec=5.0)
+            if not ready:
+                raise RuntimeError(
+                    f"Wait for service timed out waiting for parameter services for node {node.full_name}"
+                )
+                return Gio.ListStore()
+
+            # get all parameters
+            future = client.list_parameters()
+            rclpy.spin_until_future_complete(node=self.ros2_node, future=future)
             response = future.result() if future else None
-            parameters = response.result.names if response else []
-            parameters = sorted(parameters)
+            param_names = response.result.names
+
+            if not response:
+                return Gio.ListStore()
+
+            for param_descriptor in param_names:
+                param = ParameterItem(name=param_descriptor, node=node)
+                parameters.append(param)
+
+            # add parameter descriptions
+            future = client.describe_parameters(names=param_names)
+            rclpy.spin_until_future_complete(node=self.ros2_node, future=future)
+            response = future.result()
+
+            if response is None:
+                return Gio.ListStore()
+
+            for param, param_descriptor in zip(parameters, response.descriptors):
+                param.type = param_descriptor.type  # get_parameter_type_string(param_descriptor.type)
+                param.type_str = get_parameter_type_string(param_descriptor.type)
+                param.read_only = param_descriptor.read_only
+                param.description = param_descriptor.description
+                param.dynamic_typing = param_descriptor.dynamic_typing
+                param.integer_range = param_descriptor.integer_range
+                param.floating_point_range = param_descriptor.floating_point_range
+                param.additional_constraints = param_descriptor.additional_constraints
+                # success = self.update_parameter_info(param)
+                # if not success:
+                #     print(f"could not update param {param.name}")
+
+            # add parameter values
+            future = client.get_parameters(names=param_names)
+            rclpy.spin_until_future_complete(node=self.ros2_node, future=future)
+            response = future.result()
+
+            if response is None:
+                return Gio.ListStore()
+
+            for param, param_value in zip(parameters, response.values):
+                param.value = param_value  # TODO why is this always None??
+
+            # parameters = response.result.names if response else []
+            # parameters = sorted(parameters)
 
             # Filter out QoS parameters if requested
-            if not self.app.settings.get_boolean("show-qos-parameters"):
-                parameters = self._filter_qos_params(parameters)
+            # if not self.app.settings.get_boolean("show-qos-parameters"):
+            #     parameters = self._filter_qos_params(parameters)
 
+            # for param in parameters:
+            #     parameters.append(Gtk.StringObject.new(name))
+
+            parameters.sort(compare_func=lambda a, b: a.name < b.name)
             return parameters
 
         except Exception as e:
-            print(f"Error getting parameters for node {node_name}: {e}")
-            return []
+            print(f"Error getting parameters for node '{node.full_name}': {e}")
+            return Gio.ListStore()
 
     # @cached
-    def get_parameter_value(self, node_name: str, parameter_name: str) -> Any:
+    def get_parameter_value(self, parameter: ParameterItem) -> object | None:
         """Get parameter value for a specific parameter with caching support."""
-        return None  # FIXME
-
-        if not self.is_running or not self.node:
+        if not self.is_running or not self.ros2_node:
             return None
 
         try:
-            with self._rpc_lock:
-                values = call_get_parameters(
-                    node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                ).values
+            values = call_get_parameters(
+                node=self.ros2_node,
+                node_name=parameter.node.name,
+                parameter_names=[parameter.name],
+                # TODO maybe change this function, so it loads all parameters at once, instead of one at a time?
+            ).values
             param_value = get_value(parameter_value=values[0]) if values else None
-
             return param_value
 
         except Exception as e:
-            print(f"Error getting parameter value for {node_name}/{parameter_name}: {e}")
+            print(f"Error getting value for parameter '{parameter.name}' of node '{parameter.node.full_name}': {e}")
             return None
 
-    @cached
-    def get_parameter_type(self, node_name: str, parameter_name: str) -> str:
-        """Get parameter type for a specific parameter with caching support."""
-        return ""  # FIXME
+    # # @cached
+    # def get_parameter_type(self, parameter: ParameterItem) -> str | None:
+    #     """Get parameter type for a specific parameter with caching support."""
+    #     if not self.is_running or not self.ros2_node:
+    #         return None
 
-        if not self.is_running or not self.node:
-            return ""
+    #     try:
+    #         with self._rpc_lock:
+    #             descriptors = call_describe_parameters(
+    #                 node=self.ros2_node,
+    #                 node_name=parameter.node.name,
+    #                 parameter_names=[parameter.name],
+    #                 # TODO maybe change this function, so it loads all parameters at once, instead of one at a time?
+    #             ).descriptors
 
-        try:
-            with self._rpc_lock:
-                descriptors = call_describe_parameters(
-                    node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                ).descriptors
+    #         param_type = get_parameter_type_string(descriptors[0].type) if descriptors else None
+    #         return param_type
 
-            if not descriptors:
-                return ""
-
-            param_type = get_parameter_type_string(descriptors[0].type)
-
-            return param_type
-
-        except Exception as e:
-            print(f"Error getting parameter type for {node_name}/{parameter_name}: {e}")
-            return ""
-
-    # @cached
-    def get_parameter_info(self, node_name: str, parameter_name: str) -> Dict[str, Any]:
-        """Get complete parameter information (type and value) with caching support."""
-        return {"type": "", "value": None, "read_only": False}  # FIXME
-
-        if not self.is_running or not self.node:
-            return {"type": "", "value": None, "read_only": False}
-
-        try:
-            with self._rpc_lock:
-                descriptors = call_describe_parameters(
-                    node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                ).descriptors
-
-            if not descriptors:
-                return {"type": "", "value": None, "read_only": False}
-
-            param_descriptor = descriptors[0]
-            param_type = get_parameter_type_string(param_descriptor.type)
-            param_read_only = getattr(param_descriptor, "read_only", False)
-
-            with self._rpc_lock:
-                values = call_get_parameters(
-                    node=self.node, node_name=node_name, parameter_names=[parameter_name]
-                ).values
-
-            param_value = get_value(parameter_value=values[0]) if values else None
-
-            param_info = {"type": param_type, "value": param_value, "read_only": param_read_only}
-
-            return param_info
-
-        except Exception as e:
-            print(f"Error getting parameter info for {node_name}/{parameter_name}: {e}")
-            return {"type": "", "value": None, "read_only": False}
-
-    # Message and service class methods with caching
-    @cached(use_ttl=False)
-    def get_message_class(self, topic_name: str) -> Any:
-        """Get message class for a specific topic with caching support."""
-        if not self.is_running or not self.node:
-            return None
-
-        try:
-            msg_class = get_msg_class(node=self.node, topic=topic_name, include_hidden_topics=True)
-
-            return msg_class
-
-        except Exception as e:
-            print(f"Error getting message class for topic {topic_name}: {e}")
-            return None
-
-    @cached(use_ttl=False)
-    def get_service_class(self, service_name: str) -> Any:
-        """Get service class for a specific service with caching support."""
-        if not self.is_running or not self.node:
-            return None
-
-        try:
-            srv_class = get_service_class(node=self.node, service_name=service_name, include_hidden_services=True)
-
-            return srv_class
-
-        except Exception as e:
-            print(f"Error getting service class for service {service_name}: {e}")
-            return None
-
-    @cached(use_ttl=False)
-    def get_action_class(self, action_name: str) -> Any:
-        """Get action class for a specific action with caching support."""
-        if not self.is_running or not self.node:
-            return None
-
-        try:
-            available_actions = self.get_available_actions()
-            action_type = None
-            for name, types in available_actions:
-                if name == action_name:
-                    action_type = types[0] if types else None
-                    break
-
-            if not action_type:
-                return None
-
-            package_name, interface_type, action_name_only = action_type.split("/")
-            module_name = f"{package_name}.{interface_type}"
-
-            module = importlib.import_module(module_name)
-            return getattr(module, action_name_only)
-
-        except Exception as e:
-            print(f"Error getting action class for action {action_name}: {e}")
-            return None
-
-    # Utility methods for message/service type names # TODO refactor to get_interface_type_name?
-    @cached(use_ttl=False)
-    def get_message_type_name(self, msg_class) -> str:
-        """Get the full type name for a message class (e.g., 'geometry_msgs/msg/Twist')."""
-        if not msg_class:
-            return ""
-
-        try:
-            # The message class has the type information in its module
-            module_name = msg_class.__module__
-            parts = module_name.split(".")
-            if len(parts) >= 3:
-                package_name = parts[0]
-                interface_type = parts[1]  # 'msg', 'srv', 'action'
-                message_name = msg_class.__name__
-                return f"{package_name}/{interface_type}/{message_name}"
-            else:
-                # Fallback for edge cases
-                return f"{msg_class.__module__}.{msg_class.__name__}"
-
-        except Exception as e:
-            print(f"Error getting message type name: {e}")
-            # Fallback implementation
-            module_name = msg_class.__module__
-            package_name = module_name.split(".")[0]
-            message_type = module_name.split(".")[1] if len(module_name.split(".")) > 1 else "msg"
-            message_name = msg_class.__name__
-            return f"{package_name}/{message_type}/{message_name}"
-
-    @cached(use_ttl=False)
-    def get_service_type_name(self, srv_class) -> str:
-        """Get the full type name for a service class (e.g., 'std_srvs/srv/Empty')."""
-        if not srv_class:
-            return ""
-
-        try:
-            # Service classes have the same module structure as messages
-            module_name = srv_class.__module__
-            parts = module_name.split(".")
-            if len(parts) >= 3:
-                package_name = parts[0]
-                interface_type = parts[1]  # should be 'srv'
-                service_name = srv_class.__name__
-                return f"{package_name}/{interface_type}/{service_name}"
-            else:
-                # Fallback for edge cases
-                return f"{srv_class.__module__}.{srv_class.__name__}"
-
-        except Exception as e:
-            print(f"Error getting service type name: {e}")
-            # Fallback implementation
-            module_name = srv_class.__module__
-            package_name = module_name.split(".")[0]
-            service_type = module_name.split(".")[1] if len(module_name.split(".")) > 1 else "srv"
-            service_name = srv_class.__name__
-            return f"{package_name}/{service_type}/{service_name}"
-
-    @cached(use_ttl=False)
-    def get_action_type_name(self, action_class) -> str:
-        """Get the full type name for an action class (e.g., 'example_interfaces/action/Fibonacci')."""
-        if not action_class:
-            return ""
-
-        try:
-            # Action classes have the same module structure as messages
-            module_name = action_class.__module__
-            parts = module_name.split(".")
-            if len(parts) >= 3:
-                package_name = parts[0]
-                interface_type = parts[1]  # should be 'action'
-                action_name = action_class.__name__
-                return f"{package_name}/{interface_type}/{action_name}"
-            else:
-                # Fallback for edge cases
-                return f"{action_class.__module__}.{action_class.__name__}"
-        except Exception as e:
-            print(f"Error getting action type name: {e}")
-            # Fallback implementation
-            module_name = action_class.__module__
-            package_name = module_name.split(".")[0]
-            action_type = module_name.split(".")[1] if len(module_name.split(".")) > 1 else "action"
-            action_name = action_class.__name__
-            return f"{package_name}/{action_type}/{action_name}"
+    #     except Exception as e:
+    #         print(f"Error getting type for parameter '{parameter.name}' of node '{parameter.node.full_name}': {e}")
+    #         return None
 
     # Helper methods for filtering
-    def _filter_hidden_nodes(self, nodes: List[Tuple[str, str, str]]) -> List[Tuple[str, str, str]]:
-        """Filter out hidden nodes from a list of nodes."""
-        return [(name, namespace, full_name) for name, namespace, full_name in nodes if not _is_hidden_name(name)]
-
-    def _filter_hidden_topics(self, items: List[Tuple[str, List[str]]]) -> List[Tuple[str, List[str]]]:
-        """Filter out hidden topics from a list."""
-        return [(name, types) for name, types in items if not topic_or_service_is_hidden(name)]
-
-    def _filter_hidden_services(self, items: List[Tuple[str, List[str]]]) -> List[Tuple[str, List[str]]]:
-        """Filter out hidden services from a list."""
-        return [(name, types) for name, types in items if not topic_or_service_is_hidden(name)]
-
-    # TODO check if actions can actually be hidden, as the used function is "designed" for topics and services
-    def _filter_hidden_actions(self, items: List[Tuple[str, List[str]]]) -> List[Tuple[str, List[str]]]:
-        """Filter out hidden actions from a list."""
-        return [(name, types) for name, types in items if not topic_or_service_is_hidden(name)]
-
     def _filter_action_topics(self, topics: List[Tuple[str, List[str]]]) -> List[Tuple[str, List[str]]]:
         """Filter out action-related topics from a list of topics."""
         return [(name, types) for name, types in topics if not re.search(r"/_action/(status|feedback)", name)]
@@ -824,15 +836,15 @@ class ROS2Connector:
     def log(self, message: str, level: str = "info") -> None:
         """Log a message with the specified severity level (debug, [info], warning, error, fatal)."""
         if level == "info":
-            self.node.get_logger().info(message)
+            self.ros2_node.get_logger().info(message)
         elif level == "warning":
-            self.node.get_logger().warning(message)
+            self.ros2_node.get_logger().warning(message)
         elif level == "error":
-            self.node.get_logger().error(message)
+            self.ros2_node.get_logger().error(message)
         elif level == "fatal":
-            self.node.get_logger().fatal(message)
+            self.ros2_node.get_logger().fatal(message)
         elif level == "debug":
-            self.node.get_logger().debug(message)
+            self.ros2_node.get_logger().debug(message)
         else:
-            self.node.get_logger().info(f"{level} is not a valid logging level. Defaulting to info.")
-            self.node.get_logger().info(message)
+            self.ros2_node.get_logger().info(f"{level} is not a valid logging level. Defaulting to info.")
+            self.ros2_node.get_logger().info(message)

@@ -31,17 +31,17 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, Gdk, GLib, Pango, GObject
 
+from insight_gui.models.topic_item import TopicItem
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
-from insight_gui.utils.gtk_utils import find_str_in_list_store
 
-
+# TODO do the GObject refactor for the entire page
 class ImageViewerPage(ContentPage):
     __gtype_name__ = "ImageViewerPage"
 
-    def __init__(self, preselect_topic: str = "", **kwargs):
+    def __init__(self, preselect_topic: TopicItem = None, **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Image Viewer")
         super().set_refresh_fail_text("No image topics found. Refresh to try again.")
@@ -133,33 +133,23 @@ class ImageViewerPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         available_topics = self.ros2_connector.get_available_topics()
-        self.available_img_topics = []
+        self.available_img_topics = Gio.ListStore.new(TopicItem)
 
-        for topic_name, topic_types in available_topics:
-            # topic_types is a list, as multiple servers can advertise different types to the same topic
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(topic_types) == 1:
-                topic_types = topic_types[0]
-            else:
-                topic_types = ", ".join(topic_types)
+        for topic in available_topics:
+            if topic.interface.full_name == "sensor_msgs/msg/Image":
+                self.available_img_topics.append(topic)
 
-            if topic_types == "sensor_msgs/msg/Image":
-                self.available_img_topics.append(topic_name)
-
-        return len(self.available_img_topics) > 0
+        return self.available_img_topics.get_n_items() > 0
 
     def refresh_ui(self):
         # fill the ComboBox/ListStore with available topics
-        for topic_name in self.available_img_topics:
+        for topic_name in self.available_img_topics:  # TODO adapt to GObject
             self.img_topic_list_store.append(Gtk.StringObject.new(topic_name))
 
         # set the selected service to the preselected one
-        found_index = find_str_in_list_store(self.img_topic_list_store, self.preselect_topic)
-        # found, found_index = self.img_topic_list_store.find(Gtk.StringObject.new(self.preselect_service))
-        if found_index >= 0:
-            self.img_topic_row.set_selected(found_index)
-        else:
-            self.img_topic_row.set_selected(0)
+        found, index = self.img_topic_list_store.find(self.preselect_topic)
+        if found:
+            self.img_topic_row.set_selected(index)
 
     def reset_ui(self):
         self.img_topic_list_store.remove_all()

@@ -49,6 +49,7 @@ ANGLE_FORMAT_DEG = "DEG"
 ANGLE_FORMAT_RAD = "RAD"
 
 
+# TODO do the GObject refactor for the entire page
 class StaticTransformBroadcasterPage(ContentPage):
     __gtype_name__ = "StaticTransformBroadcasterPage"
 
@@ -279,9 +280,9 @@ class StaticTransformBroadcasterPage(ContentPage):
         # super().show_toast("Listening to tf data for 5.0 seconds...")
 
         # self.tf_buffer = Buffer()
-        # self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.node)
+        # self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.ros2_node)
         # time.sleep(5.0)
-        # self.lookup_time = self.ros2_connector.node.get_clock().now()
+        # self.lookup_time = self.ros2_connector.ros2_node.get_clock().now()
 
         # # Get the frames from the buffer as YAML
         # result = self.tf_buffer.all_frames_as_yaml()
@@ -374,7 +375,7 @@ class StaticTransformBroadcasterPage(ContentPage):
     def make_transform(self) -> TransformStamped:
         # create transform message
         transform = TransformStamped()
-        transform.header.stamp = self.ros2_connector.node.get_clock().now().to_msg()
+        transform.header.stamp = self.ros2_connector.ros2_node.get_clock().now().to_msg()
         transform.header.frame_id = self.parent_frame_row.get_text().strip()
         transform.child_frame_id = self.child_frame_row.get_text().strip()
 

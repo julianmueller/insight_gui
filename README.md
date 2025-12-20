@@ -332,19 +332,9 @@ Insight is a minimalist GUI alternative to rqt. It is a GTK4-based tool for expl
 </details>
 
 
-## Prerequisites
-
-Install the following packages, as some currently cannot be installed by rosdep (I'm working on it).
-
-```bash
-sudo apt install libgtk-4-dev libgirepository1.0-dev adwaita-icon-theme libadwaita-1-dev libglib2.0-dev python3-gi python3-gi-cairo python3-networkx python3-graphviz
-```
-
 ## Installation
 
 ### Binary Install with apt
-
-! THIS IS NOT WORKING YET, but hopefully will in the future (I'm waiting for approval) !
 
 ```bash
 sudo apt install ros-jazzy-insight-gui
@@ -370,6 +360,20 @@ git clone -b jazzy-dev https://github.com/julianmueller/insight_gui
 
 ```bash
 rosdep install --from-paths src -y --ignore-src
+```
+
+or install them manually:
+
+```bash
+sudo apt install libgtk-4-dev \
+    libgirepository1.0-dev \
+    adwaita-icon-theme \
+    libadwaita-1-dev \
+    libglib2.0-dev \
+    python3-gi \
+    python3-gi-cairo \
+    python3-networkx \
+    python3-graphviz
 ```
 
 3. Build the workspace:

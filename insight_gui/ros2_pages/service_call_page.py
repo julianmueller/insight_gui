@@ -34,16 +34,17 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib, Pango, GObject
 
+from insight_gui.models.service_item import ServiceItem
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
-from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
+# TODO do the GObject refactor for the entire page
 class ServiceCallPage(ContentPage):
     __gtype_name__ = "ServiceCallPage"
 
-    def __init__(self, preselect_service: str = "", **kwargs):
+    def __init__(self, preselect_service: ServiceItem = None, **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Call a Service")
         super().set_refresh_fail_text("No services found. Refresh to try again.")
@@ -55,6 +56,7 @@ class ServiceCallPage(ContentPage):
         self.request_instance = None
         self.response_class = None
         self.response_instance = None
+        self.service_item = None
 
         self.call_btn = super().add_bottom_left_btn(
             label="Call Service",
@@ -151,20 +153,18 @@ class ServiceCallPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_services = self.ros2_connector.get_available_services()
-        return len(self.available_services) > 0
+        return self.available_services is not None and self.available_services.get_n_items() > 0
 
     def refresh_ui(self):
         # fill the ComboBox/ListStore with available services
-        for service_name, _service_types in self.available_services:
-            self.service_list_store.append(Gtk.StringObject.new(service_name))
+        for service in self.available_services:  # TODO adapt to GObject
+            self.service_list_store.append(Gtk.StringObject.new(service.full_name))
 
         # set the selected service to the preselected one
-        found_index = find_str_in_list_store(self.service_list_store, self.preselect_service)
+        found, index = self.available_services.find(self.preselect_service)
         # found, found_index = self.service_list_store.find(Gtk.StringObject.new(self.preselect_service))
-        if found_index >= 0:
-            self.service_row.set_selected(found_index)
-        else:
-            self.service_row.set_selected(0)
+        if found:
+            self.service_row.set_selected(index)
 
     def reset_ui(self):
         # clear previous service list
@@ -185,8 +185,15 @@ class ServiceCallPage(ContentPage):
             return
 
         self.selected_service_name = self.service_row.get_selected_item().get_string()
-        self.service_class = self.ros2_connector.get_service_class(service_name=self.selected_service_name)
-        self.selected_service_type = self.ros2_connector.get_service_type_name(self.service_class)
+        self.service_item = self.ros2_connector.get_service_class(service_name=self.selected_service_name)
+        if not self.service_item or not self.service_item.python_class:
+            self.call_btn.set_sensitive(False)
+            return
+
+        self.service_class = self.service_item.python_class
+        self.selected_service_type = self.service_item.full_name or self.ros2_connector.get_service_type_name(
+            self.service_item
+        )
         self.service_type_row.set_subtitle(self.selected_service_type)
         self.service_type_row.set_subpage_link(
             nav_view=self.nav_view,

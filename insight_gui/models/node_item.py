@@ -1,7 +1,6 @@
-from __future__ import annotations
-from typing import List, Tuple
-
 import gi
+
+gi.require_version("GObject", "2.0")
 from gi.repository import GObject, Gio
 
 
@@ -23,12 +22,7 @@ class NodeItem(GObject.GObject):
 
     @GObject.Property
     def full_name(self) -> str:
-        return f"{self.namespace}{self.name}"
-
-    @classmethod
-    def from_tuple(cls, data: Tuple[str, str, str]) -> NodeItem:
-        namespace, name, _ = data
-        return cls(namespace=namespace, name=name)
+        return f"{self.namespace if self.namespace != '/' else ''}/{self.name}"
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} '{self.full_name}'>"
+        return f"<{self.__class__.__name__}: '{self.full_name}'>"

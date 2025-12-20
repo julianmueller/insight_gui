@@ -40,6 +40,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GObject, Gdk, GLib, Pango
 
+from insight_gui.models.topic_item import TopicItem
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import AdditionalContentRow, SuggestionEntryRow
 from insight_gui.widgets.buttons import ToggleButton
@@ -64,10 +65,11 @@ class TeleopDirection(GObject.GObject):
         self.y = y
 
 
+# TODO do the GObject refactor for the entire page
 class TeleoperatorPage(ContentPage):
     __gtype_name__ = "TeleoperatorPage"
 
-    def __init__(self, preselect_topic: str = "", **kwargs):
+    def __init__(self, preselect_topic: TopicItem = None, **kwargs):
         super().__init__(searchable=False, **kwargs)
         super().set_title("Teleoperator")
         super().set_refresh_fail_text("No teleop topics found. Refresh to try again.")
@@ -146,16 +148,10 @@ class TeleoperatorPage(ContentPage):
         available_topics = self.ros2_connector.get_available_topics()
         self.available_teleop_topics = []
 
-        for topic_name, topic_types in available_topics:
-            # topic_types is a list, as multiple servers can advertise different types to the same topic
-            # see https://github.com/ros2/ros2cli/blob/acefd9c0d773e7a067a6c458455eebaa2fbc6751/ros2service/ros2service/api/__init__.py#L59
-            if len(topic_types) == 1:
-                topic_types = topic_types[0]
-            else:
-                topic_types = ", ".join(topic_types)
-
-            if topic_types == self.TELEOP_TYPE_TWIST or topic_types == self.TELEOP_TYPE_JOY:
-                self.available_teleop_topics.append(topic_name)
+        if available_topics:
+            for topic in available_topics:
+                if any(t in (self.TELEOP_TYPE_TWIST, self.TELEOP_TYPE_JOY) for t in getattr(topic, "type_names", [])):
+                    self.available_teleop_topics.append(topic.full_name)
 
         return len(self.available_teleop_topics) > 0
 
@@ -211,8 +207,12 @@ class TeleoperatorPage(ContentPage):
 
     def on_topic_suggestion_applied(self, _, item_text: str):
         try:
-            msg_class = self.ros2_connector.get_message_class(topic_name=item_text)
-            selected_topic_type = self.ros2_connector.get_message_type_name(msg_class)
+            msg_item = self.ros2_connector.get_message_class(topic_name=item_text)
+            if not msg_item or not msg_item.python_class:
+                super().show_toast(f"Could not resolve message type for {item_text}")
+                return
+
+            selected_topic_type = msg_item.full_name or self.ros2_connector.get_message_type_name(msg_item)
             found_index = find_str_in_list_store(self.teleop_type_list_store, selected_topic_type)
             if found_index >= 0:
                 self.teleop_type_row.set_selected(found_index)
