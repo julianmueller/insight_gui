@@ -20,7 +20,7 @@ class NodeItem(GObject.GObject):
 
     parameters = GObject.Property(type=Gio.ListStore)
 
-    @GObject.Property
+    @GObject.Property(type=str)
     def full_name(self) -> str:
         return f"{self.namespace if self.namespace != '/' else ''}/{self.name}"
 

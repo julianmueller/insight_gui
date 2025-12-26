@@ -25,7 +25,7 @@ class ParameterItem(GObject.GObject):
 
     # TODO add identification of "qos" param prefix?
 
-    @GObject.Property
+    @GObject.Property(type=str)
     def full_name(self) -> str:
         return f"{self.node.full_name}:{self.name}"
 

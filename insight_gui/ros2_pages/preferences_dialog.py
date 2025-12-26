@@ -72,6 +72,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             ),
         )
 
+        # TODO move these into settings and ros2-connector (rclpy.init)
         self.env_domain_id_row = env_group.add_row(
             Adw.EntryRow(
                 title="ROS_DOMAIN_ID",

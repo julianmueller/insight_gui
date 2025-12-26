@@ -1,4 +1,3 @@
-import importlib
 import re
 
 import gi
@@ -6,6 +5,7 @@ import gi
 gi.require_version("GObject", "2.0")
 from gi.repository import GObject, Gio
 
+from rosidl_runtime_py.utilities import get_message, get_service, get_action
 from rosidl_parser.definition import (
     NamespacedType,
     UnboundedSequence,
@@ -96,7 +96,7 @@ class InterfaceTypeItem(GObject.GObject):
 
         # self.fields = Gio.ListStore.new(GObject.GObject)
 
-    @GObject.Property
+    @GObject.Property(type=str)
     def full_name(self) -> str:
         return f"{self.package}/{self.interface_class}/{self.name}"
 
@@ -106,7 +106,7 @@ class InterfaceTypeItem(GObject.GObject):
     @staticmethod
     def parse_rosidl_obj(rosidl_obj) -> Gio.ListStore:
         if rosidl_obj is None:
-            return
+            return Gio.ListStore.new(GObject.GObject)
 
         fields = Gio.ListStore.new(GObject.GObject)
 
@@ -210,12 +210,11 @@ class TopicInterfaceTypeItem(InterfaceTypeItem):
 
     def import_rosidl_obj(self):
         try:
-            module = importlib.import_module(self.package + "." + self.interface_class)
-            rosidl_class = getattr(module, self.name)
+            rosidl_class = get_message(self.full_name)
             self.rosidl_obj = rosidl_class()
-
-        except (ModuleNotFoundError, AttributeError) as e:
+        except Exception as e:
             print(f"Failed to load python class for message '{self.full_name}': {e}")
+            raise e
 
 
 class ServiceInterfaceTypeItem(InterfaceTypeItem):
@@ -236,13 +235,12 @@ class ServiceInterfaceTypeItem(InterfaceTypeItem):
 
     def import_rosidl_obj(self):
         try:
-            module = importlib.import_module(self.package + "." + self.interface_class)
-            rosidl_class = getattr(module, self.name)
+            rosidl_class = get_service(self.full_name)
             self.request_rosidl_obj = rosidl_class.Request()
             self.response_rosidl_obj = rosidl_class.Response()
-
-        except (ModuleNotFoundError, AttributeError) as e:
-            print(f"Failed to load python class for message '{self.full_name}': {e}")
+        except Exception as e:
+            print(f"Failed to resolve service class for '{self.full_name}': {e}")
+            raise e
 
 
 class ActionInterfaceTypeItem(InterfaceTypeItem):
@@ -265,14 +263,13 @@ class ActionInterfaceTypeItem(InterfaceTypeItem):
 
     def import_rosidl_obj(self):
         try:
-            module = importlib.import_module(self.package + "." + self.interface_class)
-            rosidl_class = getattr(module, self.name)
+            rosidl_class = get_action(self.full_name)
             self.goal_rosidl_obj = rosidl_class.Goal()
             self.feedback_rosidl_obj = rosidl_class.Feedback()
             self.result_rosidl_obj = rosidl_class.Result()
-
-        except (ModuleNotFoundError, AttributeError) as e:
-            print(f"Failed to load python class for message '{self.full_name}': {e}")
+        except Exception as e:
+            print(f"Failed to resolve action class for '{self.full_name}': {e}")
+            raise e
 
 
 # p = TopicInterfaceTypeItem("geometry_msgs/msg/Pose")

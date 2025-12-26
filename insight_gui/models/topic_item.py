@@ -22,7 +22,7 @@ class TopicItem(GObject.GObject):
         super().__init__(*args, **kwargs)
         self.interface = TopicInterfaceTypeItem(full_name=interface_full_name)
 
-    @GObject.Property
+    @GObject.Property(type=str)
     def full_name(self) -> str:
         return f"{self.namespace if self.namespace != '/' else ''}/{self.name}"
 

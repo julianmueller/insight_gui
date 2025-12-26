@@ -9,6 +9,8 @@
             <description>Automatically start the ROS2 node for the GUI when its started</description>
         </key>
 
+        <!-- TODO add DOMAIN_ID etc here -->
+
         <key name="gui-node-name" type="s">
             <default>"insight_gui"</default>
             <summary>GUI-Node Name</summary>
