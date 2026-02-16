@@ -26,12 +26,12 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Pango
+from gi.repository import Gtk, Adw
 
 from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import ServiceRow
 
 
 # TODO do the GObject refactor for the entire page
@@ -48,10 +48,12 @@ class ServiceListPage(ContentPage):
         self.service_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.available_services = self.ros2_connector.get_available_services()
+        self.ros2_connector.refresh_services_store()
+        self.available_services = self.ros2_connector.services_store
         return self.available_services is not None and self.available_services.get_n_items() > 0
 
     def refresh_ui(self):
+        rows_by_group: Dict[PrefGroup, list] = {}
         for service in self.available_services:
             # put all services in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-services-by-namespace"):
@@ -67,21 +69,17 @@ class ServiceListPage(ContentPage):
                 group = self.pref_page.add_group(title=namespace, description=description)
                 self.service_ns_groups[namespace] = group
 
-            # TODO this somehow messes with the sorting :( again ...
-
-            row = PrefRow(title=service.full_name, subtitle=service.interface.full_name)
-            row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.START)
-            row.subtitle_lbl.set_tooltip_text(service.full_name)
-
-            if service.hidden:
-                row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden service")
-
+            row = ServiceRow(service=service)
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=ServiceInfoPage,
                 subpage_kwargs={"service": service},
+                label="Show service info page",
             )
-            group.add_row(row)
+            rows_by_group.setdefault(group, []).append(row)
+
+        for group, rows in rows_by_group.items():
+            group.add_rows(rows, batch_size=10)
 
         # sort the groups alphabetically by title
         self.pref_page.sort_groups()

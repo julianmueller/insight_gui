@@ -51,7 +51,8 @@ class ParameterListPage(ContentPage):
         self.parameter_lists: Dict[PrefGroup] = {}
 
     def refresh_bg(self):
-        available_nodes = self.ros2_connector.get_available_nodes()
+        self.ros2_connector.refresh_nodes_store()
+        available_nodes = self.ros2_connector.nodes_store
 
         if available_nodes is None or available_nodes.get_n_items() == 0:
             return False
@@ -59,10 +60,14 @@ class ParameterListPage(ContentPage):
         self.parameters_by_node: Dict[str, Gio.ListStore] = {}
 
         for node in available_nodes:
-            parameters = self.ros2_connector.get_parameters_by_node(node=node)
+            parameters = self.ros2_connector.refresh_parameters_store(node=node)
 
             if parameters and parameters.get_n_items() > 0:
-                self.parameters_by_node[node.full_name] = parameters
+                # copy into a dedicated store to keep per-node data separate
+                parameter_store = Gio.ListStore.new(ParameterItem)
+                for param in parameters:
+                    parameter_store.append(param)
+                self.parameters_by_node[node.full_name] = parameter_store
 
         return self.parameters_by_node if self.parameters_by_node else False
 
@@ -71,6 +76,7 @@ class ParameterListPage(ContentPage):
         for node_full_name, param_store in self.parameters_by_node.items():
             # create a group and add all parameters
             group = self.pref_page.add_group(title=node_full_name)
+            rows = []
 
             for param in param_store:
                 row = PrefRow(title=param.name, subtitle=f"{param.type}: {param.value}")
@@ -84,7 +90,9 @@ class ParameterListPage(ContentPage):
                 if param.read_only:
                     row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
 
-                group.add_row(row)
+                rows.append(row)
+
+            group.add_rows(rows, batch_size=8)
 
             group.set_description_to_row_count()
 

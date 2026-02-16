@@ -257,7 +257,12 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
         return self.add_suffix(btn, prepend=prepend)
 
     def set_subpage_link(
-        self, *, nav_view: Adw.NavigationView, subpage_class: Type[Adw.NavigationPage], subpage_kwargs: dict
+        self,
+        *,
+        nav_view: Adw.NavigationView,
+        subpage_class: Type[Adw.NavigationPage],
+        subpage_kwargs: dict,
+        label: str = "Open",
     ):
         def _trigger(state: Gdk.ModifierType | None = None):
             subpage = subpage_class(**subpage_kwargs)
@@ -271,7 +276,7 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
                 nav_view.push(subpage)
 
         self.set_primary_action(
-            label="Open",
+            label=label,
             callback=_trigger,
             tooltip_text="Open details",
             pass_event_state=True,

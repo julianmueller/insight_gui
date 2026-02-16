@@ -84,7 +84,8 @@ class BackgroundWorker:
         priority: int = WORKER_PRIORITY_NORMAL,
         **kwargs,
     ) -> concurrent.futures.Future:
-        """Run a blocking callable on the worker pool.
+        """
+        Run a blocking callable on the worker pool.
 
         The optional ``done_callback`` receives the resulting Future and is
         executed in the worker thread context, so use GTK-safe handoff for UI.

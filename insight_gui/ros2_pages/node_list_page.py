@@ -31,7 +31,7 @@ from gi.repository import Gtk, Adw
 from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import NodeRow
 
 
 class NodeListPage(ContentPage):
@@ -49,10 +49,13 @@ class NodeListPage(ContentPage):
         # self.node_list_group = self.pref_page.add_group(placeholder_text="Refresh to show nodes")
 
     def refresh_bg(self) -> bool:
-        self.nodes = self.ros2_connector.get_available_nodes()
+        self.ros2_connector.refresh_nodes_store()
+        self.nodes = self.ros2_connector.nodes_store
         return self.nodes is not None and self.nodes.get_n_items() > 0
 
     def refresh_ui(self):
+        rows_by_group: Dict[PrefGroup, list] = {}
+
         for node in self.nodes:
             # put all nodes in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-nodes-by-namespace"):
@@ -66,16 +69,18 @@ class NodeListPage(ContentPage):
                 group = self.pref_page.add_group(title=node.namespace, description=description)
                 self.node_ns_groups[node.namespace] = group
 
-            row = PrefRow(title=node.name, subtitle=node.full_name)
-            if node.hidden:
-                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden node")
+            row = NodeRow(node=node)
 
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=NodeInfoPage,
                 subpage_kwargs={"node": node},
+                label="Show node info page",
             )
-            group.add_row(row)
+            rows_by_group.setdefault(group, []).append(row)
+
+        for group, rows in rows_by_group.items():
+            group.add_rows(rows, batch_size=8)
 
         # sort the groups alphabetically by title
         self.pref_page.sort_groups()

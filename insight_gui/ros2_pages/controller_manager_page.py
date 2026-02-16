@@ -229,7 +229,7 @@ class ControllerManagerPage(ContentPage):
     def _discover_controller_managers(self) -> Dict[str, ControllerManager]:
         managers: Dict[str, ControllerManager] = {}
 
-        services = self.ros2_connector.get_available_services()
+        services = self.ros2_connector.refresh_services_store()
         suffix = "/list_controllers"
 
         if not services:

@@ -69,7 +69,8 @@ class GraphPage(ContentPage):
         self.canvas.clear()
 
         # get all nodes, topics, services, actions
-        self.available_nodes = self.ros2_connector.get_available_nodes()
+        self.ros2_connector.refresh_nodes_store()
+        self.available_nodes = self.ros2_connector.nodes_store
         self.available_publishers = {}  # dict of ['node_name': Gio.ListStore]
         self.available_subscribers = {}
         self.available_service_servers = {}

@@ -181,13 +181,17 @@ class TopicPublisherPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()  # this could move to the ros2_connector and be cached
-        self.available_topics = self.ros2_connector.get_available_topics()
-        self.topic_row.set_m
+        self.ros2_connector.refresh_topics_store()
+        self.available_topics = self.ros2_connector.topics_store
         return (
             self.available_topics is not None and self.available_topics.get_n_items() > 0
         )  # len(self.available_msgs) + len(self.available_topics) > 0
 
     def refresh_ui(self):
+        self.topic_row.list_store.remove_all()
+        for topic in self.available_topics:
+            self.topic_row.list_store.append(Gtk.StringObject.new(topic.full_name))
+
         # fill the ComboBox/ListStore with available topics
         for pkg_name, msgs_list in sorted(self.available_msgs.items()):
             for msg in sorted(msgs_list):
@@ -381,7 +385,7 @@ class TopicPublisherPage(ContentPage):
             return False
 
         # check if the topic name is already published with a different type
-        available_topics = self.ros2_connector.get_available_topics()
+        available_topics = self.ros2_connector.refresh_topics_store()
         for topic in available_topics or []:
             if topic_name == topic.full_name and topic_name != self.topic_name:
                 if topic_type not in topic.type_names:

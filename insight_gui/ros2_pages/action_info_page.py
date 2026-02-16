@@ -67,7 +67,8 @@ class ActionInfoPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a server/client of this action
-        self.available_nodes = self.ros2_connector.get_available_nodes()
+        self.ros2_connector.refresh_nodes_store()
+        self.available_nodes = self.ros2_connector.nodes_store
         return self.available_nodes is not None and self.available_nodes.get_n_items() > 0
 
     def refresh_ui(self):

@@ -60,7 +60,8 @@ class JointStatesPage(ContentPage):
     def refresh_bg(self) -> bool:
         self.joint_states_topic_list = []
 
-        available_topics = self.ros2_connector.get_available_topics()
+        self.ros2_connector.refresh_topics_store()
+        available_topics = self.ros2_connector.topics_store
 
         if available_topics:
             for topic in available_topics:

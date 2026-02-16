@@ -124,7 +124,8 @@ class TopicRemapPage(ContentPage):
     # Lifecycle helpers
     # ------------------------------------------------------------------
     def refresh_bg(self) -> bool:
-        self.available_topics = self.ros2_connector.get_available_topics()
+        self.ros2_connector.refresh_topics_store()
+        self.available_topics = self.ros2_connector.topics_store
         return self.available_topics is not None and self.available_topics.get_n_items() > 0
 
     def refresh_ui(self):

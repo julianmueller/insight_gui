@@ -95,7 +95,7 @@ class NodeInfoPage(ContentPage):
         self.action_clients_list = self.ros2_connector.get_action_clients_by_node(node=self.node)
 
         # Parameters
-        self.parameters_list = self.ros2_connector.get_parameters_by_node(node=self.node)
+        self.parameters_list = self.ros2_connector.refresh_parameters_store(node=self.node)
 
         return (self.publisher_list and self.publisher_list.get_n_items() or 0) + (
             self.subscriber_list and self.subscriber_list.get_n_items() or 0

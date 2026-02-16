@@ -26,11 +26,11 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Pango
+from gi.repository import Gtk, Adw
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import TopicRow
 
 
 class TopicListPage(ContentPage):
@@ -46,10 +46,12 @@ class TopicListPage(ContentPage):
         self.topic_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.available_topics = self.ros2_connector.get_available_topics()
+        self.ros2_connector.refresh_topics_store()
+        self.available_topics = self.ros2_connector.topics_store
         return self.available_topics is not None and self.available_topics.get_n_items() > 0
 
     def refresh_ui(self):
+        rows_by_group: Dict[PrefGroup, list] = {}
         # TODO this is ugly
         from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
 
@@ -68,21 +70,17 @@ class TopicListPage(ContentPage):
                 group = self.pref_page.add_group(title=namespace, description=description)
                 self.topic_ns_groups[namespace] = group
 
-            # TODO this somehow messes with the sorting :( again ...
-
-            row = PrefRow(title=topic.full_name, subtitle=topic.interface.full_name)
-            row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.START)
-            row.subtitle_lbl.set_tooltip_text(topic.full_name)
-
-            if topic.hidden:
-                row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden topic")
-
+            row = TopicRow(topic=topic)
             row.set_subpage_link(
                 nav_view=self.nav_view,
                 subpage_class=TopicInfoPage,
                 subpage_kwargs={"topic": topic},
+                label="Show topic info page",
             )
-            group.add_row(row)
+            rows_by_group.setdefault(group, []).append(row)
+
+        for group, rows in rows_by_group.items():
+            group.add_rows(rows, batch_size=10)
 
         # sort the groups alphabetically by title
         self.pref_page.sort_groups()

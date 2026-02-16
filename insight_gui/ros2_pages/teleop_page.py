@@ -145,7 +145,8 @@ class TeleoperatorPage(ContentPage):
         self.angular_scaling = 1.0
 
     def refresh_bg(self) -> bool:
-        available_topics = self.ros2_connector.get_available_topics()
+        self.ros2_connector.refresh_topics_store()
+        available_topics = self.ros2_connector.topics_store
         self.available_teleop_topics = []
 
         if available_topics:

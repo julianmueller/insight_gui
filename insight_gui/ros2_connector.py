@@ -22,8 +22,8 @@
 
 import re
 import time
-import threading
 import importlib
+from threading import Thread, Lock
 from typing import Callable, Dict, Any, Tuple, List
 
 import rclpy
@@ -78,6 +78,13 @@ from insight_gui.models.parameter_item import ParameterItem
 
 class ROS2Connector(GObject.GObject):
     __gtype_name__ = "ROS2Connector"
+    __gsignals__ = {
+        "nodes-refreshed": (GObject.SignalFlags.RUN_FIRST, None, (Gio.ListStore,)),
+        "topics-refreshed": (GObject.SignalFlags.RUN_FIRST, None, (Gio.ListStore,)),
+        "services-refreshed": (GObject.SignalFlags.RUN_FIRST, None, (Gio.ListStore,)),
+        "actions-refreshed": (GObject.SignalFlags.RUN_FIRST, None, (Gio.ListStore,)),
+        "parameters-refreshed": (GObject.SignalFlags.RUN_FIRST, None, (Gio.ListStore,)),
+    }
 
     nodes_store = GObject.Property(type=Gio.ListStore)
     topics_store = GObject.Property(type=Gio.ListStore)
@@ -92,15 +99,36 @@ class ROS2Connector(GObject.GObject):
         self.app = Gio.Application.get_default()
         rclpy.init(args=None)  # TODO use ROS_DOMAIN_ID here
 
+        self.nodes_store = Gio.ListStore.new(NodeItem)
+        self.topics_store = Gio.ListStore.new(TopicItem)
+        self.services_store = Gio.ListStore.new(ServiceItem)
+        self.actions_store = Gio.ListStore.new(ActionItem)
+        self.interfaces_store = Gio.ListStore.new(InterfaceTypeItem)
+        self.parameters_store = Gio.ListStore.new(ParameterItem)
+        self.pkgs_store = Gio.ListStore.new(GObject.GObject)
+
         self._executor = MultiThreadedExecutor(num_threads=4)
         self.ros2_node: Node = None
-        self.thread: GLib.Thread = None
+        self.thread: Thread = None
         self.is_running = False
         self.start_time = None
-        self._rpc_lock = threading.Lock()
+        self._rpc_lock = Lock()
+
+    def _ensure_spin_thread(self):
+        """Start the ROS2 spin thread if it is not already running."""
+        if self.thread and self.thread.is_alive():
+            return
+        self.thread = Thread(target=self.spin, name="ros2-thread", daemon=True)
+        self.thread.start()
+
+    def _set_running_action_state(self, running: bool):
+        try:
+            self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(running))
+        except Exception:
+            pass
 
     def start_node(self, *args, **kwargs):
-        if self.is_running:
+        if self.is_running and self.thread and self.thread.is_alive():
             return
 
         # print(f"Starting ROS2 Node with name '{node_name}'")
@@ -111,9 +139,9 @@ class ROS2Connector(GObject.GObject):
         )
         self._executor.add_node(self.ros2_node)
         self.start_time = self.ros2_node.get_clock().now()
-        self.thread = GLib.Thread.new("ros2-thread", self.spin, None)
         self.is_running = True
-        self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(True))
+        self._ensure_spin_thread()
+        self._set_running_action_state(True)
 
     def stop_node(self, *args, **kwargs):
         if not self.is_running:
@@ -124,9 +152,10 @@ class ROS2Connector(GObject.GObject):
         if self.thread:
             self.thread.join()
             self.thread = None
+        self._executor.remove_node(self.ros2_node)
         self.ros2_node.destroy_node()
         self.ros2_node = None
-        self.app.lookup_action("ros2-node-is-running").set_state(GLib.Variant.new_boolean(False))
+        self._set_running_action_state(False)
 
     def restart_node(self, *args, **kwargs):
         """Restart the ROS2 node."""
@@ -137,15 +166,21 @@ class ROS2Connector(GObject.GObject):
     def spin(self, *args, **kwargs):
         try:
             while rclpy.ok() and self.is_running:
-                rclpy.spin_once(self.ros2_node, executor=self._executor, timeout_sec=0.1)
+                try:
+                    self._executor.spin_once(timeout_sec=0.1)
+                except ExternalShutdownException:
+                    break
+                except Exception as exc:
+                    print(f"ROS2 executor spin error: {exc}")
+                    time.sleep(0.1)
             return True  # Keep the timeout function/thread active
 
         except (KeyboardInterrupt, ExternalShutdownException):
             print("CTRL+C detected. Shutting down ROS2 Node.")
 
         finally:
-            # self.shutdown()
             self.is_running = False
+            self._set_running_action_state(False)
 
         return False
 
@@ -252,66 +287,86 @@ class ROS2Connector(GObject.GObject):
         return action_client, goal_future
 
     # Standardized ROS2 data collection methods with caching
-    def get_available_nodes(self) -> Gio.ListStore:
-        """Get available nodes with caching support."""
+    def refresh_nodes_store(self) -> Gio.ListStore:
+        """Refresh the nodes store with currently available nodes."""
+        self.nodes_store.remove_all()
         if not self.is_running or not self.ros2_node:
-            return Gio.ListStore()
-
-        nodes = Gio.ListStore.new(NodeItem)
+            self.emit("nodes-refreshed", self.nodes_store)
+            return self.nodes_store
 
         try:
+            node_items: List[NodeItem] = []
             node_names = get_node_names(node=self.ros2_node, include_hidden_nodes=True)
             # returned as a List['name', 'namespace', 'full_name']
 
             for name, namespace, full_name in node_names:
-                n = NodeItem(
-                    namespace=namespace,
-                    name=name,
-                    hidden=_is_hidden_name(full_name),
+                node_items.append(
+                    NodeItem(
+                        namespace=namespace,
+                        name=name,
+                        hidden=_is_hidden_name(full_name),
+                    )
                 )
-                nodes.append(n)
 
-            nodes.sort(compare_func=lambda a, b: (a.full_name > b.full_name) - (a.full_name < b.full_name))
-            return nodes
+            for item in node_items:
+                self.nodes_store.append(item)
+            self.nodes_store.sort(compare_func=lambda a, b: (a.full_name > b.full_name) - (a.full_name < b.full_name))
 
         except Exception as e:
             print(f"Error getting nodes: {e}")
-            return Gio.ListStore()
+            self.nodes_store.remove_all()
 
-    def get_available_topics(self) -> Gio.ListStore:
-        """Get available topics with caching support."""
+        finally:
+            self.emit("nodes-refreshed", self.nodes_store)
+
+        return self.nodes_store
+
+    def get_available_nodes(self) -> Gio.ListStore:
+        """Compatibility wrapper; prefer refresh_nodes_store()."""
+        return self.refresh_nodes_store()
+
+    def refresh_topics_store(self) -> Gio.ListStore:
+        """Refresh the topics store with currently available topics."""
+        self.topics_store.remove_all()
         if not self.is_running or not self.ros2_node:
-            return Gio.ListStore()
+            self.emit("topics-refreshed", self.topics_store)
+            return self.topics_store
 
         try:
+            topic_items: List[TopicItem] = []
             topics = get_topic_names_and_types(node=self.ros2_node, include_hidden_topics=True)
             if not self.app.settings.get_boolean("show-action-topics"):
                 topics = self._filter_action_topics(topics)
-            topics_store = Gio.ListStore.new(TopicItem)
 
             for topic_full_name, topic_types in topics:
                 topic_namespace, topic_name = topic_full_name.rsplit("/", 1)
-                topic = TopicItem(
-                    name=topic_name,
-                    namespace=topic_namespace,
-                    interface_full_name=topic_types[0],
-                    hidden=topic_or_service_is_hidden(topic_name),
+                topic_items.append(
+                    TopicItem(
+                        name=topic_name,
+                        namespace=topic_namespace,
+                        interface_full_name=topic_types[0],
+                        hidden=topic_or_service_is_hidden(topic_name),
+                    )
                 )
 
-                # TODO move this in the appropriate gui place
-                # if not self.app.settings.get_boolean("show-hidden-topics") and item.hidden:
-                #     continue
-                # if not self.app.settings.get_boolean("show-action-topics") and item.is_action_topic:
-                #     continue
-
-                topics_store.append(topic)
-
-            topics_store.sort(compare_func=lambda a, b: (a.full_name > b.full_name) - (a.full_name < b.full_name))
-            return topics_store
+            for item in topic_items:
+                self.topics_store.append(item)
+            self.topics_store.sort(
+                compare_func=lambda a, b: (a.full_name > b.full_name) - (a.full_name < b.full_name)
+            )
 
         except Exception as e:
             print(f"Error getting topics: {e}")
-            return Gio.ListStore()
+            self.topics_store.remove_all()
+
+        finally:
+            self.emit("topics-refreshed", self.topics_store)
+
+        return self.topics_store
+
+    def get_available_topics(self) -> Gio.ListStore:
+        """Compatibility wrapper; prefer refresh_topics_store()."""
+        return self.refresh_topics_store()
 
     def get_publishers_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get publishers for a specific node with caching support."""
@@ -393,47 +448,53 @@ class ROS2Connector(GObject.GObject):
             print(f"Error getting subscribers for node '{node.full_name}': {e}")
             return Gio.ListStore()
 
-    def get_available_services(self) -> Gio.ListStore:
-        """Get available services with caching support."""
+    def refresh_services_store(self) -> Gio.ListStore:
+        """Refresh the services store with currently available services."""
+        self.services_store.remove_all()
         if not self.is_running or not self.ros2_node:
-            return Gio.ListStore()
+            self.emit("services-refreshed", self.services_store)
+            return self.services_store
 
         try:
+            service_items: List[ServiceItem] = []
             services = get_service_names_and_types(node=self.ros2_node, include_hidden_services=True)
             if not self.app.settings.get_boolean("show-action-services"):
                 services = self._filter_action_services(services)
             if not self.app.settings.get_boolean("show-parameter-services"):
                 services = self._filter_param_services(services)
-            service_store = Gio.ListStore.new(ServiceItem)
 
             for service_full_name, service_types in services:
                 service_namespace, service_name = service_full_name.rsplit("/", 1)
                 if not re.search("/srv/", service_types[0]):
                     continue
 
-                service = ServiceItem(
-                    name=service_name,
-                    namespace=service_namespace,
-                    interface_full_name=service_types[0],
-                    hidden=topic_or_service_is_hidden(service_name),
+                service_items.append(
+                    ServiceItem(
+                        name=service_name,
+                        namespace=service_namespace,
+                        interface_full_name=service_types[0],
+                        hidden=topic_or_service_is_hidden(service_name),
+                    )
                 )
 
-                # TODO move this in the appropriate gui place
-                # if not self.app.settings.get_boolean("show-hidden-services") and service.hidden:
-                #     continue
-                # if not self.app.settings.get_boolean("show-action-services") and service.is_action_service:
-                #     continue
-                # if not self.app.settings.get_boolean("show-parameter-services") and service.is_parameter_service:
-                #     continue
-
-                service_store.append(service)
-
-            service_store.sort(compare_func=lambda a, b: (a.full_name > b.full_name) - (a.full_name < b.full_name))
-            return service_store
+            for item in service_items:
+                self.services_store.append(item)
+            self.services_store.sort(
+                compare_func=lambda a, b: (a.full_name > b.full_name) - (a.full_name < b.full_name)
+            )
 
         except Exception as e:
             print(f"Error getting services: {e}")
-            return Gio.ListStore()
+            self.services_store.remove_all()
+
+        finally:
+            self.emit("services-refreshed", self.services_store)
+
+        return self.services_store
+
+    def get_available_services(self) -> Gio.ListStore:
+        """Compatibility wrapper; prefer refresh_services_store()."""
+        return self.refresh_services_store()
 
     def get_service_clients_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get service clients for a specific node with caching support."""
@@ -532,36 +593,46 @@ class ROS2Connector(GObject.GObject):
             print(f"Error getting service servers for node '{node.full_name}': {e}")
             return Gio.ListStore()
 
-    def get_available_actions(self) -> Gio.ListStore:
-        """Get available actions with caching support."""
+    def refresh_actions_store(self) -> Gio.ListStore:
+        """Refresh the actions store with currently available actions."""
+        self.actions_store.remove_all()
         if not self.is_running or not self.ros2_node:
-            return Gio.ListStore()
+            self.emit("actions-refreshed", self.actions_store)
+            return self.actions_store
 
         try:
+            action_items: List[ActionItem] = []
             available_actions = get_action_names_and_types(node=self.ros2_node)
-            action_store = Gio.ListStore.new(ActionItem)
 
             for action_full_name, action_types in available_actions:
                 action_namespace, action_name = action_full_name.rsplit("/", 1)
-                action = ActionItem(
-                    name=action_name,
-                    namespace=action_namespace,
-                    interface_full_name=action_types[0],
-                    hidden=topic_or_service_is_hidden(action_name),
+                action_items.append(
+                    ActionItem(
+                        name=action_name,
+                        namespace=action_namespace,
+                        interface_full_name=action_types[0],
+                        hidden=topic_or_service_is_hidden(action_name),
+                    )
                 )
 
-                # TODO move this in the appropriate gui place
-                # if not self.app.settings.get_boolean("show-hidden-actions") and action.hidden:
-                #     continue
-
-                action_store.append(action)
-
-            action_store.sort(compare_func=lambda a, b: (a.full_name > b.full_name) - (a.full_name < b.full_name))
-            return action_store
+            for item in action_items:
+                self.actions_store.append(item)
+            self.actions_store.sort(
+                compare_func=lambda a, b: (a.full_name > b.full_name) - (a.full_name < b.full_name)
+            )
 
         except Exception as e:
             print(f"Error getting actions: {e}")
-            return Gio.ListStore()
+            self.actions_store.remove_all()
+
+        finally:
+            self.emit("actions-refreshed", self.actions_store)
+
+        return self.actions_store
+
+    def get_available_actions(self) -> Gio.ListStore:
+        """Compatibility wrapper; prefer refresh_actions_store()."""
+        return self.refresh_actions_store()
 
     def get_action_clients_by_node(self, node: NodeItem) -> Gio.ListStore:
         """Get action clients for a specific node with caching support."""
@@ -640,13 +711,15 @@ class ROS2Connector(GObject.GObject):
             return Gio.ListStore()
 
     # Node-specific parameter methods with caching
-    def get_parameters_by_node(self, node: NodeItem) -> Gio.ListStore:
-        """Get parameters for a specific node with caching support."""
+    def refresh_parameters_store(self, node: NodeItem) -> Gio.ListStore:
+        """Refresh the parameters store for a specific node."""
+        self.parameters_store.remove_all()
         if not self.is_running or not self.ros2_node:
-            return Gio.ListStore()
+            self.emit("parameters-refreshed", self.parameters_store)
+            return self.parameters_store
 
         try:
-            parameters: Gio.ListStore = Gio.ListStore.new(ParameterItem)
+            parameters: List[ParameterItem] = []
 
             client = AsyncParameterClient(node=self.ros2_node, remote_node_name=node.full_name)
             ready = client.wait_for_services(timeout_sec=5.0)
@@ -654,20 +727,19 @@ class ROS2Connector(GObject.GObject):
                 raise RuntimeError(
                     f"Wait for service timed out waiting for parameter services for node {node.full_name}"
                 )
-                return Gio.ListStore()
 
             # get all parameters
             future = client.list_parameters()
             rclpy.spin_until_future_complete(node=self.ros2_node, future=future)
             response = future.result() if future else None
-            param_names = response.result.names
+            param_names = response.result.names if response else []
 
             if not response:
-                return Gio.ListStore()
+                self.parameters_store.remove_all()
+                return self.parameters_store
 
             for param_descriptor in param_names:
-                param = ParameterItem(name=param_descriptor, node=node)
-                parameters.append(param)
+                parameters.append(ParameterItem(name=param_descriptor, node=node))
 
             # add parameter descriptions
             future = client.describe_parameters(names=param_names)
@@ -675,7 +747,8 @@ class ROS2Connector(GObject.GObject):
             response = future.result()
 
             if response is None:
-                return Gio.ListStore()
+                self.parameters_store.remove_all()
+                return self.parameters_store
 
             for param, param_descriptor in zip(parameters, response.descriptors):
                 param.type = param_descriptor.type  # get_parameter_type_string(param_descriptor.type)
@@ -686,9 +759,6 @@ class ROS2Connector(GObject.GObject):
                 param.integer_range = param_descriptor.integer_range
                 param.floating_point_range = param_descriptor.floating_point_range
                 param.additional_constraints = param_descriptor.additional_constraints
-                # success = self.update_parameter_info(param)
-                # if not success:
-                #     print(f"could not update param {param.name}")
 
             # add parameter values
             future = client.get_parameters(names=param_names)
@@ -696,27 +766,32 @@ class ROS2Connector(GObject.GObject):
             response = future.result()
 
             if response is None:
-                return Gio.ListStore()
+                self.parameters_store.remove_all()
+                return self.parameters_store
 
             for param, param_value in zip(parameters, response.values):
                 param.value = param_value  # TODO why is this always None??
-
-            # parameters = response.result.names if response else []
-            # parameters = sorted(parameters)
 
             # Filter out QoS parameters if requested
             # if not self.app.settings.get_boolean("show-qos-parameters"):
             #     parameters = self._filter_qos_params(parameters)
 
-            # for param in parameters:
-            #     parameters.append(Gtk.StringObject.new(name))
-
-            parameters.sort(compare_func=lambda a, b: (a.name > b.name) - (a.name < b.name))
-            return parameters
+            for item in parameters:
+                self.parameters_store.append(item)
+            self.parameters_store.sort(compare_func=lambda a, b: (a.name > b.name) - (a.name < b.name))
 
         except Exception as e:
             print(f"Error getting parameters for node '{node.full_name}': {e}")
-            return Gio.ListStore()
+            self.parameters_store.remove_all()
+
+        finally:
+            self.emit("parameters-refreshed", self.parameters_store)
+
+        return self.parameters_store
+
+    def get_parameters_by_node(self, node: NodeItem) -> Gio.ListStore:
+        """Compatibility wrapper; prefer refresh_parameters_store()."""
+        return self.refresh_parameters_store(node=node)
 
     def get_parameter_value(self, parameter: ParameterItem) -> object | None:
         """Get parameter value for a specific parameter with caching support."""
@@ -790,10 +865,10 @@ class ROS2Connector(GObject.GObject):
         """Force refresh all stores."""
 
         # Pre-populate stores with fresh data
-        self.get_available_nodes()
-        self.get_available_topics()
-        self.get_available_services()
-        self.get_available_actions()
+        self.refresh_nodes_store()
+        self.refresh_topics_store()
+        self.refresh_services_store()
+        self.refresh_actions_store()
 
     def log(self, message: str, level: str = "info") -> None:
         """Log a message with the specified severity level (debug, [info], warning, error, fatal)."""

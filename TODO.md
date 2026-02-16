@@ -139,6 +139,7 @@
     - topic_pub_page
     - topic_remoap_page
     - topic_sub_page
+- rename all `ros2_pages` into `pages` as all ros2 functionalities will be moved to an `ros2` folder and the `ros2_connector` maybe split across several files?
 
 
 ## Bugs

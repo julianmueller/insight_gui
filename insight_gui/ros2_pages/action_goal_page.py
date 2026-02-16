@@ -163,7 +163,8 @@ class ActionGoalPage(ContentPage):
         self.result_text_view_row = self.result_group.add_row(TextViewRow(editable=False, wrap_mode=Gtk.WrapMode.NONE))
 
     def refresh_bg(self) -> bool:
-        self.available_actions = self.ros2_connector.get_available_actions()
+        self.ros2_connector.refresh_actions_store()
+        self.available_actions = self.ros2_connector.actions_store
         return self.available_actions is not None and self.available_actions.get_n_items() > 0
 
     def refresh_ui(self):
@@ -323,7 +324,7 @@ class ActionGoalPage(ContentPage):
         self.action_type_row.set_subtitle(selected_action_type)
 
         # Get action types for ActionInfoPage
-        available_actions = self.ros2_connector.get_available_actions()
+        available_actions = self.ros2_connector.refresh_actions_store()
         action_type_name = selected_action_type
         if available_actions:
             for action in available_actions:

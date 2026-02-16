@@ -132,7 +132,8 @@ class ImageViewerPage(ContentPage):
         self.frequency_lbl = self.frequency_row.add_suffix_lbl("")
 
     def refresh_bg(self) -> bool:
-        available_topics = self.ros2_connector.get_available_topics()
+        self.ros2_connector.refresh_topics_store()
+        available_topics = self.ros2_connector.topics_store
         self.available_img_topics = Gio.ListStore.new(TopicItem)
 
         for topic in available_topics:

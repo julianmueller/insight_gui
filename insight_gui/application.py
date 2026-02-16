@@ -41,12 +41,13 @@ from gi.repository import Gtk, Adw, GLib, Gio, Gdk
 # custom imports
 from insight_gui.window import MainWindow
 from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.utils.background_worker import (
-    BackgroundWorker,
-    WORKER_PRIORITY_HIGH,
-    WORKER_PRIORITY_NORMAL,
-    WORKER_PRIORITY_LOW,
-)
+from insight_gui.debug.ros2_connector_dummy import ROS2ConnectorDummy
+# from insight_gui.utils.background_worker import (
+#     BackgroundWorker,
+#     WORKER_PRIORITY_HIGH,
+#     WORKER_PRIORITY_NORMAL,
+#     WORKER_PRIORITY_LOW,
+# )
 
 
 APPLICATION_ID = "com.github.julianmueller.Insight"
@@ -56,16 +57,17 @@ APPLICATION_PATH = APPLICATION_ID.replace(".", "/")
 class InsightApplication(Adw.Application):
     __gtype_name__ = "InsightApplication"
 
-    def __init__(self, start_page_id: str = None):
+    def __init__(self, start_page_id: str = None, dummy_ros2: bool = False):
         super().__init__(application_id=APPLICATION_ID)
         Gtk.init()
         Adw.init()
 
         self._start_page_id = start_page_id
-        self.worker = BackgroundWorker(max_workers=2)
-        self.WORKER_PRIORITY_HIGH = WORKER_PRIORITY_HIGH
-        self.WORKER_PRIORITY_NORMAL = WORKER_PRIORITY_NORMAL
-        self.WORKER_PRIORITY_LOW = WORKER_PRIORITY_LOW
+        self._dummy_ros2 = dummy_ros2
+        # self.worker = BackgroundWorker(max_workers=2)
+        # self.WORKER_PRIORITY_HIGH = WORKER_PRIORITY_HIGH
+        # self.WORKER_PRIORITY_NORMAL = WORKER_PRIORITY_NORMAL
+        # self.WORKER_PRIORITY_LOW = WORKER_PRIORITY_LOW
 
         # find the shared data directory
         self.share_dir = Path(get_package_share_directory("insight_gui")) / "data"
@@ -105,7 +107,11 @@ class InsightApplication(Adw.Application):
         Gtk.Window.set_default_icon_name("insight")
 
         # ros2 connector handles all connections to the ros2 node
-        self.ros2_connector = ROS2Connector()
+        if self._dummy_ros2:
+            print("Using dummy ROS2 connector. No real ROS2 interactions will occur.")
+            self.ros2_connector = ROS2ConnectorDummy()
+        else:
+            self.ros2_connector = ROS2Connector()
 
         # Define "app.ros2_node_start" action
         ros2_node_start_action = Gio.SimpleAction.new("ros2-node-start", None)
@@ -191,32 +197,33 @@ class InsightApplication(Adw.Application):
             Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-    def run_in_worker(
-        self,
-        func: Callable,
-        *args,
-        done_callback: Callable[[concurrent.futures.Future], None] | None = None,
-        priority: int = WORKER_PRIORITY_NORMAL,
-        **kwargs,
-    ) -> concurrent.futures.Future:
-        """Run a blocking callable on the worker pool.
+    # def run_in_worker(
+    #     self,
+    #     func: Callable,
+    #     *args,
+    #     done_callback: Callable[[concurrent.futures.Future], None] | None = None,
+    #     priority: int = WORKER_PRIORITY_NORMAL,
+    #     **kwargs,
+    # ) -> concurrent.futures.Future:
+    #     """
+    #     Run a blocking callable on the worker pool.
 
-        The optional ``done_callback`` receives the resulting Future and is
-        executed in the worker thread context, so use GTK-safe handoff for UI.
-        ``priority`` is lower-is-higher (0 is highest) and only affects queued tasks.
-        """
+    #     The optional ``done_callback`` receives the resulting Future and is
+    #     executed in the worker thread context, so use GTK-safe handoff for UI.
+    #     ``priority`` is lower-is-higher (0 is highest) and only affects queued tasks.
+    #     """
 
-        return self.worker.run_in_worker(func, *args, done_callback=done_callback, priority=priority, **kwargs)
+    #     return self.worker.run_in_worker(func, *args, done_callback=done_callback, priority=priority, **kwargs)
 
-    def reprioritize_worker_future(self, fut: concurrent.futures.Future, priority: int) -> bool:
-        """Lower or raise priority of a queued future if it has not started yet."""
-        return self.worker.reprioritize_worker_future(fut, priority=priority)
+    # def reprioritize_worker_future(self, fut: concurrent.futures.Future, priority: int) -> bool:
+    #     """Lower or raise priority of a queued future if it has not started yet."""
+    #     return self.worker.reprioritize_worker_future(fut, priority=priority)
 
-    # def idle_add(self, func, *args, **kwargs) -> None:
-    #     """Invoke `func` on the GTK/GLib main thread. Used for GUI updates."""
+    # # def idle_add(self, func, *args, **kwargs) -> None:
+    # #     """Invoke `func` on the GTK/GLib main thread. Used for GUI updates."""
 
-    #     def _wrapper():
-    #         func(*args, **kwargs)
-    #         return GLib.SOURCE_REMOVE
+    # #     def _wrapper():
+    # #         func(*args, **kwargs)
+    # #         return GLib.SOURCE_REMOVE
 
-    #     GLib.idle_add(_wrapper)
+    # #     GLib.idle_add(_wrapper)
