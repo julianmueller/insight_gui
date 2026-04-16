@@ -36,4 +36,5 @@
         "/usr/lib/python3/dist-packages",
         "/usr/lib/python3/site-packages"
     ],
+    "python.terminal.activateEnvironment": false,
 }

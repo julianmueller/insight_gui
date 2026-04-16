@@ -141,7 +141,6 @@ class PackageNewDialog(Adw.PreferencesDialog):
                     self.dest_dir = folder.get_path()
                     self.dest_dir_row.set_subtitle(self.dest_dir)
             except Exception as e:
-                # print("No folder selected or error:", e)
                 self.dest_dir = None
                 self.dest_dir_row.set_subtitle("")
 

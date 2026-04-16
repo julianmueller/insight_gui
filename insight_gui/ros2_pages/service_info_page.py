@@ -42,6 +42,8 @@ class ServiceInfoPage(ContentPage):
         super().set_title(f"Service {service.full_name}")
 
         self.service = service
+        self.service_full_name = service.full_name
+        self.service_interface_full_name = service.interface.full_name
         self.detach_kwargs = {"service": service}
 
         self.open_call_page_btn = super().add_bottom_left_btn(
@@ -66,55 +68,55 @@ class ServiceInfoPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a server/client of the service
-        self.ros2_connector.refresh_nodes_store()
-        self.available_nodes = self.ros2_connector.nodes_store
-        return self.available_nodes is not None and self.available_nodes.get_n_items() > 0
+        self.server_nodes = []
+        self.client_nodes = []
+
+        for node in self.ros2_connector.collect_nodes():
+            servers = self.ros2_connector.collect_service_servers_by_node(node=node)
+            if any(server.full_name == self.service_full_name for server in servers):
+                self.server_nodes.append(node)
+
+            clients = self.ros2_connector.collect_service_clients_by_node(node=node)
+            if any(client.full_name == self.service_full_name for client in clients):
+                self.client_nodes.append(node)
+
+        return bool(self.server_nodes or self.client_nodes)
 
     def refresh_ui(self):
         # create a row for the service type # TODO maybe rather add the request/response as rows?
-        interface_type_row = PrefRow(title=self.service.interface.full_name)
+        interface_type_row = PrefRow(title=self.service_interface_full_name)
         interface_type_row.set_subpage_link(
             nav_view=self.nav_view,
             subpage_class=InterfaceInfoPage,
             subpage_kwargs={"interface": self.service.interface},
         )
-        self.service_interface_type_group.add_row(interface_type_row)
+        self._add_rows_async(self.service_interface_type_group, (interface_type_row,), batch_size=1)
+        self._add_item_rows_async(
+            self.service_servers_group,
+            self.server_nodes,
+            self._build_node_row,
+            batch_size=8,
+            on_done=self.service_servers_group.set_description_to_row_count,
+        )
+        self._add_item_rows_async(
+            self.service_clients_group,
+            self.client_nodes,
+            self._build_node_row,
+            batch_size=8,
+            on_done=self.service_clients_group.set_description_to_row_count,
+        )
 
-        # populate the service servers and clients
-        for node in self.available_nodes or []:
-            # add those nodes, that are servers to the service # TODO this could probably be optimized
-            service_server_list = self.ros2_connector.get_service_servers_by_node(node=node)
-            found, index = service_server_list.find(self.service)
-            if found:
-                row = PrefRow(title=node.name, subtitle=node.full_name)
-                if node.hidden:
-                    row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden node")
+    def _build_node_row(self, node) -> PrefRow:
+        row = PrefRow(title=node.name, subtitle=node.full_name)
+        if node.hidden:
+            row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden node")
 
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=NodeInfoPage,
-                    subpage_kwargs={"node": node},
-                )
-                self.service_servers_group.add_row(row)
-
-            # add those nodes, that are clients to this service # TODO this could probably be optimized
-            service_client_list = self.ros2_connector.get_service_clients_by_node(node=node)
-            found, index = service_client_list.find(self.service)
-            if found:
-                row = PrefRow(title=node.name, subtitle=node.full_name)
-                if node.hidden:
-                    row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden node")
-
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=NodeInfoPage,
-                    subpage_kwargs={"node": node},
-                )
-                self.service_clients_group.add_row(row)
-
-        # add the counts as descriptions
-        self.service_servers_group.set_description_to_row_count()
-        self.service_clients_group.set_description_to_row_count()
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=NodeInfoPage,
+            subpage_kwargs={"node": node},
+        )
+        return row
 
     def reset_ui(self):
         self.service_interface_type_group.clear()

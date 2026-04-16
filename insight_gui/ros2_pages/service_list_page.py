@@ -34,7 +34,6 @@ from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.model_rows import ServiceRow
 
 
-# TODO do the GObject refactor for the entire page
 class ServiceListPage(ContentPage):
     __gtype_name__ = "ServiceListPage"
 
@@ -48,12 +47,11 @@ class ServiceListPage(ContentPage):
         self.service_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_services_store()
-        self.available_services = self.ros2_connector.services_store
-        return self.available_services is not None and self.available_services.get_n_items() > 0
+        self.available_services = self.ros2_connector.collect_services()
+        return bool(self.available_services)
 
     def refresh_ui(self):
-        rows_by_group: Dict[PrefGroup, list] = {}
+        services_by_group: Dict[PrefGroup, list] = {}
         for service in self.available_services:
             # put all services in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-services-by-namespace"):
@@ -65,24 +63,31 @@ class ServiceListPage(ContentPage):
             if namespace in self.service_ns_groups.keys():
                 group = self.service_ns_groups[namespace]
             else:
-                description = "global namespace" if service.namespace == "/" else ""
+                description = "global namespace" if namespace == "/" else ""
                 group = self.pref_page.add_group(title=namespace, description=description)
                 self.service_ns_groups[namespace] = group
 
-            row = ServiceRow(service=service)
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=ServiceInfoPage,
-                subpage_kwargs={"service": service},
-                label="Show service info page",
-            )
-            rows_by_group.setdefault(group, []).append(row)
+            services_by_group.setdefault(group, []).append(service)
 
-        for group, rows in rows_by_group.items():
-            group.add_rows(rows, batch_size=10)
-
-        # sort the groups alphabetically by title
         self.pref_page.sort_groups()
+
+        for group, services in services_by_group.items():
+            self._add_item_rows_async(
+                group,
+                services,
+                self._build_service_row,
+                batch_size=10,
+            )
+
+    def _build_service_row(self, service) -> ServiceRow:
+        row = ServiceRow(service=service)
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=ServiceInfoPage,
+            subpage_kwargs={"service": service},
+            label="Show service info page",
+        )
+        return row
 
     def reset_ui(self):
         for group in reversed(self.service_ns_groups.values()):

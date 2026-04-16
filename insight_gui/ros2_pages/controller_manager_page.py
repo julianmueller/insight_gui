@@ -143,69 +143,17 @@ class ControllerManagerPage(ContentPage):
                 group.set_placeholder_text("No controllers reported")
                 continue
 
-            for controller in sorted(controllers, key=lambda info: info.name):
-                subtitle_parts = []
-                if controller.type_name:
-                    subtitle_parts.append(controller.type_name)
-                if controller.state:
-                    subtitle_parts.append(controller.state.replace("_", " ").title())
-                subtitle = " • ".join(subtitle_parts)
-
-                row = PrefRow(title=controller.name, subtitle=subtitle)
-                row.add_filter_tag(manager.display_name.lower())
-
-                if controller.state:
-                    row.add_filter_tag(controller.state.lower())
-                if controller.type_name:
-                    row.add_filter_tag(controller.type_name.lower())
-
-                for interface_name in controller.claimed_interfaces:
-                    row.add_filter_tag(interface_name.lower())
-
-                tooltip_lines = []
-                if controller.claimed_interfaces:
-                    tooltip_lines.append("Claimed interfaces:\n  " + "\n  ".join(sorted(controller.claimed_interfaces)))
-                if controller.required_command_interfaces:
-                    tooltip_lines.append(
-                        "Required command interfaces:\n  " + "\n  ".join(sorted(controller.required_command_interfaces))
-                    )
-                if controller.required_state_interfaces:
-                    tooltip_lines.append(
-                        "Required state interfaces:\n  " + "\n  ".join(sorted(controller.required_state_interfaces))
-                    )
-
-                if tooltip_lines:
-                    row.set_tooltip_text("\n\n".join(tooltip_lines))
-
-                # Add a textual state indicator.
-                if controller.state:
-                    row.add_suffix_lbl(controller.state.replace("_", " ").title())
-
-                toggle_btn = ToggleButton(
-                    func=self._on_toggle_controller,
-                    func_kwargs={
-                        "manager_prefix": manager.prefix,
-                        "controller_name": controller.name,
-                    },
-                    default_active=controller.state.lower() == "active",
-                    labels=("Deactivate", "Activate"),
-                    icon_names=("media-playback-stop-symbolic", "media-playback-start-symbolic"),
-                    tooltip_texts=("Deactivate controller", "Activate controller"),
-                )
-                toggle_btn.add_css_class("flat")
-
-                # Allow toggling only for controllers that support activation/deactivation.
-                if controller.state.lower() not in {"active", "inactive"}:
-                    toggle_btn.set_sensitive(False)
-                    toggle_btn.set_tooltip_text("Controller cannot be toggled in its current state")
-
-                row.add_suffix(toggle_btn)
-                group.add_row(row)
-
-            group.set_description_to_row_count()
+            sorted_controllers = sorted(controllers, key=lambda info: info.name)
+            self._add_item_rows_async(
+                group,
+                sorted_controllers,
+                lambda controller, manager=manager: self._build_controller_row(manager, controller),
+                batch_size=8,
+                on_done=group.set_description_to_row_count,
+            )
 
         self.pref_page.sort_groups()
-        self.reapply_filters()
+        self.apply_filters()
 
         for level, message in self.refresh_messages:
             if level == "error":
@@ -216,6 +164,63 @@ class ControllerManagerPage(ContentPage):
                 )
             else:
                 self.show_toast(message)
+
+    def _build_controller_row(self, manager: ControllerManager, controller: ControllerInfo) -> PrefRow:
+        subtitle_parts = []
+        if controller.type_name:
+            subtitle_parts.append(controller.type_name)
+        if controller.state:
+            subtitle_parts.append(controller.state.replace("_", " ").title())
+        subtitle = " • ".join(subtitle_parts)
+
+        row = PrefRow(title=controller.name, subtitle=subtitle)
+        row.add_filter_tag(manager.display_name.lower())
+
+        if controller.state:
+            row.add_filter_tag(controller.state.lower())
+        if controller.type_name:
+            row.add_filter_tag(controller.type_name.lower())
+
+        for interface_name in controller.claimed_interfaces:
+            row.add_filter_tag(interface_name.lower())
+
+        tooltip_lines = []
+        if controller.claimed_interfaces:
+            tooltip_lines.append("Claimed interfaces:\n  " + "\n  ".join(sorted(controller.claimed_interfaces)))
+        if controller.required_command_interfaces:
+            tooltip_lines.append(
+                "Required command interfaces:\n  " + "\n  ".join(sorted(controller.required_command_interfaces))
+            )
+        if controller.required_state_interfaces:
+            tooltip_lines.append(
+                "Required state interfaces:\n  " + "\n  ".join(sorted(controller.required_state_interfaces))
+            )
+
+        if tooltip_lines:
+            row.set_tooltip_text("\n\n".join(tooltip_lines))
+
+        if controller.state:
+            row.add_suffix_lbl(controller.state.replace("_", " ").title())
+
+        toggle_btn = ToggleButton(
+            func=self._on_toggle_controller,
+            func_kwargs={
+                "manager_prefix": manager.prefix,
+                "controller_name": controller.name,
+            },
+            default_active=controller.state.lower() == "active",
+            labels=("Deactivate", "Activate"),
+            icon_names=("media-playback-stop-symbolic", "media-playback-start-symbolic"),
+            tooltip_texts=("Deactivate controller", "Activate controller"),
+        )
+        toggle_btn.add_css_class("flat")
+
+        if controller.state.lower() not in {"active", "inactive"}:
+            toggle_btn.set_sensitive(False)
+            toggle_btn.set_tooltip_text("Controller cannot be toggled in its current state")
+
+        row.add_suffix(toggle_btn)
+        return row
 
     def reset_ui(self):
         for group in reversed(self.manager_groups):
@@ -229,7 +234,7 @@ class ControllerManagerPage(ContentPage):
     def _discover_controller_managers(self) -> Dict[str, ControllerManager]:
         managers: Dict[str, ControllerManager] = {}
 
-        services = self.ros2_connector.refresh_services_store()
+        services = self.ros2_connector.collect_services()
         suffix = "/list_controllers"
 
         if not services:

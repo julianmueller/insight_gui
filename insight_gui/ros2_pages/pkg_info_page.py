@@ -36,19 +36,20 @@ from gi.repository import Gtk, Adw, Pango, Gio
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.widgets.buttons import CopyButton
+from insight_gui.models.package_item import PackageItem
 
 
 class PackageInfoPage(ContentPage):
     __gtype_name__ = "PackageInfoPage"
 
-    def __init__(self, pkg_name: str, **kwargs):
+    def __init__(self, pkg: PackageItem, **kwargs):
         super().__init__(searchable=True, refreshable=False, **kwargs)
-        super().set_title(f"Package {pkg_name}")
+        super().set_title(f"Package {pkg.name}")
 
-        self.pkg_name = pkg_name
-        self.detach_kwargs = {"pkg_name": pkg_name}
+        self.pkg = pkg
+        self.detach_kwargs = {"pkg": self.pkg}
 
-        package_share_dir = get_package_share_directory(self.pkg_name)
+        package_share_dir = get_package_share_directory(self.pkg.name)
         package_xml = os.path.join(package_share_dir, "package.xml")
         self.xml_tree = ET.parse(package_xml).getroot()
 
@@ -56,40 +57,40 @@ class PackageInfoPage(ContentPage):
         self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
             icon_name="folder-symbolic",
             func=self.on_open_pkg_folder,
-            func_kwargs={"pkg_name": self.pkg_name},
+            func_kwargs={"pkg_name": self.pkg.name},
         )
 
         # add index link
         self.link_group.add_row(PrefRow(title="Open on index.ros.org")).add_suffix_btn(
             icon_name="web-browser-symbolic",
-            func=lambda: Gio.AppInfo.launch_default_for_uri(f"https://index.ros.org/p/{self.pkg_name}/", None),
+            func=lambda: Gio.AppInfo.launch_default_for_uri(f"https://index.ros.org/p/{self.pkg.name}/", None),
         )
 
         # add api link
         self.link_group.add_row(PrefRow(title="View API documentation on docs.ros.org")).add_suffix_btn(
             icon_name="folder-documents-symbolic",
-            func=lambda: Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/jazzy/p/{self.pkg_name}/", None),
+            func=lambda: Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/jazzy/p/{self.pkg.name}/", None),
         )
 
         # TODO there is currently no way (that i found) to get this
         # add source code link
         # self.link_group.add_row(PrefRow(title="View source code on repository")).add_suffix_btn(
         #     icon_name="git-symbolic",
-        #     func=lambda: print("TODO"),
+        #     func=lambda: None,
         # )
 
         # Executables
         self.executables_group = self.pref_page.add_group(
             title="Executables", placeholder_text="Package has no executables"
         )
-        executable_paths = get_executable_paths(package_name=self.pkg_name)
+        executable_paths = get_executable_paths(package_name=self.pkg.name)
 
         for path in sorted(executable_paths):
             executable_name = Path(path).name
             row: PrefRow = self.executables_group.add_row(PrefRow(title=executable_name))
             row.add_suffix(
                 CopyButton(
-                    copy_text=f"ros2 run {self.pkg_name} {executable_name}",
+                    copy_text=f"ros2 run {self.pkg.name} {executable_name}",
                     tooltip_text="Copy 'ros2 run' command",
                     toast_host=self.toast_overlay,
                 )
@@ -98,7 +99,7 @@ class PackageInfoPage(ContentPage):
                 icon_name="terminal-alt-symbolic",
                 tooltip_text="Open command in terminal",
                 func=self.on_open_terminal_command,
-                func_kwargs={"command": f"ros2 run {self.pkg_name} {executable_name}"},
+                func_kwargs={"command": f"ros2 run {self.pkg.name} {executable_name}"},
             )
 
         # add the counts as descriptions

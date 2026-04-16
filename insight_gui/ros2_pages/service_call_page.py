@@ -40,7 +40,6 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, TextViewRow
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 
 
-# TODO do the GObject refactor for the entire page
 class ServiceCallPage(ContentPage):
     __gtype_name__ = "ServiceCallPage"
 
@@ -77,14 +76,14 @@ class ServiceCallPage(ContentPage):
                 enable_search=True,
                 use_subtitle=True,
                 css_classes=["property"],
-                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+                expression=Gtk.PropertyExpression.new(ServiceItem, None, "full-name"),
             )
         )
         self.service_row.connect("notify::selected-item", self.on_service_selected)
         self.service_type_row = self.select_group.add_row(PrefRow(title="Service Type", css_classes=["property"]))
 
         # Create a Gio.ListStore to fill the ComboBox with
-        self.service_list_store: Gio.ListStore = Gio.ListStore.new(Gtk.StringObject)
+        self.service_list_store: Gio.ListStore = Gio.ListStore.new(ServiceItem)
         self.service_row.set_model(self.service_list_store)
 
         def _on_factory_setup(factory, list_item):
@@ -99,7 +98,7 @@ class ServiceCallPage(ContentPage):
             item = list_item.get_item()
             label = list_item.get_child()
             if item and label:
-                label.set_text(item.get_string())
+                label.set_text(item.full_name)
 
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", _on_factory_setup)
@@ -152,20 +151,20 @@ class ServiceCallPage(ContentPage):
         )
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_services_store()
-        self.available_services = self.ros2_connector.services_store
-        return self.available_services is not None and self.available_services.get_n_items() > 0
+        self.available_services = self.ros2_connector.collect_services()
+        return bool(self.available_services)
 
     def refresh_ui(self):
-        # fill the ComboBox/ListStore with available services
-        for service in self.available_services:  # TODO adapt to GObject
-            self.service_list_store.append(Gtk.StringObject.new(service.full_name))
+        self.service_list_store = self._create_list_store(ServiceItem, self.available_services)
+        self.service_row.set_model(self.service_list_store)
 
         # set the selected service to the preselected one
-        found, index = self.available_services.find(self.preselect_service)
-        # found, found_index = self.service_list_store.find(Gtk.StringObject.new(self.preselect_service))
-        if found:
-            self.service_row.set_selected(index)
+        preselect_service = getattr(self.preselect_service, "full_name", self.preselect_service)
+        index = next(
+            (idx for idx, service in enumerate(self.available_services) if service.full_name == preselect_service),
+            0,
+        )
+        self.service_row.set_selected(index)
 
     def reset_ui(self):
         # clear previous service list
@@ -185,21 +184,25 @@ class ServiceCallPage(ContentPage):
         if self.service_list_store.get_n_items() <= 0:
             return
 
-        self.selected_service_name = self.service_row.get_selected_item().get_string()
-        self.service_item = self.ros2_connector.get_service_class(service_name=self.selected_service_name)
-        if not self.service_item or not self.service_item.python_class:
+        self.service_item = self.service_row.get_selected_item()
+        if not self.service_item:
             self.call_btn.set_sensitive(False)
             return
 
-        self.service_class = self.service_item.python_class
-        self.selected_service_type = self.service_item.full_name or self.ros2_connector.get_service_type_name(
-            self.service_item
-        )
+        self.selected_service_name = self.service_item.full_name
+        self.selected_service_type = self.service_item.interface.full_name
+        try:
+            self.service_class = get_service(self.selected_service_type)
+        except Exception as exc:
+            self.call_btn.set_sensitive(False)
+            super().show_toast(f"Could not load service class for {self.selected_service_type}: {exc}")
+            return
+
         self.service_type_row.set_subtitle(self.selected_service_type)
         self.service_type_row.set_subpage_link(
             nav_view=self.nav_view,
             subpage_class=InterfaceInfoPage,
-            subpage_kwargs={"interface_full_name": self.selected_service_type},
+            subpage_kwargs={"interface": self.service_item.interface},
         )
 
         self.request_class = self.service_class.Request
@@ -274,7 +277,7 @@ class ServiceCallPage(ContentPage):
             return
 
         def _thread_worker():
-            self.call_btn.set_sensitive(False)
+            GLib.idle_add(self.call_btn.set_sensitive, False)
             try:
                 self.response_instance = self.ros2_connector.call_service(
                     srv_type=self.service_class,
@@ -283,8 +286,12 @@ class ServiceCallPage(ContentPage):
                     timeout_sec=2,
                 )
             except Exception as e:
-                self.show_toast(f"Service Error: {e}")
-                self.call_btn.set_sensitive(True)
+                def _show_error(exc=e):
+                    self.show_toast(f"Service Error: {exc}")
+                    self.call_btn.set_sensitive(True)
+                    return GLib.SOURCE_REMOVE
+
+                GLib.idle_add(_show_error)
                 return
 
             def _update_text_field():
@@ -295,6 +302,7 @@ class ServiceCallPage(ContentPage):
 
                 self.response_text_view_row.set_text(response_text)
                 self.call_btn.set_sensitive(True)
+                return GLib.SOURCE_REMOVE
 
             GLib.idle_add(_update_text_field)
 

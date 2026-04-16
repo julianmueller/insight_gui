@@ -17,6 +17,7 @@ from rosidl_parser.definition import (
     UnboundedWString,
     BasicType,
 )
+from insight_gui.utils.ros_logging import ros_log
 
 
 # see https://docs.ros.org/en/jazzy/Concepts/Basic/About-Interfaces.html
@@ -25,15 +26,15 @@ class FieldItem(GObject.GObject):
 
     """
     Each field consists of a type and a name, separated by a space, i.e:
-    
+
     ```
     fieldtype1 fieldname1
     fieldtype2 fieldname2 fielddefaultvalue
     constanttype CONSTANTNAME=constantvalue
     ```
-    
+
     For example:
-    
+
     ```
     int32 my_int
     string full_name "John Doe"
@@ -85,14 +86,15 @@ class InterfaceTypeItem(GObject.GObject):
 
     def __init__(self, *, full_name: str = "", rosidl_obj: object = None, **kwargs):
         super().__init__(**kwargs)
+        self._loaded = False
 
         if full_name != "":
             self.package, self.interface_class, self.name = full_name.split("/")
-            self.import_rosidl_obj()
 
         elif rosidl_obj is not None:
             self.rosidl_obj = rosidl_obj
             self.package, self.interface_class, self.name = rosidl_obj.__class__.__name__.split(".")
+            self._loaded = True
 
         # self.fields = Gio.ListStore.new(GObject.GObject)
 
@@ -101,7 +103,15 @@ class InterfaceTypeItem(GObject.GObject):
         return f"{self.package}/{self.interface_class}/{self.name}"
 
     def import_rosidl_obj(self):
+        # TODO move this into the ros2 connector?
         raise NotImplementedError("This should be implemented by a child class")
+
+    def ensure_loaded(self):
+        if self._loaded:
+            return
+
+        self.import_rosidl_obj()
+        self._loaded = True
 
     @staticmethod
     def parse_rosidl_obj(rosidl_obj) -> Gio.ListStore:
@@ -206,6 +216,13 @@ class TopicInterfaceTypeItem(InterfaceTypeItem):
                 f"Invalid interface type for TopicInterfaceTypeItem: {self.interface_class}, should be 'msg'"
             )
 
+        self.msg_fields = None
+
+    def ensure_loaded(self):
+        if self._loaded:
+            return
+
+        super().ensure_loaded()
         self.msg_fields = self.parse_rosidl_obj(self.rosidl_obj)
 
     def import_rosidl_obj(self):
@@ -213,7 +230,7 @@ class TopicInterfaceTypeItem(InterfaceTypeItem):
             rosidl_class = get_message(self.full_name)
             self.rosidl_obj = rosidl_class()
         except Exception as e:
-            print(f"Failed to load python class for message '{self.full_name}': {e}")
+            ros_log(f"Failed to load python class for message '{self.full_name}': {e}", level="error")
             raise e
 
 
@@ -230,8 +247,16 @@ class ServiceInterfaceTypeItem(InterfaceTypeItem):
                 f"Invalid interface type for ServiceInterfaceTypeItem: {self.interface_class}, should be 'srv'"
             )
 
-        self.request_fields = self.parse_rosidl_obj(self.request_rosidl_obj)
-        self.response_fields = self.parse_rosidl_obj(self.response_rosidl_obj)
+        self.request_fields = None
+        self.response_fields = None
+
+    def ensure_loaded(self):
+        if self._loaded:
+            return
+
+        super().ensure_loaded()
+        self.request_fields = self.parse_rosidl_obj(getattr(self, "request_rosidl_obj", None))
+        self.response_fields = self.parse_rosidl_obj(getattr(self, "response_rosidl_obj", None))
 
     def import_rosidl_obj(self):
         try:
@@ -239,7 +264,7 @@ class ServiceInterfaceTypeItem(InterfaceTypeItem):
             self.request_rosidl_obj = rosidl_class.Request()
             self.response_rosidl_obj = rosidl_class.Response()
         except Exception as e:
-            print(f"Failed to resolve service class for '{self.full_name}': {e}")
+            ros_log(f"Failed to resolve service class for '{self.full_name}': {e}", level="error")
             raise e
 
 
@@ -257,9 +282,18 @@ class ActionInterfaceTypeItem(InterfaceTypeItem):
                 f"Invalid interface type for ActionInterfaceTypeItem: {self.interface_class}, should be 'action'"
             )
 
-        self.goal_fields = self.parse_rosidl_obj(self.goal_rosidl_obj)
-        self.feedback_fields = self.parse_rosidl_obj(self.feedback_rosidl_obj)
-        self.result_fields = self.parse_rosidl_obj(self.result_rosidl_obj)
+        self.goal_fields = None
+        self.feedback_fields = None
+        self.result_fields = None
+
+    def ensure_loaded(self):
+        if self._loaded:
+            return
+
+        super().ensure_loaded()
+        self.goal_fields = self.parse_rosidl_obj(getattr(self, "goal_rosidl_obj", None))
+        self.feedback_fields = self.parse_rosidl_obj(getattr(self, "feedback_rosidl_obj", None))
+        self.result_fields = self.parse_rosidl_obj(getattr(self, "result_rosidl_obj", None))
 
     def import_rosidl_obj(self):
         try:
@@ -268,9 +302,8 @@ class ActionInterfaceTypeItem(InterfaceTypeItem):
             self.feedback_rosidl_obj = rosidl_class.Feedback()
             self.result_rosidl_obj = rosidl_class.Result()
         except Exception as e:
-            print(f"Failed to resolve action class for '{self.full_name}': {e}")
+            ros_log(f"Failed to resolve action class for '{self.full_name}': {e}", level="error")
             raise e
 
 
 # p = TopicInterfaceTypeItem("geometry_msgs/msg/Pose")
-# print(p.msg.fields)

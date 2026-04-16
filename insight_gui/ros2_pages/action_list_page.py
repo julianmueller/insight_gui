@@ -34,7 +34,6 @@ from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.model_rows import ActionRow
 
 
-# TODO do the GObject refactor for the entire page
 class ActionListPage(ContentPage):
     __gtype_name__ = "ActionListPage"
 
@@ -48,12 +47,11 @@ class ActionListPage(ContentPage):
         self.action_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_actions_store()
-        self.available_actions = self.ros2_connector.actions_store
-        return self.available_actions is not None and self.available_actions.get_n_items() > 0
+        self.available_actions = self.ros2_connector.collect_actions()
+        return bool(self.available_actions)
 
     def refresh_ui(self):
-        rows_by_group: Dict[PrefGroup, list] = {}
+        actions_by_group: Dict[PrefGroup, list] = {}
         for action in self.available_actions:
             # put all actions in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-actions-by-namespace"):
@@ -65,24 +63,31 @@ class ActionListPage(ContentPage):
             if namespace in self.action_ns_groups.keys():
                 group = self.action_ns_groups[namespace]
             else:
-                description = "global namespace" if action.namespace == "/" else ""
+                description = "global namespace" if namespace == "/" else ""
                 group = self.pref_page.add_group(title=namespace, description=description)
                 self.action_ns_groups[namespace] = group
 
-            row = ActionRow(action=action)
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=ActionInfoPage,
-                subpage_kwargs={"action": action},
-                label="Show action info page",
-            )
-            rows_by_group.setdefault(group, []).append(row)
+            actions_by_group.setdefault(group, []).append(action)
 
-        for group, rows in rows_by_group.items():
-            group.add_rows(rows, batch_size=10)
-
-        # sort the groups alphabetically by title
         self.pref_page.sort_groups()
+
+        for group, actions in actions_by_group.items():
+            self._add_item_rows_async(
+                group,
+                actions,
+                self._build_action_row,
+                batch_size=10,
+            )
+
+    def _build_action_row(self, action) -> ActionRow:
+        row = ActionRow(action=action)
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=ActionInfoPage,
+            subpage_kwargs={"action": action},
+            label="Show action info page",
+        )
+        return row
 
     def reset_ui(self):
         for group in reversed(self.action_ns_groups.values()):

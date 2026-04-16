@@ -32,6 +32,7 @@ from insight_gui.ros2_pages.pkg_new_dialog import PackageNewDialog
 from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.models.package_item import PackageItem
 
 
 class PackageListPage(ContentPage):
@@ -44,6 +45,7 @@ class PackageListPage(ContentPage):
         super().set_search_entry_placeholder_text("Search for Packages")
 
         self.pkg_list_group = self.pref_page.add_group(placeholder_text="Refresh to show packages")
+        self.pkgs_store: Gio.ListStore = Gio.ListStore.new(PackageItem)
 
         self.new_pkg_btn = super().add_bottom_left_btn(
             label="New Package",
@@ -59,26 +61,34 @@ class PackageListPage(ContentPage):
             func=lambda: Gio.AppInfo.launch_default_for_uri("https://index.ros.org/packages/#jazzy", None),
         )
 
-    def refresh_bg(self) -> bool:
-        self.available_pkgs = get_packages_with_prefixes()
-
-        if len(self.available_pkgs) == 0:
-            self.pkg_list_group.set_placeholder_text("No packages found. Refresh to try again.")
-            return False
-        return True
+    def refresh_bg(self):
+        self.available_pkgs = sorted(get_packages_with_prefixes().items())
+        return bool(self.available_pkgs)
 
     def refresh_ui(self):
-        rows = []
-        for pkg_name, pkg_path in sorted(self.available_pkgs.items()):
-            row = PrefRow(title=pkg_name, subtitle=pkg_path)
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=PackageInfoPage,
-                subpage_kwargs={"pkg_name": pkg_name},
-            )
-            rows.append(row)
+        if not self.available_pkgs:
+            self.pkg_list_group.clear()
+            self.pkg_list_group.set_placeholder_text("No packages found. Refresh to try again.")
+            return
 
-        self.pkg_list_group.add_rows(rows)
+        self.pkg_list_group.clear()
+        self._add_item_rows_async(
+            self.pkg_list_group,
+            self.available_pkgs,
+            lambda pkg: self._build_pkg_row(*pkg),
+            batch_size=5,
+            priority=GLib.PRIORITY_LOW,
+        )
+
+    def _build_pkg_row(self, pkg_name: str, pkg_path: str) -> PrefRow:
+        pkg = PackageItem(name=pkg_name, path=pkg_path)
+        row = PrefRow(title=pkg.name, subtitle=pkg.path)
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=PackageInfoPage,
+            subpage_kwargs={"pkg": pkg},
+        )
+        return row
 
     def reset_ui(self):
-        self.pkg_list_group.clear()
+        pass

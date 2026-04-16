@@ -22,8 +22,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import concurrent.futures
-from collections.abc import Callable
 from pathlib import Path
 
 # # HOTFIX for https://discourse.gnome.org/t/gtk4-efficiency-and-performance-in-x11-export-remote-drawing-mode/8786
@@ -36,12 +34,12 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GLib", "2.0")
-from gi.repository import Gtk, Adw, GLib, Gio, Gdk
+from gi.repository import GObject, Gtk, Adw, GLib, Gio, Gdk
 
 # custom imports
 from insight_gui.window import MainWindow
 from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.debug.ros2_connector_dummy import ROS2ConnectorDummy
+from insight_gui.utils.ros_logging import ros_log
 # from insight_gui.utils.background_worker import (
 #     BackgroundWorker,
 #     WORKER_PRIORITY_HIGH,
@@ -57,13 +55,11 @@ APPLICATION_PATH = APPLICATION_ID.replace(".", "/")
 class InsightApplication(Adw.Application):
     __gtype_name__ = "InsightApplication"
 
-    def __init__(self, start_page_id: str = None, dummy_ros2: bool = False):
+    def __init__(self, start_page_id: str = None):
         super().__init__(application_id=APPLICATION_ID)
-        Gtk.init()
-        Adw.init()
+        GObject.threads_init()
 
         self._start_page_id = start_page_id
-        self._dummy_ros2 = dummy_ros2
         # self.worker = BackgroundWorker(max_workers=2)
         # self.WORKER_PRIORITY_HIGH = WORKER_PRIORITY_HIGH
         # self.WORKER_PRIORITY_NORMAL = WORKER_PRIORITY_NORMAL
@@ -93,7 +89,7 @@ class InsightApplication(Adw.Application):
             self.settings = Gio.Settings.new_full(schema, None, None)
 
         except Exception as e:
-            print(f"Application: Could not initialize GSettings normally: {e}")
+            ros_log(f"Application: Could not initialize GSettings normally: {e}", level="error")
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -107,15 +103,11 @@ class InsightApplication(Adw.Application):
         Gtk.Window.set_default_icon_name("insight")
 
         # ros2 connector handles all connections to the ros2 node
-        if self._dummy_ros2:
-            print("Using dummy ROS2 connector. No real ROS2 interactions will occur.")
-            self.ros2_connector = ROS2ConnectorDummy()
-        else:
-            self.ros2_connector = ROS2Connector()
+        self.ros2_connector = ROS2Connector()
 
         # Define "app.ros2_node_start" action
         ros2_node_start_action = Gio.SimpleAction.new("ros2-node-start", None)
-        ros2_node_start_action.connect("activate", lambda *_: self.ros2_connector.start_node())
+        ros2_node_start_action.connect("activate", lambda *_: self.ros2_connector.start_node_async())
         self.add_action(ros2_node_start_action)
 
         # Define "app.ros2_node_stop" action
@@ -130,8 +122,8 @@ class InsightApplication(Adw.Application):
         ros2_node_is_running_action.connect("notify::state", self.ros2_connector.on_node_state_changed)
         self.add_action(ros2_node_is_running_action)
 
-        # start the ros2 node
-        self.ros2_connector.start_node()
+        # Start ROS 2 in the background so application startup is not blocked by rclpy/node initialization.
+        self.ros2_connector.start_node_async()
 
     def do_activate(self):
         if not self.main_window:
@@ -160,15 +152,11 @@ class InsightApplication(Adw.Application):
 
     def shutdown(self, *args):
         # First ask pages to cancel any ongoing refresh so worker tasks can exit quickly
-        try:
-            self.main_window.current_page.cancel_refresh()
-            for win in list(self.detached_windows):
-                win.current_page.cancel_refresh()
-        except Exception as exc:
-            print(f"Error while cancelling refreshes during shutdown: {exc}")
-
-        # Stop the worker before tearing down ROS to avoid blocking calls on a dead node
-        self.worker.shutdown(wait=False, cancel_futures=True)
+        # try:
+        #     self.main_window.current_page.cancel_refresh()
+        #     for win in list(self.detached_windows):
+        #         win.current_page.cancel_refresh()
+        # except Exception as exc:
 
         # Tear down ROS after worker threads are asked to stop
         self.ros2_connector.shutdown()

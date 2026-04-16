@@ -49,41 +49,48 @@ class NodeListPage(ContentPage):
         # self.node_list_group = self.pref_page.add_group(placeholder_text="Refresh to show nodes")
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_nodes_store()
-        self.nodes = self.ros2_connector.nodes_store
-        return self.nodes is not None and self.nodes.get_n_items() > 0
+        self.nodes = self.ros2_connector.collect_nodes()
+        return bool(self.nodes)
 
     def refresh_ui(self):
-        rows_by_group: Dict[PrefGroup, list] = {}
+        nodes_by_group: Dict[PrefGroup, list] = {}
 
         for node in self.nodes:
-            # put all nodes in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-nodes-by-namespace"):
-                node.namespace = ""
-
-            # get the namespace group of the action
-            if node.namespace in self.node_ns_groups.keys():
-                group = self.node_ns_groups[node.namespace]
+                namespace = ""
+                description = ""
             else:
+                namespace = node.namespace
                 description = "global namespace" if node.namespace == "/" else ""
-                group = self.pref_page.add_group(title=node.namespace, description=description)
-                self.node_ns_groups[node.namespace] = group
 
-            row = NodeRow(node=node)
+            if namespace in self.node_ns_groups.keys():
+                group = self.node_ns_groups[namespace]
+            else:
+                group = self.pref_page.add_group(title=namespace, description=description)
+                self.node_ns_groups[namespace] = group
 
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=NodeInfoPage,
-                subpage_kwargs={"node": node},
-                label="Show node info page",
-            )
-            rows_by_group.setdefault(group, []).append(row)
+            nodes_by_group.setdefault(group, []).append(node)
 
-        for group, rows in rows_by_group.items():
-            group.add_rows(rows, batch_size=8)
-
-        # sort the groups alphabetically by title
         self.pref_page.sort_groups()
+
+        for group, nodes in nodes_by_group.items():
+            self._add_item_rows_async(
+                group,
+                nodes,
+                self._build_node_row,
+                batch_size=8,
+            )
+
+    def _build_node_row(self, node) -> NodeRow:
+        row = NodeRow(node=node)
+
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=NodeInfoPage,
+            subpage_kwargs={"node": node},
+            label="Show node info page",
+        )
+        return row
 
     def reset_ui(self):
         for group in reversed(self.node_ns_groups.values()):

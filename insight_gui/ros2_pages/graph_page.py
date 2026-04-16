@@ -65,13 +65,9 @@ class GraphPage(ContentPage):
         self.main_content_page.set_child(self.canvas)
 
     def refresh_bg(self):
-        # Clear previous data
-        self.canvas.clear()
-
         # get all nodes, topics, services, actions
-        self.ros2_connector.refresh_nodes_store()
-        self.available_nodes = self.ros2_connector.nodes_store
-        self.available_publishers = {}  # dict of ['node_name': Gio.ListStore]
+        self.available_nodes = self.ros2_connector.collect_nodes()
+        self.available_publishers = {}
         self.available_subscribers = {}
         self.available_service_servers = {}
         self.available_service_clients = {}
@@ -82,29 +78,29 @@ class GraphPage(ContentPage):
         # collect node and topic info
         for node in self.available_nodes:
             # Add publishers to the node
-            self.available_publishers[node.full_name] = self.ros2_connector.get_publishers_by_node(node=node)
+            self.available_publishers[node.full_name] = self.ros2_connector.collect_publishers_by_node(node=node)
 
             # Add subscribers to the node
-            self.available_subscribers[node.full_name] = self.ros2_connector.get_subscribers_by_node(node=node)
+            self.available_subscribers[node.full_name] = self.ros2_connector.collect_subscribers_by_node(node=node)
 
             # Add service servers to the node
-            self.available_service_servers[node.full_name] = self.ros2_connector.get_service_servers_by_node(node=node)
+            self.available_service_servers[node.full_name] = self.ros2_connector.collect_service_servers_by_node(node=node)
 
             # Add service clients to the node
-            self.available_service_clients[node.full_name] = self.ros2_connector.get_service_clients_by_node(node=node)
+            self.available_service_clients[node.full_name] = self.ros2_connector.collect_service_clients_by_node(node=node)
 
             # Add actions servers to the node
-            self.available_action_servers[node.full_name] = self.ros2_connector.get_action_servers_by_node(node=node)
+            self.available_action_servers[node.full_name] = self.ros2_connector.collect_action_servers_by_node(node=node)
 
             # Add actions clients to the node
-            self.available_action_clients[node.full_name] = self.ros2_connector.get_action_clients_by_node(node=node)
+            self.available_action_clients[node.full_name] = self.ros2_connector.collect_action_clients_by_node(node=node)
 
             # Add parameters to the node # TODO this takes really long for larger graphs
-            # self.available_parameters[node.full_name] = self.ros2_connector.get_parameters_by_node(node=node)
+            # self.available_parameters[node.full_name] = self.ros2_connector.collect_parameters(node=node)
 
         # TODO also add other topics etc here, that do not belong to any nodes
 
-        return self.available_nodes is not None and self.available_nodes.get_n_items() > 0
+        return bool(self.available_nodes)
 
     def refresh_ui(self):
         # collect node and topic info
@@ -177,5 +173,4 @@ class GraphPage(ContentPage):
         self.canvas.calculate_layout()
 
     def reset_ui(self):
-        # self.canvas.clear()
-        pass
+        self.canvas.clear()

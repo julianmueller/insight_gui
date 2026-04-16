@@ -136,32 +136,72 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
             row.connect("unfiltered", self._on_row_unfiltered)
 
     def add_row(self, row: Gtk.Widget) -> Gtk.Widget:
-        """Add a single row to the group 'asynchronously' to avoid blocking the UI."""
-
-        def _append_row():
-            self._append_row(row)
-            return GLib.SOURCE_REMOVE  # run only once
-
-        GLib.idle_add(_append_row)
+        """Add a single row to the group asynchronously."""
+        self.add_rows([row], batch_size=1)
         return row
 
-    def add_rows(self, rows: list[Gtk.Widget], batch_size: int = 2):
-        """Add multiple rows to the group 'asynchronously' in batches to avoid blocking the UI."""
-        if not rows:
+    def add_rows(
+        self,
+        rows_iterable,
+        *,
+        batch_size: int = 50,
+        priority: int = GLib.PRIORITY_LOW,
+        on_done: Callable | None = None,
+    ) -> None:
+        """
+        Add multiple rows asynchronously in batches to keep the UI responsive.
+
+        Accepts any iterable (including generators) so row creation can be lazy.
+        """
+        if rows_iterable is None:
+            return
+
+        rows_iter = iter(rows_iterable)
+
+        def add_batch():
+            for _ in range(batch_size):
+                try:
+                    row = next(rows_iter)
+                except StopIteration:
+                    if on_done:
+                        on_done()
+                    return GLib.SOURCE_REMOVE
+                self._append_row(row)
+            return GLib.SOURCE_CONTINUE
+
+        GLib.idle_add(add_batch, priority=priority)
+
+    def add_rows_from_model(
+        self,
+        model: Gio.ListModel,
+        row_factory: Callable[[GObject.Object], Gtk.Widget],
+        *,
+        batch_size: int = 50,
+        priority: int = GLib.PRIORITY_LOW,
+        on_done: Callable | None = None,
+    ) -> None:
+        """Create and add rows from a GObject model asynchronously in batches."""
+        if model is None:
             return
 
         index = 0
+        total = model.get_n_items()
 
         def add_batch():
             nonlocal index
-            end = min(index + batch_size, len(rows))
+            end = min(index + batch_size, total)
             for i in range(index, end):
-                self._append_row(rows[i])
+                item = model.get_item(i)
+                row = row_factory(item)
+                self._append_row(row)
             index = end
-            # return True to keep the idle source active if there are more items
-            return index < len(rows)
+            if index >= total:
+                if on_done:
+                    on_done()
+                return GLib.SOURCE_REMOVE
+            return GLib.SOURCE_CONTINUE
 
-        GLib.idle_add(add_batch)
+        GLib.idle_add(add_batch, priority=priority)
 
     def remove_row(self, row: Gtk.Widget):
         for i in range(self.rows.get_n_items()):

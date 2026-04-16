@@ -13,7 +13,7 @@ class ParameterItem(GObject.GObject):
     name = GObject.Property(type=str, default="")
     node = GObject.Property(type=NodeItem)
     description = GObject.Property(type=str, default="")
-    type = GObject.Property(type=object, default=None)
+    type = GObject.Property(type=object, default=None)  # noqa: A003
     type_str = GObject.Property(type=str, default="")
     value = GObject.Property(type=object, default=None)
     read_only = GObject.Property(type=bool, default=False)

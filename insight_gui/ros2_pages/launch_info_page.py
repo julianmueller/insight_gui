@@ -115,7 +115,7 @@ class LaunchInfoPage(ContentPage):
 
             return True
         except Exception as e:
-            print(f"Error parsing launch arguments: {e}")
+            self.ros2_connector.log(f"Error parsing launch arguments: {e}", level="error")
             return False
 
     def refresh_ui(self):

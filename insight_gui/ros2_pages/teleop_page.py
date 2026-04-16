@@ -145,13 +145,14 @@ class TeleoperatorPage(ContentPage):
         self.angular_scaling = 1.0
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_topics_store()
-        available_topics = self.ros2_connector.topics_store
+        available_topics = self.ros2_connector.collect_topics()
+        self.available_teleop_topic_items = []
         self.available_teleop_topics = []
 
         if available_topics:
             for topic in available_topics:
-                if any(t in (self.TELEOP_TYPE_TWIST, self.TELEOP_TYPE_JOY) for t in getattr(topic, "type_names", [])):
+                if any(t in (self.TELEOP_TYPE_TWIST, self.TELEOP_TYPE_JOY) for t in topic.type_names):
+                    self.available_teleop_topic_items.append(topic)
                     self.available_teleop_topics.append(topic.full_name)
 
         return len(self.available_teleop_topics) > 0
@@ -208,12 +209,19 @@ class TeleoperatorPage(ContentPage):
 
     def on_topic_suggestion_applied(self, _, item_text: str):
         try:
-            msg_item = self.ros2_connector.get_message_class(topic_name=item_text)
-            if not msg_item or not msg_item.python_class:
+            topic = next((topic for topic in self.available_teleop_topic_items if topic.full_name == item_text), None)
+            if not topic:
                 super().show_toast(f"Could not resolve message type for {item_text}")
                 return
 
-            selected_topic_type = msg_item.full_name or self.ros2_connector.get_message_type_name(msg_item)
+            selected_topic_type = next(
+                (
+                    topic_type
+                    for topic_type in topic.type_names
+                    if topic_type in (self.TELEOP_TYPE_TWIST, self.TELEOP_TYPE_JOY)
+                ),
+                "",
+            )
             found_index = find_str_in_list_store(self.teleop_type_list_store, selected_topic_type)
             if found_index >= 0:
                 self.teleop_type_row.set_selected(found_index)
@@ -347,18 +355,15 @@ class TeleopRow(AdditionalContentRow):
 
     def lock_focus(self):
         self.is_focus_locked = True
-        # print("Locking focus on teleop row")
         self.grab_focus()
 
     def unlock_focus(self):
         self._held_keys.clear()
-        # print("Unlocking focus on teleop row")
 
     def on_key_pressed(self, controller, keyval, keycode, state):
         # Handle ESC key to unlock focus
         if keyval == Gdk.KEY_Escape:
             if self.teleop_page:
-                # print("Focus unlocked via ESC key")
                 self.unlock_focus()
                 self.teleop_page.unlock_focus()
             return True

@@ -20,22 +20,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from typing import Dict
-
-from rclpy.parameter import Parameter
-from rclpy.exceptions import ParameterNotDeclaredException
-from rcl_interfaces.msg import ParameterDescriptor
-
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio
+from gi.repository import Gtk, Adw
 
-from insight_gui.models.parameter_item import ParameterItem
 from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 
 
@@ -48,53 +40,50 @@ class ParameterListPage(ContentPage):
         super().set_placeholder_text("Refresh to show parameters")
         super().set_search_entry_placeholder_text("Search for parameters")
 
-        self.parameter_lists: Dict[PrefGroup] = {}
+        self.parameters_by_node = []
 
     def refresh_bg(self):
-        self.ros2_connector.refresh_nodes_store()
-        available_nodes = self.ros2_connector.nodes_store
+        available_nodes = self.ros2_connector.collect_nodes()
 
-        if available_nodes is None or available_nodes.get_n_items() == 0:
+        if not available_nodes:
             return False
 
-        self.parameters_by_node: Dict[str, Gio.ListStore] = {}
+        self.parameters_by_node = []
 
         for node in available_nodes:
-            parameters = self.ros2_connector.refresh_parameters_store(node=node)
+            parameters = self.ros2_connector.collect_parameters(node=node)
 
-            if parameters and parameters.get_n_items() > 0:
-                # copy into a dedicated store to keep per-node data separate
-                parameter_store = Gio.ListStore.new(ParameterItem)
-                for param in parameters:
-                    parameter_store.append(param)
-                self.parameters_by_node[node.full_name] = parameter_store
+            if parameters:
+                self.parameters_by_node.append((node, parameters))
 
-        return self.parameters_by_node if self.parameters_by_node else False
+        return bool(self.parameters_by_node)
 
     def refresh_ui(self):
         # for every node with params add a group
-        for node_full_name, param_store in self.parameters_by_node.items():
+        for node, parameters in self.parameters_by_node:
             # create a group and add all parameters
-            group = self.pref_page.add_group(title=node_full_name)
-            rows = []
+            group = self.pref_page.add_group(title=node.full_name)
+            self._add_item_rows_async(
+                group,
+                parameters,
+                self._build_parameter_row,
+                batch_size=8,
+                on_done=group.set_description_to_row_count,
+            )
 
-            for param in param_store:
-                row = PrefRow(title=param.name, subtitle=f"{param.type}: {param.value}")
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=ParamEditPage,
-                    subpage_kwargs={"parameter": param},
-                )
+    def _build_parameter_row(self, param) -> PrefRow:
+        row = PrefRow(title=param.name, subtitle=f"{param.type_str}: {param.value}")
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=ParamEditPage,
+            subpage_kwargs={"parameter": param},
+        )
 
-                # if the parameter is read-only, a prefix icon is added to the row
-                if param.read_only:
-                    row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
+        # if the parameter is read-only, a prefix icon is added to the row
+        if param.read_only:
+            row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
 
-                rows.append(row)
-
-            group.add_rows(rows, batch_size=8)
-
-            group.set_description_to_row_count()
+        return row
 
     def reset_ui(self):
         self.pref_page.clear()

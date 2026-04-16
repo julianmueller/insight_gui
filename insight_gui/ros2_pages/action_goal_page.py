@@ -28,6 +28,7 @@ import time
 import rclpy
 from rosidl_runtime_py import set_message_fields
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
+from rosidl_runtime_py.utilities import get_action
 
 import gi
 
@@ -41,7 +42,6 @@ from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 
 
-# TODO do the GObject refactor for the entire page
 class ActionGoalPage(ContentPage):
     __gtype_name__ = "ActionGoalPage"
 
@@ -65,6 +65,7 @@ class ActionGoalPage(ContentPage):
         self.goal_handle = None
         self.feedback_text = ""
         self.selected_action: ActionItem | None = None
+        self.selected_action_name = ""
         self.action_class = None
 
         self.send_goal_btn = super().add_bottom_left_btn(
@@ -86,7 +87,7 @@ class ActionGoalPage(ContentPage):
                 enable_search=True,
                 use_subtitle=True,
                 css_classes=["property"],
-                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+                expression=Gtk.PropertyExpression.new(ActionItem, None, "full-name"),
             )
         )
         self.action_combo_row.connect("notify::selected-item", self.on_action_selected)
@@ -163,17 +164,20 @@ class ActionGoalPage(ContentPage):
         self.result_text_view_row = self.result_group.add_row(TextViewRow(editable=False, wrap_mode=Gtk.WrapMode.NONE))
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_actions_store()
-        self.available_actions = self.ros2_connector.actions_store
-        return self.available_actions is not None and self.available_actions.get_n_items() > 0
+        self.available_actions = self.ros2_connector.collect_actions()
+        return bool(self.available_actions)
 
     def refresh_ui(self):
+        self.available_action_model = self._create_list_store(ActionItem, self.available_actions)
         # fill the ComboBox/ListStore with available actions
-        self.action_combo_row.set_model(self.available_actions)
+        self.action_combo_row.set_model(self.available_action_model)
 
-        # set the selected action to the preselected one
-        found, index = self.available_actions.find(self.preselect_action)
-        self.action_combo_row.set_selected(index if found else 0)
+        preselect_action = getattr(self.preselect_action, "full_name", self.preselect_action)
+        index = next(
+            (idx for idx, action in enumerate(self.available_actions) if action.full_name == preselect_action),
+            0,
+        )
+        self.action_combo_row.set_selected(index)
 
     def reset_ui(self):
         # clear previous action list
@@ -213,14 +217,18 @@ class ActionGoalPage(ContentPage):
             return
 
         def _thread_worker():
-            self.send_goal_btn.set_sensitive(False)
+            GLib.idle_add(self.send_goal_btn.set_sensitive, False)
 
             try:
                 # Clear previous feedback and result
                 self.feedback_text = ""
 
-                self.feedback_text_view_row.clear()
-                self.result_text_view_row.clear()
+                def _clear_output():
+                    self.feedback_text_view_row.clear()
+                    self.result_text_view_row.clear()
+                    return GLib.SOURCE_REMOVE
+
+                GLib.idle_add(_clear_output)
 
                 # Send the goal with feedback callback
                 self.action_client, goal_future = self.ros2_connector.send_action_goal(
@@ -232,24 +240,21 @@ class ActionGoalPage(ContentPage):
                 )
 
                 # Wait for goal to be accepted
-                start = time.monotonic()
-                while not goal_future.done():
-                    rclpy.spin_once(self.ros2_connector.ros2_node, timeout_sec=0.01)
-                    if (time.monotonic() - start) > 5.0:  # 5 second timeout
-                        raise TimeoutError("Timeout waiting for goal acceptance")
+                self.ros2_connector._wait_for_future(goal_future, timeout_sec=5.0)
 
                 self.goal_handle = goal_future.result()
                 if not self.goal_handle.accepted:
-                    self.show_toast("Goal was rejected by action server")
-                    self.send_goal_btn.set_sensitive(True)
+                    def _show_rejected():
+                        self.show_toast("Goal was rejected by action server")
+                        self.send_goal_btn.set_sensitive(True)
+                        return GLib.SOURCE_REMOVE
+
+                    GLib.idle_add(_show_rejected)
                     return
 
                 # Get the result
                 result_future = self.goal_handle.get_result_async()
-                start = time.monotonic()
-                while not result_future.done():
-                    rclpy.spin_once(self.ros2_connector.ros2_node, timeout_sec=0.01)
-                    # No timeout for result - let it run until completion
+                self.ros2_connector._wait_for_future(result_future)
 
                 result = result_future.result()
                 self.result_instance = result.result
@@ -259,13 +264,21 @@ class ActionGoalPage(ContentPage):
                 elif self.msg_format == "JSON":
                     result_text = str(json.dumps(message_to_ordereddict(self.result_instance), indent=4))
 
-                self.result_text_view_row.set_text(result_text)
-                self.send_goal_btn.set_sensitive(True)
-                self.show_toast("Action completed!")
+                def _show_result():
+                    self.result_text_view_row.set_text(result_text)
+                    self.send_goal_btn.set_sensitive(True)
+                    self.show_toast("Action completed!")
+                    return GLib.SOURCE_REMOVE
+
+                GLib.idle_add(_show_result)
 
             except Exception as e:
-                self.show_toast(f"Action Error: {e}")
-                self.send_goal_btn.set_sensitive(True)
+                def _show_error(exc=e):
+                    self.show_toast(f"Action Error: {exc}")
+                    self.send_goal_btn.set_sensitive(True)
+                    return GLib.SOURCE_REMOVE
+
+                GLib.idle_add(_show_error)
 
         threading.Thread(target=_thread_worker, daemon=True).start()
 
@@ -279,8 +292,6 @@ class ActionGoalPage(ContentPage):
             new_feedback = str(json.dumps(message_to_ordereddict(self.feedback_instance), indent=4))
 
         # Accumulate feedback with timestamp
-        import time
-
         timestamp = time.strftime("%H:%M:%S")
         if self.feedback_text:
             self.feedback_text += f"\n\n--- Feedback at {timestamp} ---\n{new_feedback}"
@@ -289,6 +300,7 @@ class ActionGoalPage(ContentPage):
 
         def _update_feedback():
             self.feedback_text_view_row.set_text(self.feedback_text)
+            return GLib.SOURCE_REMOVE
 
         GLib.idle_add(_update_feedback)
 
@@ -298,44 +310,31 @@ class ActionGoalPage(ContentPage):
         self.result_text_view_row.clear()
 
     def on_action_selected(self, *args):
-        if self.available_actions.get_n_items() <= 0:
+        if not self.available_actions:
             return
-
-        print(*args)
 
         # TODO mkae use of args, the selected gobject will be in there
 
         self.selected_action: ActionItem = self.action_combo_row.get_selected_item()
-        self.selected_action_item = next(
-            (a for a in self.available_actions if a.full_name == self.selected_action_name), None
-        )
-
-        action_message_item = self.ros2_connector.get_action_class(action=self.selected_action)
-
-        if not action_message_item or not action_message_item.python_class:
+        self.selected_action_name = self.selected_action.full_name if self.selected_action else ""
+        if not self.selected_action:
             self.send_goal_btn.set_sensitive(False)
-            super().show_toast(f"Could not load action class for {self.selected_action_name}")
             return
 
-        self.action_class = action_message_item.python_class
-        selected_action_type = action_message_item.full_name or self.ros2_connector.get_action_type_name(
-            action_message_item
-        )
-        self.action_type_row.set_subtitle(selected_action_type)
+        selected_action_type = self.selected_action.interface.full_name
+        try:
+            self.action_class = get_action(selected_action_type)
+        except Exception as exc:
+            self.send_goal_btn.set_sensitive(False)
+            super().show_toast(f"Could not load action class for {selected_action_type}: {exc}")
+            return
 
-        # Get action types for ActionInfoPage
-        available_actions = self.ros2_connector.refresh_actions_store()
-        action_type_name = selected_action_type
-        if available_actions:
-            for action in available_actions:
-                if action.full_name == self.selected_action_name and action.type_names:
-                    action_type_name = action.type_names[0]
-                    break
+        self.action_type_row.set_subtitle(selected_action_type)
 
         self.action_type_row.set_subpage_link(
             nav_view=self.nav_view,
             subpage_class=InterfaceInfoPage,
-            subpage_kwargs={"interface": action.interface},
+            subpage_kwargs={"interface": self.selected_action.interface},
         )
 
         self.goal_class = self.action_class.Goal

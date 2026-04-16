@@ -31,7 +31,6 @@ from gi.repository import Gtk, Adw, Gio
 from insight_gui.widgets.content_page import ContentPage
 
 
-# TODO do the GObject refactor for the entire page
 class JointStatesPage(ContentPage):
     __gtype_name__ = "JointStatesPage"
 
@@ -60,12 +59,11 @@ class JointStatesPage(ContentPage):
     def refresh_bg(self) -> bool:
         self.joint_states_topic_list = []
 
-        self.ros2_connector.refresh_topics_store()
-        available_topics = self.ros2_connector.topics_store
+        available_topics = self.ros2_connector.collect_topics()
 
         if available_topics:
             for topic in available_topics:
-                if any(t == "sensor_msgs/msg/JointState" for t in getattr(topic, "type_names", [])):
+                if any(t == "sensor_msgs/msg/JointState" for t in topic.type_names):
                     self.joint_states_topic_list.append(topic.full_name)
         return len(self.joint_states_topic_list) > 0
 
@@ -111,7 +109,7 @@ class JointStatesPage(ContentPage):
         #         hexpand=True,
         #         value_pos=Gtk.PositionType.RIGHT,
         #     )
-        #     scale.connect("notify::value-changed", lambda *args: print(scale.get_value()))
+        #     scale.connect("notify::value-changed", lambda *_: None)
         #     plus_button = Gtk.Button(icon_name="plus-symbolic", valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
         #     minus_button = Gtk.Button(icon_name="minus-symbolic", valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
 

@@ -27,6 +27,8 @@ from dataclasses import dataclass, field
 from functools import partial
 from collections.abc import Callable
 
+from insight_gui.utils.ros_logging import ros_log
+
 
 WORKER_PRIORITY_HIGH = 0
 WORKER_PRIORITY_NORMAL = 10
@@ -161,7 +163,7 @@ class BackgroundWorker:
                 try:
                     work_item.done_callback(work_item.future)
                 except Exception as cb_exc:
-                    print(f"Worker done_callback raised: {cb_exc}")
+                    ros_log(f"Worker done_callback raised: {cb_exc}", level="error")
             with self._lock:
                 work_item.running = False
                 self._active_workers -= 1

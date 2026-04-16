@@ -78,8 +78,20 @@ class InterfaceType(Enum):
 class InterfaceInfoPage(ContentPage):
     __gtype_name__ = "InterfaceInfoPage"
 
-    def __init__(self, interface: InterfaceTypeItem, **kwargs):
+    def __init__(self, interface: InterfaceTypeItem = None, interface_full_name: str = "", **kwargs):
         super().__init__(searchable=True, refreshable=False, **kwargs)
+
+        if interface is None and interface_full_name:
+            interface_type = InterfaceType.infer_from_name(interface_full_name)
+            if interface_type == InterfaceType.MSG:
+                interface = TopicInterfaceTypeItem(full_name=interface_full_name)
+            elif interface_type == InterfaceType.SRV:
+                interface = ServiceInterfaceTypeItem(full_name=interface_full_name)
+            elif interface_type == InterfaceType.ACT:
+                interface = ActionInterfaceTypeItem(full_name=interface_full_name)
+
+        if interface is None:
+            raise ValueError("InterfaceInfoPage requires an interface or interface_full_name")
 
         if isinstance(interface, TopicInterfaceTypeItem):
             super().set_title(f"Topic Type {interface.full_name}")
@@ -113,25 +125,16 @@ class InterfaceInfoPage(ContentPage):
         )
 
     def refresh_bg(self):
+        self.interface.ensure_loaded()
         return True
 
     def refresh_ui(self):
         # interface_classes = {}
 
-        def _populate_group_with_field(group, field_list):
-            for field in field_list:
-                row = PrefRow(title=field.name, subtitle=field.dds_type)
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=InterfaceInfoPage,
-                    subpage_kwargs={"interface": field.field_obj},
-                )
-                group.add_row(row)
-
         # Message
         if isinstance(self.interface, TopicInterfaceTypeItem):
             msg_group = self.pref_page.add_group(title="Message", placeholder_text="This message has no fields.")
-            _populate_group_with_field(msg_group, self.interface.msg_fields)
+            self._add_item_rows_async(msg_group, self.interface.msg_fields, self._build_field_row, batch_size=20)
 
         # if self.interface_type == InterfaceType.MSG:
         #     msg_class = get_message(self.interface_full_name)
@@ -146,8 +149,13 @@ class InterfaceInfoPage(ContentPage):
             response_group = self.pref_page.add_group(
                 title="Response", placeholder_text="This response message has no fields."
             )
-            _populate_group_with_field(request_group, self.interface.request_fields)
-            _populate_group_with_field(response_group, self.interface.response_fields)
+            self._add_item_rows_async(request_group, self.interface.request_fields, self._build_field_row, batch_size=20)
+            self._add_item_rows_async(
+                response_group,
+                self.interface.response_fields,
+                self._build_field_row,
+                batch_size=20,
+            )
 
         # elif self.interface_type == InterfaceType.SRV:
         #     srv_class = get_service(self.interface_full_name)
@@ -156,7 +164,7 @@ class InterfaceInfoPage(ContentPage):
         #     constants = self.get_constants(srv_class.Request) | self.get_constants(srv_class.Response)
 
         # # Action
-        elif isinstance(self.interface, ServiceInterfaceTypeItem):
+        elif isinstance(self.interface, ActionInterfaceTypeItem):
             goal_group = self.pref_page.add_group(title="Goal", placeholder_text="This goal message has no fields.")
             feedback_group = self.pref_page.add_group(
                 title="Feedback", placeholder_text="This feedback message has no fields."
@@ -164,9 +172,14 @@ class InterfaceInfoPage(ContentPage):
             result_group = self.pref_page.add_group(
                 title="Result", placeholder_text="This result message has no fields."
             )
-            _populate_group_with_field(goal_group, self.interface.goal_fields)
-            _populate_group_with_field(feedback_group, self.interface.feedback_fields)
-            _populate_group_with_field(result_group, self.interface.result_fields)
+            self._add_item_rows_async(goal_group, self.interface.goal_fields, self._build_field_row, batch_size=20)
+            self._add_item_rows_async(
+                feedback_group,
+                self.interface.feedback_fields,
+                self._build_field_row,
+                batch_size=20,
+            )
+            self._add_item_rows_async(result_group, self.interface.result_fields, self._build_field_row, batch_size=20)
 
         # elif self.interface_type == InterfaceType.ACT:
         #     act_class = get_action(self.interface_full_name)
@@ -221,6 +234,9 @@ class InterfaceInfoPage(ContentPage):
         #     self.subpage_signal_handler = gesture_click.connect("pressed", _on_pressed)
         #     subpage_btn.add_controller(gesture_click)
 
+    def _build_field_row(self, field) -> PrefRow:
+        return PrefRow(title=field.name, subtitle=field.dds_type)
+
     def _on_open_interface_file(self, *args):
         interface_file_path = get_interface_path(self.interface.full_name)
         if os.path.exists(interface_file_path):
@@ -230,7 +246,7 @@ class InterfaceInfoPage(ContentPage):
             super().show_toast(f"Path '{interface_file_path}' does not exist!")
 
     def _on_open_weblink(self, *args):
-        Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/jazzy/p/{self.interface_full_name}.html", None)
+        Gio.AppInfo.launch_default_for_uri(f"https://docs.ros.org/en/jazzy/p/{self.interface.full_name}.html", None)
 
     # def get_constants(self, interface_class: Type) -> dict:
     #     interface_instance = interface_class()

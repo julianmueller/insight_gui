@@ -46,14 +46,15 @@ class TopicListPage(ContentPage):
         self.topic_ns_groups: Dict[PrefGroup] = {}
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_topics_store()
-        self.available_topics = self.ros2_connector.topics_store
-        return self.available_topics is not None and self.available_topics.get_n_items() > 0
+        self.available_topics = self.ros2_connector.collect_topics()
+        return bool(self.available_topics)
 
     def refresh_ui(self):
-        rows_by_group: Dict[PrefGroup, list] = {}
+        topics_by_group: Dict[PrefGroup, list] = {}
         # TODO this is ugly
         from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
+
+        self._topic_info_page_class = TopicInfoPage
 
         for topic in self.available_topics:
             # put all topics in one group if grouping is disabled
@@ -66,24 +67,31 @@ class TopicListPage(ContentPage):
             if namespace in self.topic_ns_groups.keys():
                 group = self.topic_ns_groups[namespace]
             else:
-                description = "global namespace" if topic.namespace == "/" else ""
+                description = "global namespace" if namespace == "/" else ""
                 group = self.pref_page.add_group(title=namespace, description=description)
                 self.topic_ns_groups[namespace] = group
 
-            row = TopicRow(topic=topic)
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=TopicInfoPage,
-                subpage_kwargs={"topic": topic},
-                label="Show topic info page",
-            )
-            rows_by_group.setdefault(group, []).append(row)
+            topics_by_group.setdefault(group, []).append(topic)
 
-        for group, rows in rows_by_group.items():
-            group.add_rows(rows, batch_size=10)
-
-        # sort the groups alphabetically by title
         self.pref_page.sort_groups()
+
+        for group, topics in topics_by_group.items():
+            self._add_item_rows_async(
+                group,
+                topics,
+                self._build_topic_row,
+                batch_size=10,
+            )
+
+    def _build_topic_row(self, topic) -> TopicRow:
+        row = TopicRow(topic=topic)
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=self._topic_info_page_class,
+            subpage_kwargs={"topic": topic},
+            label="Show topic info page",
+        )
+        return row
 
     def reset_ui(self):
         for group in reversed(self.topic_ns_groups.values()):

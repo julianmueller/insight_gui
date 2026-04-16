@@ -36,6 +36,7 @@ from insight_gui.ros2_pages.overview_page import OverviewPage
 from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
 
 from insight_gui.utils.adw_colors import AdwAccentColor
+from insight_gui.utils.ros_logging import ros_log
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.stack_sidebar import StackSidebar
 
@@ -229,7 +230,7 @@ class MainWindow(BaseWindow):
         )
 
         # update time labels
-        GLib.idle_add(self._update_time_labels)
+        # GLib.idle_add(self._update_time_labels) # TODO
 
     @property
     def current_page(self) -> Adw.NavigationPage:
@@ -241,7 +242,7 @@ class MainWindow(BaseWindow):
 
     def on_shortcuts_dialog(self, *args):
         # ShortcutsDialog().present(self) # TODO
-        print("not implemented yet")
+        ros_log("Shortcuts dialog is not implemented yet.", level="warning")
 
     def on_about_dialog(self, *args):
         self.about_dialog = Adw.AboutDialog(

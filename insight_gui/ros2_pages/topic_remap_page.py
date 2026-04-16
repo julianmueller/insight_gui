@@ -26,6 +26,7 @@ from typing import Optional
 
 from rclpy.exceptions import InvalidTopicNameException
 from rclpy.validate_full_topic_name import validate_full_topic_name
+from rosidl_runtime_py.utilities import get_message
 
 import gi
 
@@ -40,7 +41,6 @@ from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
-# TODO do the GObject refactor for the entire page
 class TopicRemapPage(ContentPage):
     __gtype_name__ = "TopicRemapPage"
 
@@ -53,6 +53,7 @@ class TopicRemapPage(ContentPage):
         self.detach_kwargs = {"preselect_topic": preselect_topic}
 
         self.selected_topic: str = ""
+        self.selected_topic_item: TopicItem | None = None
         self.selected_topic_type: str = ""
         self.target_topic_full: str = ""
 
@@ -68,11 +69,11 @@ class TopicRemapPage(ContentPage):
                 enable_search=True,
                 use_subtitle=True,
                 css_classes=["property"],
-                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+                expression=Gtk.PropertyExpression.new(TopicItem, None, "full-name"),
             )
         )
 
-        self.topic_list_store = Gio.ListStore.new(Gtk.StringObject)
+        self.topic_list_store = Gio.ListStore.new(TopicItem)
         self.topic_row.set_model(self.topic_list_store)
 
         def _on_factory_setup(factory, list_item):
@@ -87,7 +88,7 @@ class TopicRemapPage(ContentPage):
             item = list_item.get_item()
             label = list_item.get_child()
             if item and label:
-                label.set_text(item.get_string())
+                label.set_text(item.full_name)
 
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", _on_factory_setup)
@@ -124,17 +125,18 @@ class TopicRemapPage(ContentPage):
     # Lifecycle helpers
     # ------------------------------------------------------------------
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_topics_store()
-        self.available_topics = self.ros2_connector.topics_store
-        return self.available_topics is not None and self.available_topics.get_n_items() > 0
+        self.available_topics = self.ros2_connector.collect_topics()
+        return bool(self.available_topics)
 
     def refresh_ui(self):
-        self.topic_list_store.remove_all()
+        self.topic_list_store = self._create_list_store(TopicItem, self.available_topics)
+        self.topic_row.set_model(self.topic_list_store)
 
-        for topic in self.available_topics:
-            self.topic_list_store.append(Gtk.StringObject.new(topic.full_name))
-
-        found_index = find_str_in_list_store(self.topic_list_store, self.preselect_topic)
+        preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
+        found_index = next(
+            (idx for idx, topic in enumerate(self.available_topics) if topic.full_name == preselect_topic),
+            -1,
+        )
         if found_index >= 0:
             self.topic_row.set_selected(found_index)
         elif self.topic_list_store.get_n_items() > 0:
@@ -157,13 +159,15 @@ class TopicRemapPage(ContentPage):
         item = self.topic_row.get_selected_item()
         if not item:
             self.selected_topic = ""
+            self.selected_topic_item = None
             self.topic_type_row.set_subtitle("")
             return
 
-        topic_name = item.get_string()
+        topic_name = item.full_name
         self.selected_topic = topic_name
+        self.selected_topic_item = item
 
-        topic_type = self._get_topic_type(topic_name)
+        topic_type = item.interface.full_name
         self.selected_topic_type = topic_type or ""
         self.topic_type_row.set_subtitle(self.selected_topic_type)
 
@@ -198,11 +202,15 @@ class TopicRemapPage(ContentPage):
             self.show_toast(str(exc))
             return False
 
-        msg_class = self.ros2_connector.get_message_class(self.selected_topic)
-        if not msg_class or not msg_class.python_class:
+        if not self.selected_topic_item:
             self.show_toast("Could not determine message type")
             return False
-        msg_class_python = msg_class.python_class
+
+        try:
+            msg_class_python = get_message(self.selected_topic_item.interface.full_name)
+        except Exception as exc:
+            self.show_toast(f"Could not determine message type: {exc}")
+            return False
 
         try:
             self.remap_pub = self.ros2_connector.add_publisher(msg_class_python, target_topic)

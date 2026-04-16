@@ -37,7 +37,6 @@ from insight_gui.widgets.pref_rows import PrefRow, ButtonRow, ImageViewRow, Text
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
-# TODO do the GObject refactor for the entire page
 class ImageViewerPage(ContentPage):
     __gtype_name__ = "ImageViewerPage"
 
@@ -132,25 +131,23 @@ class ImageViewerPage(ContentPage):
         self.frequency_lbl = self.frequency_row.add_suffix_lbl("")
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_topics_store()
-        available_topics = self.ros2_connector.topics_store
-        self.available_img_topics = Gio.ListStore.new(TopicItem)
-
-        for topic in available_topics:
-            if topic.interface.full_name == "sensor_msgs/msg/Image":
-                self.available_img_topics.append(topic)
-
-        return self.available_img_topics.get_n_items() > 0
+        available_topics = self.ros2_connector.collect_topics()
+        self.available_img_topics = [
+            topic for topic in available_topics if "sensor_msgs/msg/Image" in topic.type_names
+        ]
+        return bool(self.available_img_topics)
 
     def refresh_ui(self):
         # fill the ComboBox/ListStore with available topics
-        for topic_name in self.available_img_topics:  # TODO adapt to GObject
-            self.img_topic_list_store.append(Gtk.StringObject.new(topic_name))
+        for topic in self.available_img_topics:
+            self.img_topic_list_store.append(Gtk.StringObject.new(topic.full_name))
 
         # set the selected service to the preselected one
-        found, index = self.img_topic_list_store.find(self.preselect_topic)
-        if found:
-            self.img_topic_row.set_selected(index)
+        preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
+        for index, topic in enumerate(self.available_img_topics):
+            if topic.full_name == preselect_topic:
+                self.img_topic_row.set_selected(index)
+                break
 
     def reset_ui(self):
         self.img_topic_list_store.remove_all()
@@ -211,13 +208,12 @@ class ImageViewerPage(ContentPage):
             return
 
         now = time.time()
+        frequency_text = ""
         if self._last_msg_wall_time is not None:
             dt = now - self._last_msg_wall_time
             if dt > 0:
                 freq = 1.0 / dt
-                self.frequency_lbl.set_label(f"{freq:.1f} Hz")
-        else:
-            self.frequency_lbl.set_label("")
+                frequency_text = f"{freq:.1f} Hz"
         self._last_msg_wall_time = now
 
         # apply rate limiting
@@ -225,19 +221,22 @@ class ImageViewerPage(ContentPage):
             return
 
         if self.is_streaming or not self.single_img_done:
-            # Convert sensor_msgs/Image to a BGR8 numpy array (default behavior).
-
             try:
+                # Convert sensor_msgs/Image to a BGR8 numpy array (default behavior).
                 cv_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-                self.img_row.set_image_from_opencv(cv_image)
 
             except (RuntimeError, AttributeError, CvBridgeError) as e:
-                self.show_toast(f"Error: {e}")
+                GLib.idle_add(lambda exc=e: self.show_toast(f"Error: {exc}") or GLib.SOURCE_REMOVE)
+                return
 
-            # TODO fill the info rows
-            self.width_lbl.set_label(str(msg.width))
-            self.height_lbl.set_label(str(msg.height))
-            self.encoding_lbl.set_label(str(msg.encoding))
+            def _update_image():
+                self.img_row.set_image_from_opencv(cv_image)
+                self.width_lbl.set_label(str(msg.width))
+                self.height_lbl.set_label(str(msg.height))
+                self.encoding_lbl.set_label(str(msg.encoding))
+                self.frequency_lbl.set_label(frequency_text)
+                self.single_img_done = True
+                self.last_update_time = now
+                return GLib.SOURCE_REMOVE
 
-            self.single_img_done = True
-            self.last_update_time = now
+            GLib.idle_add(_update_image)

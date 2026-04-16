@@ -24,6 +24,7 @@ import json
 import time
 
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
+from rosidl_runtime_py.utilities import get_message
 
 import gi
 
@@ -39,7 +40,6 @@ from insight_gui.widgets.pref_rows import PrefRow, TextViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
-# TODO do the GObject refactor for the entire page
 class TopicSubscriberPage(ContentPage):
     __gtype_name__ = "TopicSubscriberPage"
 
@@ -88,11 +88,11 @@ class TopicSubscriberPage(ContentPage):
                 enable_search=True,
                 use_subtitle=True,
                 css_classes=["property"],
-                expression=Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"),
+                expression=Gtk.PropertyExpression.new(TopicItem, None, "full-name"),
             )
         )
         self.topic_combo_row.connect("notify::selected-item", self.on_topic_changed)
-        self.topic_type_row = self.select_group.add_row(PrefRow(title="Service Type", css_classes=["property"]))
+        self.topic_type_row = self.select_group.add_row(PrefRow(title="Topic Type", css_classes=["property"]))
 
         def _on_factory_setup(factory, list_item):
             label = Gtk.Label(
@@ -106,7 +106,7 @@ class TopicSubscriberPage(ContentPage):
             item = list_item.get_item()
             label = list_item.get_child()
             if item and label:
-                label.set_text(item.get_string())
+                label.set_text(item.full_name)
 
         # TODO maybe also group the topics by namespaces?
         factory = Gtk.SignalListItemFactory()
@@ -146,17 +146,20 @@ class TopicSubscriberPage(ContentPage):
         # TODO add rows that display infos about the topic, like qos and rate etc
 
     def refresh_bg(self) -> bool:
-        self.ros2_connector.refresh_topics_store()
-        self.available_topics = self.ros2_connector.topics_store
-        return self.available_topics is not None and self.available_topics.get_n_items() > 0
+        self.available_topics = self.ros2_connector.collect_topics()
+        return bool(self.available_topics)
 
     def refresh_ui(self):
+        self.available_topic_model = self._create_list_store(TopicItem, self.available_topics)
         # fill the ComboBox/ListStore with available services
-        self.topic_combo_row.set_model(self.available_topics)
+        self.topic_combo_row.set_model(self.available_topic_model)
 
-        # set the selected service to the preselected one
-        found, index = self.available_topics.find(self.preselect_topic)
-        self.topic_combo_row.set_selected(index if found else 0)
+        preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
+        index = next(
+            (idx for idx, topic in enumerate(self.available_topics) if topic.full_name == preselect_topic),
+            0,
+        )
+        self.topic_combo_row.set_selected(index)
 
     def reset_ui(self):
         self.single_echo_done = True
@@ -204,7 +207,7 @@ class TopicSubscriberPage(ContentPage):
             self.topic_combo_row.set_sensitive(True)
 
     def on_topic_changed(self, *args):
-        if self.available_topics.get_n_items() <= 0:
+        if not self.available_topics:
             return
 
         self.remove_sub()
@@ -212,13 +215,13 @@ class TopicSubscriberPage(ContentPage):
         self.selected_topic: TopicItem = self.topic_combo_row.get_selected_item()
 
         if self.selected_topic:
-            msg_item = self.selected_topic.interface.msg_fields
-            if not msg_item or not msg_item.python_class:
+            self.selected_topic_type = self.selected_topic.interface.full_name
+            try:
+                msg_class = get_message(self.selected_topic_type)
+            except Exception:
                 super().show_toast(f"Could not resolve message class for {self.selected_topic.name}")
                 return
-            msg_class = msg_item.python_class
 
-            self.selected_topic_type = msg_item.full_name or self.ros2_connector.get_message_type_name(msg_item)
             self.topic_type_row.set_subtitle(self.selected_topic.interface.full_name)
             self.topic_type_row.set_subpage_link(
                 nav_view=self.nav_view,
@@ -228,7 +231,7 @@ class TopicSubscriberPage(ContentPage):
 
             # TODO maybe add special treatment for some "known topics?"
             self.ros2_sub = self.ros2_connector.add_subsciption(
-                msg_type=msg_class, topic_name=self.selected_topic.name, callback=self.topic_callback
+                msg_type=msg_class, topic_name=self.selected_topic.full_name, callback=self.topic_callback
             )
             self.single_echo_done = True
             self.on_clear_text()
@@ -277,12 +280,12 @@ class TopicSubscriberPage(ContentPage):
             elif self.msg_format == "JSON":
                 msg_text = str(json.dumps(message_to_ordereddict(self.msg_instance), indent=4))  # .replace('"', "'")
 
-            if len(msg_text) > 1000:
-                self.show_banner("Content of message very large, this may slow down the UI!")
-
             def _idle():
+                if len(msg_text) > 1000:
+                    self.show_banner("Content of message very large, this may slow down the UI!")
                 self.echo_text_view_row.set_text(msg_text)
                 self.last_update_time = now
                 self.single_echo_done = True
+                return GLib.SOURCE_REMOVE
 
             GLib.idle_add(_idle)

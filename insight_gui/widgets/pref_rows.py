@@ -32,6 +32,7 @@ from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango
 from insight_gui.widgets.buttons import ToggleButton, CopyButton
 from insight_gui.widgets.context_menu import ContextMenu
 from insight_gui.widgets.filtering_interface import FilteringInterface
+from insight_gui.utils.ros_logging import ros_log
 
 
 class PrefRow(Adw.ActionRow, FilteringInterface):
@@ -592,7 +593,7 @@ class TextViewRow(AdditionalContentRow):
     # TODO not really working
     def filter_by_tags(self, tag_names: list[str]):
         tag_table = self.text_buffer.get_tag_table()
-        tag_table.foreach(lambda tag: print(tag.get_property("name")))
+        tag_table.foreach(lambda tag: ros_log(tag.get_property("name"), level="debug"))
 
         def toggle_tag_visibility(tag):
             if tag.get_property("name") not in tag_names:
@@ -748,32 +749,32 @@ class ImageViewRow(AdditionalContentRow):
 
     def on_save_image(self, *args):
         # TODO implement saving behaviour
-        print("saving")
+        ros_log("Saving images is not implemented yet.", level="debug")
         pass
 
     def on_copy_image(self, *args):
         # TODO implement copying behaviour
-        print("copying")
+        ros_log("Copying images is not implemented yet.", level="debug")
         pass
 
     def on_zoom_in(self, *args):
         # TODO implement zoom in
-        print("zoom in")
+        ros_log("Image zoom in is not implemented yet.", level="debug")
         pass
 
     def on_zoom_out(self, *args):
         # TODO implement zoom out
-        print("zoom out")
+        ros_log("Image zoom out is not implemented yet.", level="debug")
         pass
 
     def on_fit_to_width(self, *args):
         # TODO implement fit to width
-        print("fit to width")
+        ros_log("Image fit to width is not implemented yet.", level="debug")
         pass
 
     def on_open_image(self, *args):
         # TODO implement open image
-        print("open image")
+        ros_log("Opening images is not implemented yet.", level="debug")
         pass
 
 
@@ -1242,7 +1243,7 @@ class SearchRow(Adw.PreferencesRow, FilteringInterface):
         if search_func:
             self.search_func = search_func
         else:
-            self.search_func = lambda x: print("no search func specified")
+            self.search_func = lambda _text: ros_log("No search function specified.", level="debug")
 
         for css_class in css_classes:
             super().add_css_class(css_class)

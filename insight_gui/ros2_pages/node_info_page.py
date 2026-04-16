@@ -83,27 +83,29 @@ class NodeInfoPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         # Publishers/Subscribers
-        self.publisher_list = self.ros2_connector.get_publishers_by_node(node=self.node)
-        self.subscriber_list = self.ros2_connector.get_subscribers_by_node(node=self.node)
+        self.publisher_list = self.ros2_connector.collect_publishers_by_node(node=self.node)
+        self.subscriber_list = self.ros2_connector.collect_subscribers_by_node(node=self.node)
 
         # Service Servers/Clients
-        self.service_server_list = self.ros2_connector.get_service_servers_by_node(node=self.node)
-        self.service_client_list = self.ros2_connector.get_service_clients_by_node(node=self.node)
+        self.service_server_list = self.ros2_connector.collect_service_servers_by_node(node=self.node)
+        self.service_client_list = self.ros2_connector.collect_service_clients_by_node(node=self.node)
 
         # Action Servers/Clients
-        self.action_servers_list = self.ros2_connector.get_action_servers_by_node(node=self.node)
-        self.action_clients_list = self.ros2_connector.get_action_clients_by_node(node=self.node)
+        self.action_servers_list = self.ros2_connector.collect_action_servers_by_node(node=self.node)
+        self.action_clients_list = self.ros2_connector.collect_action_clients_by_node(node=self.node)
 
         # Parameters
-        self.parameters_list = self.ros2_connector.refresh_parameters_store(node=self.node)
+        self.parameters_list = self.ros2_connector.collect_parameters(node=self.node)
 
-        return (self.publisher_list and self.publisher_list.get_n_items() or 0) + (
-            self.subscriber_list and self.subscriber_list.get_n_items() or 0
-        ) + (self.service_server_list and self.service_server_list.get_n_items() or 0) + (
-            self.service_client_list and self.service_client_list.get_n_items() or 0
-        ) + (self.action_servers_list and self.action_servers_list.get_n_items() or 0) + (
-            self.action_clients_list and self.action_clients_list.get_n_items() or 0
-        ) + (self.parameters_list and self.parameters_list.get_n_items() or 0) > 0
+        return (
+            len(self.publisher_list)
+            + len(self.subscriber_list)
+            + len(self.service_server_list)
+            + len(self.service_client_list)
+            + len(self.action_servers_list)
+            + len(self.action_clients_list)
+            + len(self.parameters_list)
+        ) > 0
 
     def refresh_ui(self):
         # TODO this is ugly
@@ -111,110 +113,106 @@ class NodeInfoPage(ContentPage):
         from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
         from insight_gui.ros2_pages.action_info_page import ActionInfoPage
 
-        # Publishers
-        for topic in self.publisher_list:
-            row = PrefRow(title=topic.full_name, subtitle=topic.interface.full_name)
-            if topic.hidden:
-                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
+        self._add_item_rows_async(
+            self.publishers_group,
+            self.publisher_list,
+            lambda topic: self._build_topic_row(topic, TopicInfoPage),
+            batch_size=8,
+            on_done=self.publishers_group.set_description_to_row_count,
+        )
+        self._add_item_rows_async(
+            self.subscribers_group,
+            self.subscriber_list,
+            lambda topic: self._build_topic_row(topic, TopicInfoPage),
+            batch_size=8,
+            on_done=self.subscribers_group.set_description_to_row_count,
+        )
+        self._add_item_rows_async(
+            self.service_servers_group,
+            self.service_server_list,
+            lambda service: self._build_service_row(service, ServiceInfoPage),
+            batch_size=8,
+            on_done=self.service_servers_group.set_description_to_row_count,
+        )
+        self._add_item_rows_async(
+            self.service_clients_group,
+            self.service_client_list,
+            lambda service: self._build_service_row(service, ServiceInfoPage),
+            batch_size=8,
+            on_done=self.service_clients_group.set_description_to_row_count,
+        )
+        self._add_item_rows_async(
+            self.action_servers_group,
+            self.action_servers_list,
+            lambda action: self._build_action_row(action, ActionInfoPage),
+            batch_size=8,
+            on_done=self.action_servers_group.set_description_to_row_count,
+        )
+        self._add_item_rows_async(
+            self.action_clients_group,
+            self.action_clients_list,
+            lambda action: self._build_action_row(action, ActionInfoPage),
+            batch_size=8,
+            on_done=self.action_clients_group.set_description_to_row_count,
+        )
+        self._add_item_rows_async(
+            self.parameters_group,
+            self.parameters_list,
+            self._build_parameter_row,
+            batch_size=8,
+            on_done=self.parameters_group.set_description_to_row_count,
+        )
 
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=TopicInfoPage,
-                subpage_kwargs={"topic": topic},
-            )
-            self.publishers_group.add_row(row)
-        self.publishers_group.set_description_to_row_count()
+    def _build_topic_row(self, topic, topic_info_page_class) -> PrefRow:
+        row = PrefRow(title=topic.full_name, subtitle=topic.interface.full_name)
+        if topic.hidden:
+            row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
 
-        # Subscribers
-        for topic in self.subscriber_list:
-            row = PrefRow(title=topic.full_name, subtitle=topic.interface.full_name)
-            if topic.hidden:
-                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=topic_info_page_class,
+            subpage_kwargs={"topic": topic},
+        )
+        return row
 
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=TopicInfoPage,
-                subpage_kwargs={"topic": topic},
-            )
-            self.subscribers_group.add_row(row)
-        self.subscribers_group.set_description_to_row_count()
+    def _build_service_row(self, service, service_info_page_class) -> PrefRow:
+        row = PrefRow(title=service.full_name, subtitle=service.interface.full_name)
+        if service.hidden:
+            row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
 
-        # Service Servers
-        for service in self.service_server_list:
-            row = PrefRow(title=service.full_name, subtitle=service.interface.full_name)
-            if service.hidden:
-                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=service_info_page_class,
+            subpage_kwargs={"service": service},
+        )
+        return row
 
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=ServiceInfoPage,
-                subpage_kwargs={"service": service},
-            )
-            self.service_servers_group.add_row(row)
-        self.service_servers_group.set_description_to_row_count()
+    def _build_action_row(self, action, action_info_page_class) -> PrefRow:
+        row = PrefRow(title=action.full_name, subtitle=action.interface.full_name)
+        if action.hidden:
+            row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden action")
 
-        # Service Clients
-        for service in self.service_client_list:
-            row = PrefRow(title=service.full_name, subtitle=service.interface.full_name)
-            if service.hidden:
-                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=action_info_page_class,
+            subpage_kwargs={"action": action},
+        )
+        return row
 
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=ServiceInfoPage,
-                subpage_kwargs={"service": service},
-            )
-            self.service_clients_group.add_row(row)
-        self.service_clients_group.set_description_to_row_count()
+    def _build_parameter_row(self, param) -> PrefRow:
+        if not param.type:
+            return PrefRow(title=param.name, subtitle="Parameter type unavailable")
 
-        # Action Servers
-        for action in self.action_servers_list:
-            row = PrefRow(title=action.full_name, subtitle=action.interface.full_name)
-            if action.hidden:
-                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden action")
+        row = PrefRow(title=param.name, subtitle=f"{param.type_str}: {param.value}")
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=ParamEditPage,
+            subpage_kwargs={"parameter": param},
+        )
+        if param.read_only:
+            row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
 
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=ActionInfoPage,
-                subpage_kwargs={"action": action},
-            )
-            self.action_servers_group.add_row(row)
-        self.action_servers_group.set_description_to_row_count()
-
-        # Action Clients
-        for action in self.action_clients_list:
-            row = PrefRow(title=action.full_name, subtitle=action.interface.full_name)
-            if action.hidden:
-                row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden action")
-
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=ActionInfoPage,
-                subpage_kwargs={"action": action},
-            )
-            self.action_clients_group.add_row(row)
-        self.action_clients_group.set_description_to_row_count()
-
-        # Parameters
-        for param in self.parameters_list:
-            # success = self.ros2_connector.update_parameter_info(parameter=param)
-            if not param.type:
-                continue  # param was not updated yet
-            # param_type = param_info["type"]
-            # param_value = param_info["value"]
-            # param_read_only = param_info["read_only"]
-
-            row = PrefRow(title=param.name, subtitle=f"{param.type_str}: {param.value}")
-            row.set_subpage_link(
-                nav_view=self.nav_view,
-                subpage_class=ParamEditPage,
-                subpage_kwargs={"parameter": param},
-            )
-            if param.read_only:
-                row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
-
-            self.parameters_group.add_row(row)
-        self.parameters_group.set_description_to_row_count()
+        return row
 
     def reset_ui(self):
         self.publishers_group.clear()

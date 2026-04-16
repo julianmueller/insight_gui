@@ -43,6 +43,8 @@ class ActionInfoPage(ContentPage):
         super().set_title(f"Action {action.full_name}")
 
         self.action = action
+        self.action_full_name = action.full_name
+        self.action_interface_full_name = action.interface.full_name
         self.detach_kwargs = {"action": action}
 
         self.open_goal_page_btn = super().add_bottom_left_btn(
@@ -67,55 +69,55 @@ class ActionInfoPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         # first, gather all nodes, to check which of them is a server/client of this action
-        self.ros2_connector.refresh_nodes_store()
-        self.available_nodes = self.ros2_connector.nodes_store
-        return self.available_nodes is not None and self.available_nodes.get_n_items() > 0
+        self.server_nodes = []
+        self.client_nodes = []
+
+        for node in self.ros2_connector.collect_nodes():
+            servers = self.ros2_connector.collect_action_servers_by_node(node=node)
+            if any(server.full_name == self.action_full_name for server in servers):
+                self.server_nodes.append(node)
+
+            clients = self.ros2_connector.collect_action_clients_by_node(node=node)
+            if any(client.full_name == self.action_full_name for client in clients):
+                self.client_nodes.append(node)
+
+        return bool(self.server_nodes or self.client_nodes)
 
     def refresh_ui(self):
         # create a row for the action type # TODO maybe rather add the request/response/feedback as rows?
-        interface_type_row = PrefRow(title=self.action.interface.full_name)
+        interface_type_row = PrefRow(title=self.action_interface_full_name)
         interface_type_row.set_subpage_link(
             nav_view=self.nav_view,
             subpage_class=InterfaceInfoPage,
             subpage_kwargs={"interface": self.action.interface},
         )
-        self.action_interface_type_group.add_row(interface_type_row)
+        self._add_rows_async(self.action_interface_type_group, (interface_type_row,), batch_size=1)
+        self._add_item_rows_async(
+            self.action_servers_group,
+            self.server_nodes,
+            self._build_node_row,
+            batch_size=8,
+            on_done=self.action_servers_group.set_description_to_row_count,
+        )
+        self._add_item_rows_async(
+            self.action_clients_group,
+            self.client_nodes,
+            self._build_node_row,
+            batch_size=8,
+            on_done=self.action_clients_group.set_description_to_row_count,
+        )
 
-        # populate the servers and clients
-        for node in self.available_nodes:
-            # add those nodes, that are servers to the action # TODO this could probably be optimized
-            action_servers_list = self.ros2_connector.get_action_servers_by_node(node=node)
-            found, index = action_servers_list.find(self.action)
-            if found:
-                row = PrefRow(title=node.name, subtitle=node.full_name)
-                if node.hidden:
-                    row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden node")
+    def _build_node_row(self, node) -> PrefRow:
+        row = PrefRow(title=node.name, subtitle=node.full_name)
+        if node.hidden:
+            row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden node")
 
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=NodeInfoPage,
-                    subpage_kwargs={"node": node},
-                )
-                self.action_servers_group.add_row(row)
-
-            # add those nodes, that are clients to the action # TODO this could probably be optimized
-            action_clients_list = self.ros2_connector.get_action_clients_by_node(node=node)
-            found, index = action_clients_list.find(self.action)
-            if found:
-                row = PrefRow(title=node.name, subtitle=node.full_name)
-                if node.hidden:
-                    row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden node")
-
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=NodeInfoPage,
-                    subpage_kwargs={"node": node},
-                )
-                self.action_clients_group.add_row(row)
-
-        # add the counts as descriptions
-        self.action_servers_group.set_description_to_row_count()
-        self.action_clients_group.set_description_to_row_count()
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=NodeInfoPage,
+            subpage_kwargs={"node": node},
+        )
+        return row
 
     def reset_ui(self):
         self.action_interface_type_group.clear()

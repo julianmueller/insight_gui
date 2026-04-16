@@ -23,4 +23,3 @@
 
 class RefreshCancelled(Exception):
     """Raised when a refresh was canceled before completion."""
-

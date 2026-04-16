@@ -21,6 +21,7 @@
 # =============================================================================
 
 import yaml
+from threading import Thread
 
 import rclpy
 
@@ -33,7 +34,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio
+from gi.repository import Gtk, Adw, Gio, GLib
 
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.exceptions import RefreshCancelled
@@ -109,7 +110,7 @@ class TransformsPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         cancel_event = self._refresh_cancel_event
-        super().show_toast("Listening to tf data for 5.0 seconds...")
+        GLib.idle_add(self.show_toast, "Listening to tf data for 5.0 seconds...")
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self.ros2_connector.ros2_node)
         if self.wait_for_refresh_cancel(timeout=5.0, cancel_event=cancel_event):
@@ -129,63 +130,67 @@ class TransformsPage(ContentPage):
                 trans: TransformStamped = self.tf_buffer.lookup_transform(parent_frame, frame_name, rclpy.time.Time())
                 self.frames_dict[frame_name]["transform"] = trans
 
-            self.calc_button.set_sensitive(True)
             return True
         else:
-            self.frames_group.set_placeholder_text("No frames found. Refresh to try again.")
-            self.calc_button.set_sensitive(False)
             return False
 
     def refresh_ui(self):
-        # create an expander row for each frame and add all the info as rows
-        frame_rows = []
-        for frame_name, frame_info in self.frames_dict.items():
-            expander_row: Adw.ExpanderRow = Adw.ExpanderRow(title=frame_name)
-
-            parent_frame_row = PrefRow(title="Parent frame")
-            parent_frame_row.add_suffix_lbl(frame_info["parent"])
-            expander_row.add_row(parent_frame_row)
-
-            tf_row = TextViewRow(title="Transform", show_copy_btn=True)
-            tf_row.set_text(message_to_yaml(frame_info["transform"]))
-            expander_row.add_row(tf_row)
-
-            broadcaster_row = PrefRow(title="Broadcaster")
-            broadcaster_row.add_suffix_lbl(frame_info["broadcaster"])
-            expander_row.add_row(broadcaster_row)
-
-            rate_row = PrefRow(title="Rate")
-            rate_row.add_suffix_lbl(str(frame_info["rate"]))
-            expander_row.add_row(rate_row)
-
-            most_recent_transform_row = PrefRow(title="Most recent transform")
-            most_recent_transform_row.add_suffix_lbl(str(frame_info["most_recent_transform"]))
-            expander_row.add_row(most_recent_transform_row)
-
-            oldest_transform_row = PrefRow(title="Oldest transform")
-            oldest_transform_row.add_suffix_lbl(str(frame_info["oldest_transform"]))
-            expander_row.add_row(oldest_transform_row)
-
-            buffer_length_row = PrefRow(title="Buffer length")
-            buffer_length_row.add_suffix_lbl(str(frame_info["buffer_length"]))
-            expander_row.add_row(buffer_length_row)
-
-            frame_rows.append(expander_row)
+        frame_items = sorted(self.frames_dict.items())
+        for frame_name, _frame_info in frame_items:
             self.frames_list_store.append(Gtk.StringObject.new(frame_name))
 
-        # add all rows to the group
-        self.frames_group.add_rows(frame_rows)
+        self._add_item_rows_async(
+            self.frames_group,
+            frame_items,
+            lambda frame_item: self._build_frame_row(*frame_item),
+            batch_size=4,
+        )
         self.frames_group.set_description(f"Lookup time: {(self.lookup_time.nanoseconds / 1e9):.2f}")
+        self.calc_button.set_sensitive(True)
 
         # Set the Gio.ListModel on the ComboRow
         if self.frames_list_store.get_n_items() > 0:
             self.source_frame_row.set_selected(0)
             self.target_frame_row.set_selected(0)
 
+    def _build_frame_row(self, frame_name: str, frame_info: dict) -> Adw.ExpanderRow:
+        expander_row = Adw.ExpanderRow(title=frame_name)
+
+        parent_frame_row = PrefRow(title="Parent frame")
+        parent_frame_row.add_suffix_lbl(frame_info["parent"])
+        expander_row.add_row(parent_frame_row)
+
+        tf_row = TextViewRow(title="Transform", show_copy_btn=True)
+        tf_row.set_text(message_to_yaml(frame_info["transform"]))
+        expander_row.add_row(tf_row)
+
+        broadcaster_row = PrefRow(title="Broadcaster")
+        broadcaster_row.add_suffix_lbl(frame_info["broadcaster"])
+        expander_row.add_row(broadcaster_row)
+
+        rate_row = PrefRow(title="Rate")
+        rate_row.add_suffix_lbl(str(frame_info["rate"]))
+        expander_row.add_row(rate_row)
+
+        most_recent_transform_row = PrefRow(title="Most recent transform")
+        most_recent_transform_row.add_suffix_lbl(str(frame_info["most_recent_transform"]))
+        expander_row.add_row(most_recent_transform_row)
+
+        oldest_transform_row = PrefRow(title="Oldest transform")
+        oldest_transform_row.add_suffix_lbl(str(frame_info["oldest_transform"]))
+        expander_row.add_row(oldest_transform_row)
+
+        buffer_length_row = PrefRow(title="Buffer length")
+        buffer_length_row.add_suffix_lbl(str(frame_info["buffer_length"]))
+        expander_row.add_row(buffer_length_row)
+
+        return expander_row
+
     def reset_ui(self):
         self.frames_group.clear()
         self.result_text_row.set_visible(False)
         self.frames_list_store.remove_all()
+        self.calc_button.set_sensitive(False)
 
     def on_switch_frames(self, *args):
         if len(self.frames_dict) == 0:
@@ -207,25 +212,35 @@ class TransformsPage(ContentPage):
             super().show_toast("'source frame' and 'target frame' cannot be the same")
             return
 
-        try:
-            # Lookup transform
-            transform: TransformStamped = self.tf_buffer.lookup_transform(
-                target_frame=source_frame,
-                source_frame=target_frame,
-                time=rclpy.time.Time(),
-                timeout=rclpy.duration.Duration(seconds=5),
-            )
+        self.calc_button.set_sensitive(False)
 
-            # TODO check if transform is valid, eg frames are connected in some way
-            # and if not give an error like "not connected" etc
+        def _worker():
+            try:
+                transform: TransformStamped = self.tf_buffer.lookup_transform(
+                    target_frame=source_frame,
+                    source_frame=target_frame,
+                    time=rclpy.time.Time(),
+                    timeout=rclpy.duration.Duration(seconds=5),
+                )
+                text = message_to_yaml(transform.transform)
+                error = None
+            except (LookupException, ConnectivityException, ExtrapolationException) as exc:
+                text = ""
+                error = exc
 
-            text = message_to_yaml(transform.transform)
+            def _finish():
+                self.calc_button.set_sensitive(True)
+                if error:
+                    self.show_toast(f"Could not calculate transform: {error}")
+                    self.result_text_row.set_text("")
+                    self.result_text_row.set_visible(False)
+                    return GLib.SOURCE_REMOVE
 
-            self.result_text_row.set_subtitle(f"from <{source_frame}> to <{target_frame}>")
-            self.result_text_row.set_text(text)
-            self.result_text_row.set_visible(True)
+                self.result_text_row.set_subtitle(f"from <{source_frame}> to <{target_frame}>")
+                self.result_text_row.set_text(text)
+                self.result_text_row.set_visible(True)
+                return GLib.SOURCE_REMOVE
 
-        except (LookupException, ConnectivityException, ExtrapolationException) as e:
-            super().show_toast(f"Could not calculate transform: {e}")
-            self.result_text_row.set_text("")
-            self.result_text_row.set_visible(False)
+            GLib.idle_add(_finish)
+
+        Thread(target=_worker, daemon=True).start()

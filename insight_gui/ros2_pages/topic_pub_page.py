@@ -49,7 +49,6 @@ from insight_gui.widgets.buttons import PlayPauseButton
 from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
-# TODO do the GObject refactor for the entire page
 class TopicPublisherPage(ContentPage):
     __gtype_name__ = "TopicPublisherPage"
 
@@ -65,6 +64,7 @@ class TopicPublisherPage(ContentPage):
         self.single_pub_done = True
         self.ros2_pub = None
         self.topic_name = None
+        self.topic_type_name = ""
         self.msg_class = None
         self.msg_instance = None
         self.publishing_rate = 10.0
@@ -181,11 +181,8 @@ class TopicPublisherPage(ContentPage):
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()  # this could move to the ros2_connector and be cached
-        self.ros2_connector.refresh_topics_store()
-        self.available_topics = self.ros2_connector.topics_store
-        return (
-            self.available_topics is not None and self.available_topics.get_n_items() > 0
-        )  # len(self.available_msgs) + len(self.available_topics) > 0
+        self.available_topics = self.ros2_connector.collect_topics()
+        return bool(self.available_topics)  # len(self.available_msgs) + len(self.available_topics) > 0
 
     def refresh_ui(self):
         self.topic_row.list_store.remove_all()
@@ -198,11 +195,9 @@ class TopicPublisherPage(ContentPage):
                 msg_type_full_name = f"{pkg_name}/{msg}"
                 self.topic_type_list_store.append(Gtk.StringObject.new(msg_type_full_name))
 
-        # set the selected service to the preselected one
-        found, index = self.available_topics.find(self.preselect_topic)
-        # found, found_index = self.topic_list_store.find(Gtk.StringObject.new(self.preselect_topic))
-        if found >= 0:
-            self.topic_row.set_text(self.preselect_topic)
+        preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
+        if preselect_topic and any(topic.full_name == preselect_topic for topic in self.available_topics):
+            self.topic_row.set_text(preselect_topic)
         else:
             self.topic_row.set_text("")
 
@@ -324,12 +319,12 @@ class TopicPublisherPage(ContentPage):
 
     def on_topic_suggestion_applied(self, _, item_text: str):
         try:
-            msg_item = self.ros2_connector.get_message_class(topic_name=item_text)
-            if not msg_item or not msg_item.python_class:
+            topic = next((topic for topic in self.available_topics if topic.full_name == item_text), None)
+            if not topic:
                 super().show_toast(f"Could not resolve type for topic {item_text}")
                 return
 
-            selected_topic_type = msg_item.full_name or self.ros2_connector.get_message_type_name(msg_item)
+            selected_topic_type = topic.interface.full_name
             found_index = find_str_in_list_store(self.topic_type_list_store, selected_topic_type)
             if found_index >= 0:
                 self.topic_type_row.set_selected(found_index)
@@ -339,7 +334,8 @@ class TopicPublisherPage(ContentPage):
                 super().show_toast(f"There seems to be a problem with the topic type: {selected_topic_type}")
                 return
 
-            self.msg_class = msg_item.python_class
+            self.msg_class = get_message(selected_topic_type)
+            self.topic_type_name = selected_topic_type
             self.topic_name = self.topic_row.get_text()  # equals item_text
             self.create_pub()
 
@@ -358,6 +354,7 @@ class TopicPublisherPage(ContentPage):
 
         if topic_type_str:
             self.msg_class = get_message(topic_type_str)
+            self.topic_type_name = topic_type_str
             self.msg_instance = self.msg_class()
             self.create_pub()
             self.update_pub_text()
@@ -385,7 +382,7 @@ class TopicPublisherPage(ContentPage):
             return False
 
         # check if the topic name is already published with a different type
-        available_topics = self.ros2_connector.refresh_topics_store()
+        available_topics = getattr(self, "available_topics", None) or self.ros2_connector.collect_topics()
         for topic in available_topics or []:
             if topic_name == topic.full_name and topic_name != self.topic_name:
                 if topic_type not in topic.type_names:
@@ -399,9 +396,7 @@ class TopicPublisherPage(ContentPage):
         if not self.msg_class or not self.topic_name:
             return
 
-        if self.check_topic_name_and_type(
-            self.topic_name, self.ros2_connector.get_message_type_name(self.msg_class), toast=True
-        ):
+        if self.check_topic_name_and_type(self.topic_name, self.topic_type_name, toast=True):
             self.enable_publish_btn()
         else:
             self.disable_publish_btn()

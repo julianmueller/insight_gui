@@ -95,64 +95,52 @@ class InterfaceBrowserPage(ContentPage):
         # add all the message interfaces
         for pkg_name, msgs_list in sorted(self.available_msgs.items()):
             msg_group = self.pref_page.add_group(title=pkg_name)
-
-            msg_rows = []
-            for msg in sorted(msgs_list):
-                msg_type_full_name = f"{pkg_name}/{msg}"
-                msg_type = msg.removeprefix("msg/")  # remove namespace
-
-                row = PrefRow(title=msg_type, subtitle=msg_type_full_name, tags=["msg"])
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=InterfaceInfoPage,
-                    subpage_kwargs={"interface_full_name": msg_type_full_name},
-                )
-                msg_rows.append(row)
-            msg_group.add_rows(msg_rows)
+            self._add_item_rows_async(
+                msg_group,
+                sorted(msgs_list),
+                lambda msg, pkg_name=pkg_name: self._build_interface_row(pkg_name, msg, "msg"),
+                batch_size=20,
+            )
 
         # add all the service interfaces
         for pkg_name, srvs_list in sorted(self.available_srvs.items()):
             srv_group = self.pref_page.add_group(title=pkg_name)
-
-            srv_rows = []
-            for srv in sorted(srvs_list):
-                srv_type_full_name = f"{pkg_name}/{srv}"
-                srv_type = srv.removeprefix("srv/")  # remove namespace
-
-                # TODO add some kind of a label that a row is a service interface
-                row = PrefRow(title=srv_type, subtitle=srv_type_full_name, tags=["srv"])
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=InterfaceInfoPage,
-                    subpage_kwargs={"interface_full_name": srv_type_full_name},
-                )
-                srv_rows.append(row)
-            srv_group.add_rows(srv_rows)
+            self._add_item_rows_async(
+                srv_group,
+                sorted(srvs_list),
+                lambda srv, pkg_name=pkg_name: self._build_interface_row(pkg_name, srv, "srv"),
+                batch_size=20,
+            )
 
         # add all the action interfaces
         for pkg_name, actions_list in sorted(self.available_action_msgs.items()):
             actions_group = self.pref_page.add_group(title=pkg_name)
-
-            act_rows = []
-            for act in sorted(actions_list):
-                act_type_full_name = f"{pkg_name}/{act}"
-                act_type = act.removeprefix("msg/")  # remove namespace
-
-                # TODO add some kind of a label that a row is an action interface
-                row = PrefRow(title=act_type, subtitle=act_type_full_name, tags=["action"])
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=InterfaceInfoPage,
-                    subpage_kwargs={"interface_full_name": act_type_full_name},
-                )
-                act_rows.append(row)
-            actions_group.add_rows(act_rows)
+            self._add_item_rows_async(
+                actions_group,
+                sorted(actions_list),
+                lambda action, pkg_name=pkg_name: self._build_interface_row(pkg_name, action, "action"),
+                batch_size=20,
+            )
 
         # sort the groups alphabetically by title
         self.pref_page.sort_groups()
 
         if self.pref_page.num_groups == 0:
             self.pref_page.set_placeholder_text("No interfaces found. Refresh to try again.")
+
+    def _build_interface_row(self, pkg_name: str, interface_name: str, interface_tag: str) -> PrefRow:
+        interface_full_name = f"{pkg_name}/{interface_name}"
+        row = PrefRow(
+            title=interface_name.removeprefix("msg/").removeprefix("srv/").removeprefix("action/"),
+            subtitle=interface_full_name,
+            tags=[interface_tag],
+        )
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=InterfaceInfoPage,
+            subpage_kwargs={"interface_full_name": interface_full_name},
+        )
+        return row
 
     def reset_ui(self):
         self.pref_page.clear()
@@ -162,4 +150,4 @@ class InterfaceBrowserPage(ContentPage):
         self.add_conditional_filter_tag("srv", self.filter_srvs_btn.get_active())
         self.add_conditional_filter_tag("action", self.filter_actions_btn.get_active())
 
-        self.reapply_filters()
+        self.apply_filters()

@@ -79,7 +79,7 @@ class LaunchListPage(ContentPage):
             return len(self.pkgs_with_launch_files) > 0
 
         except Exception as e:
-            print(f"Error finding launch packages: {e}")
+            self.ros2_connector.log(f"Error finding launch packages: {e}", level="error")
             return False
 
     def refresh_ui(self):
@@ -92,19 +92,12 @@ class LaunchListPage(ContentPage):
                 group = self.pref_page.add_group(title=pkg_name, description=pkg_info["path"])
                 self.pkg_launch_groups[pkg_name] = group
 
-            rows = []
-            for launch_file_path in pkg_info["launch_files"]:
-                launch_file_name = Path(launch_file_path).name
-
-                row = PrefRow(title=launch_file_name, subtitle=launch_file_path)
-                row.set_subpage_link(
-                    nav_view=self.nav_view,
-                    subpage_class=LaunchInfoPage,
-                    subpage_kwargs={"pkg_name": pkg_name, "launch_file_path": launch_file_path},
-                )
-                rows.append(row)
-
-            group.add_rows(rows)
+            self._add_item_rows_async(
+                group,
+                pkg_info["launch_files"],
+                lambda launch_file_path, pkg_name=pkg_name: self._build_launch_row(pkg_name, launch_file_path),
+                batch_size=10,
+            )
 
             # set the subtitle of the group to the package path and number of launch files
             num_launch_files = len(pkg_info["launch_files"])
@@ -113,6 +106,16 @@ class LaunchListPage(ContentPage):
             )
 
         self.pref_page.sort_groups()
+
+    def _build_launch_row(self, pkg_name: str, launch_file_path: str) -> PrefRow:
+        launch_file_name = Path(launch_file_path).name
+        row = PrefRow(title=launch_file_name, subtitle=launch_file_path)
+        row.set_subpage_link(
+            nav_view=self.nav_view,
+            subpage_class=LaunchInfoPage,
+            subpage_kwargs={"pkg_name": pkg_name, "launch_file_path": launch_file_path},
+        )
+        return row
 
     def reset_ui(self):
         for group in reversed(self.pkg_launch_groups.values()):

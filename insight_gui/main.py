@@ -26,6 +26,8 @@ import sys
 import signal
 import argparse
 
+from insight_gui.utils.ros_logging import ros_log
+
 # from insight_gui.application import InsightApplication
 
 
@@ -49,12 +51,6 @@ def main(args=None):
         default=False,
     )
     parser.add_argument(
-        "--dummy-ros2",
-        help="Use a dummy ROS2 connector that simulates ROS2 interactions without requiring a real ROS2 environment",
-        action="store_true",
-        default=False,
-    )
-    parser.add_argument(
         "--debugpy",
         help="Enable debugpy and wait for debugger to attach on port 5678",
         default=False,
@@ -65,32 +61,26 @@ def main(args=None):
     # Handle starting page argument
     start_page_id = None
     if args.page:
-        from insight_gui.pages import all_pages, get_all_page_ids
+        from insight_gui.pages import get_all_page_ids
 
         page_ids = get_all_page_ids()
         if args.page not in page_ids:
-            print(f"Error: Page ID '{args.page}' not found. Use '--list-pages' to see all available pages.")
+            ros_log(f"Error: Page ID '{args.page}' not found. Use '--list-pages' to see all available pages.", "error")
             sys.exit(1)
 
         start_page_id = args.page
 
     # list all available pages and exit
     if args.list_pages:
-        from insight_gui.pages import all_pages, get_all_page_ids
+        from insight_gui.pages import all_pages
 
-        print("Available pages ('title' # ID):\n")
+        lines = ["Available pages ('title' # ID):", ""]
         for group in all_pages:
-            print(f"{group.title}")
+            lines.append(f"{group.title}")
             for page in group.pages:
-                print(f"\t'{page.title}' # {page.page_id}")
+                lines.append(f"\t'{page.title}' # {page.page_id}")
+        ros_log("\n".join(lines), "info")
         sys.exit(0)
-
-    # Handle dummy ROS2 connector argument
-    dummy_ros2 = False
-    if args.dummy_ros2:
-        print("Using dummy ROS2 connector. No real ROS2 interactions will occur.")
-        # The actual switching to the dummy connector is handled in the InsightApplication class
-        dummy_ros2 = True
 
     # use debugpy for remote debugging if requested
     if args.debugpy:
@@ -98,23 +88,25 @@ def main(args=None):
             # Make sure to install debugpy with pip if not already installed
             import debugpy
 
-            print("Starting debugpy... Waiting for debugger to attach.")
+            ros_log("Starting debugpy... Waiting for debugger to attach.", "info")
             debugpy.listen(("0.0.0.0", 5678))
             debugpy.wait_for_client()
         except ImportError:
-            print("debugpy is not installed. Please install it with 'pip install debugpy'")
+            ros_log("debugpy is not installed. Please install it with 'pip install debugpy'", "error")
 
     # Start the application
+    gui_app = None
     try:
         from insight_gui.application import InsightApplication
 
-        gui_app = InsightApplication(start_page_id=start_page_id, dummy_ros2=dummy_ros2)
+        gui_app = InsightApplication(start_page_id=start_page_id)
         signal.signal(signal.SIGINT, gui_app.shutdown)
         gui_app.run(None)
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-        gui_app.shutdown()
+        ros_log(f"An error occurred: {e}", "error")
+        if gui_app:
+            gui_app.shutdown()
 
 
 if __name__ == "__main__":

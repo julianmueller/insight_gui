@@ -71,112 +71,128 @@ class DoctorPage(ContentPage):
         for report in self.reports:
             if report.name == "NETWORK CONFIGURATION":
                 # TODO these should be somehow grouped by network device
-                for item in report.items:
-                    self.network_config_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
+                self._add_item_rows_async(self.network_config_group, report.items, self._build_info_row)
 
-                if self.network_config_group.num_rows == 0:
+                if not report.items:
                     self.network_config_group.set_placeholder_text(
                         "No network configuration found. Refresh to try again."
                     )
 
             elif report.name == "PACKAGE VERSIONS":
-                rows = []
-                for item in sorted(report.items):
-                    row: PrefRow = PrefRow(title=item[0], subtitle=item[1])
+                self._add_item_rows_async(
+                    self.package_versions_group,
+                    sorted(report.items),
+                    self._build_package_version_row,
+                )
 
-                    re_match = re.match(r"^latest\=([^,]+), local\=([^,]+)$", item[1])
-                    latest_version = re_match.group(1).strip()
-                    local_version = re_match.group(2).strip()
-                    if latest_version != local_version:
-                        row.add_prefix_icon("software-update-available-symbolic", tooltip_text="Update available")
-                    rows.append(row)
-                self.package_versions_group.add_rows(rows)
-
-                if self.package_versions_group.num_rows == 0:
+                if not report.items:
                     self.package_versions_group.set_placeholder_text("No package versions found.")
 
             elif report.name == "PLATFORM INFORMATION":
-                rows = []
-                for item in sorted(report.items):
-                    rows.append(PrefRow(title=item[0], subtitle=item[1]))
-                self.platform_info_group.add_rows(rows)
+                self._add_item_rows_async(self.platform_info_group, sorted(report.items), self._build_info_row)
 
-                if self.platform_info_group.num_rows == 0:
+                if not report.items:
                     self.platform_info_group.set_placeholder_text(
                         "No platform information found. Refresh to try again."
                     )
 
             elif report.name == "QOS COMPATIBILITY LIST":
                 if len(report.items) == 1:
-                    self.qos_compatibility_group.add_row(PrefRow(title=report.items[0][0], subtitle=report.items[0][1]))
+                    self._add_item_rows_async(
+                        self.qos_compatibility_group,
+                        report.items,
+                        self._build_info_row,
+                        batch_size=1,
+                    )
 
                 else:
-                    rows = []
-                    for i in range(0, len(report.items), 4):
-                        # print(i)
-                        topic_type = report.items[i]
-                        pub_node = report.items[i + 1]
-                        sub_node = report.items[i + 2]
-                        compatibility_status = report.items[i + 3]
+                    self._add_item_rows_async(
+                        self.qos_compatibility_group,
+                        self._iter_report_chunks(report.items, 4),
+                        self._build_qos_compatibility_row,
+                    )
 
-                        row = PrefRow(title=topic_type[1])
-                        row.set_use_markup(True)
-                        row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
-                        if compatibility_status[1] == "OK":
-                            row.add_prefix_icon("check-symbolic")
-                        else:
-                            row.add_prefix_icon("dialog-error-symbolic")
-                        rows.append(row)
-                    self.qos_compatibility_group.add_rows(rows)
-
-                # for item in report.items:
-                #     self.qos_compatibility_group.add_row(PrefRow(title=item[0], subtitle=item[1]))
-
-                if self.qos_compatibility_group.num_rows == 0:
+                if not report.items:
                     self.qos_compatibility_group.set_placeholder_text(
                         "No QoS compatibility list found. Refresh to try again."
                     )
 
             elif report.name == "RMW MIDDLEWARE":
-                rows = []
-                for item in sorted(report.items):
-                    rows.append(PrefRow(title=item[0], subtitle=item[1]))
-                self.rmw_info_group.add_rows(rows)
+                self._add_item_rows_async(self.rmw_info_group, sorted(report.items), self._build_info_row)
 
-                if self.rmw_info_group.num_rows == 0:
+                if not report.items:
                     self.rmw_info_group.set_placeholder_text("No RMW middleware found. Refresh to try again.")
 
             elif report.name == "ROS 2 INFORMATION":
-                rows = []
-                for item in report.items:
-                    row = PrefRow(title=item[0], subtitle=item[1])
-                    row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.toast_overlay))
-                    rows.append(row)
-                self.ros2_info_group.add_rows(rows)
+                self._add_item_rows_async(self.ros2_info_group, report.items, self._build_ros2_info_row)
 
-                if self.ros2_info_group.num_rows == 0:
+                if not report.items:
                     self.ros2_info_group.set_placeholder_text("No ROS 2 information found. Refresh to try again.")
 
             elif report.name == "TOPIC LIST":
-                rows = []
-                for i in range(0, len(report.items), 4):
-                    topic_type = report.items[i]
-                    pub_node = report.items[i + 1]
-                    sub_node = report.items[i + 2]
-                    compatibility_status = report.items[i + 3]
+                self._add_item_rows_async(
+                    self.topic_list_group,
+                    self._iter_report_chunks(report.items, 4),
+                    self._build_topic_list_row,
+                )
 
-                    row = PrefRow(title=topic_type[1])
-                    row.set_use_markup(True)
-                    row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
-                    if compatibility_status[1] == "OK":
-                        row.add_prefix_icon("checkbox-checked-symbolic")
-                    else:
-                        row.add_prefix_icon("dialog-error-symbolic")
-                    rows.append(row)
-                self.topic_list_group.add_rows(rows)
-
-                if self.topic_list_group.num_rows == 0:
+                if not report.items:
                     self.topic_list_group.set_placeholder_text("No topics found. Refresh to try again.")
+
+    @staticmethod
+    def _iter_report_chunks(items, chunk_size: int):
+        return [
+            tuple(items[i:i + chunk_size])
+            for i in range(0, len(items), chunk_size)
+            if len(items[i:i + chunk_size]) == chunk_size
+        ]
+
+    @staticmethod
+    def _build_info_row(item) -> PrefRow:
+        return PrefRow(title=item[0], subtitle=item[1])
+
+    @staticmethod
+    def _build_package_version_row(item) -> PrefRow:
+        row = PrefRow(title=item[0], subtitle=item[1])
+
+        re_match = re.match(r"^latest\=([^,]+), local\=([^,]+)$", item[1])
+        if re_match is None:
+            return row
+
+        latest_version = re_match.group(1).strip()
+        local_version = re_match.group(2).strip()
+        if latest_version != local_version:
+            row.add_prefix_icon("software-update-available-symbolic", tooltip_text="Update available")
+        return row
+
+    def _build_ros2_info_row(self, item) -> PrefRow:
+        row = self._build_info_row(item)
+        row.add_suffix(CopyButton(copy_text=row.get_subtitle(), toast_host=self.toast_overlay))
+        return row
+
+    @staticmethod
+    def _build_qos_compatibility_row(items) -> PrefRow:
+        topic_type, pub_node, sub_node, compatibility_status = items
+        row = PrefRow(title=topic_type[1])
+        row.set_use_markup(True)
+        row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
+        if compatibility_status[1] == "OK":
+            row.add_prefix_icon("check-symbolic")
+        else:
+            row.add_prefix_icon("dialog-error-symbolic")
+        return row
+
+    @staticmethod
+    def _build_topic_list_row(items) -> PrefRow:
+        topic_type, pub_node, sub_node, compatibility_status = items
+        row = PrefRow(title=topic_type[1])
+        row.set_use_markup(True)
+        row.set_subtitle(subtitle=f"publisher_node: {pub_node[1]}\nsubscriber_node: {sub_node[1]}")
+        if compatibility_status[1] == "OK":
+            row.add_prefix_icon("checkbox-checked-symbolic")
+        else:
+            row.add_prefix_icon("dialog-error-symbolic")
+        return row
 
     def reset_ui(self):
         self.network_config_group.clear()

@@ -33,7 +33,6 @@ from gi.repository import Gtk, Adw, GObject, GLib, Gio
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.breadcrumbs import BreadcrumbsBar
-from insight_gui.exceptions import RefreshCancelled
 
 
 class ContentPage(Adw.NavigationPage):
@@ -114,8 +113,6 @@ class ContentPage(Adw.NavigationPage):
         # tags and search_text for filtering
         self.filter_tags: set[str] = set()
         self.search_text: str = ""
-        self._latest_refresh_successful = True
-        self._refresh_cancelled_by_user = False
 
         if self.detachable:
             self.detach_kwargs: dict = {}
@@ -132,11 +129,13 @@ class ContentPage(Adw.NavigationPage):
 
             #     self.detach_kwargs[arg] = _locals[arg]
 
-        self.refreshing = False
+        self._refreshing = False
         self.refresh_fail_text = "Refresh yielded no results"
-        self._active_refresh_token: object | None = None
-        self._refresh_cancel_event: threading.Event = threading.Event()
-        self._refresh_future: concurrent.futures.Future | None = None
+        self._refresh_ui_deferred = False
+        self._refresh_pending_jobs = 0
+        self._refresh_bg_success = True
+        self._refresh_bg_error: Exception | None = None
+        self._refresh_cancel_event = threading.Event()
 
         self.pref_page = PrefPage()
         self.pref_page.connect("group-filtered", self._on_groups_filtered_changed)
@@ -162,135 +161,63 @@ class ContentPage(Adw.NavigationPage):
 
     def on_unrealize(self, *args):
         self.is_realized = False
-        self.deprioritize_refresh()
 
     def on_map(self, *args):
         self.is_mapped = True
 
     def on_unmap(self, *args):
         self.is_mapped = False
-        self.deprioritize_refresh()
-
-    def cancel_refresh(self):
-        """Request cancellation of the current refresh, if any, and reset UI state."""
-        if self.refreshing:
-            self._end_refresh_ui()
-        if self._refresh_future:
-            self._refresh_future.cancel()
-        self._refresh_cancelled_by_user = True
-        self._refresh_cancel_event.set()
-        self._active_refresh_token = None
-
-    def deprioritize_refresh(self):
-        """Lower priority of the current refresh so newer pages can run first."""
-        self._refresh_cancel_event.set()
-        if self._refresh_future:
-            self.app.reprioritize_worker_future(self._refresh_future, priority=self.app.WORKER_PRIORITY_LOW)
-
-    def is_refresh_cancelled(self, *, cancel_event: threading.Event | None = None) -> bool:
-        event = cancel_event or getattr(self, "_refresh_cancel_event", None)
-        return bool(event and event.is_set())
-
-    def wait_for_refresh_cancel(
-        self, timeout: float | None = None, *, cancel_event: threading.Event | None = None
-    ) -> bool:
-        """Block up to ``timeout`` seconds, returning True if cancellation is requested."""
-        event = cancel_event or getattr(self, "_refresh_cancel_event", None)
-        if event is None:
-            return False
-        return event.wait(timeout)
 
     # TODO maybe change the whole refresh thing, so that there is only one refresh method, which always happens in the
     # bg and every update on the ui is performed with 'idle_add'. with this, the refresh is progressive and not all at
     # once, which might again freeze the ui, when many many ui changes all need to happen at once
     def refresh(self):
-        if self.refreshing:
+        if self._refreshing:
             return
 
-        cancel_event = threading.Event()
-        refresh_token = object()
-        self._refresh_cancel_event = cancel_event
-        self._active_refresh_token = refresh_token
-        self._refresh_cancelled_by_user = False
+        self._refresh_cancel_event.clear()
         self._start_refresh_ui()
-        self._latest_refresh_successful = True
+        self._refresh_bg_success = True
+        self._refresh_bg_error = None
 
-        def _finish(
-            payload: object, error: Exception | None = None, *, refresh_token=refresh_token, cancel_event=cancel_event
-        ):
-            if refresh_token is not self._active_refresh_token:
-                return GLib.SOURCE_REMOVE
-            if cancel_event.is_set() and (self._refresh_cancelled_by_user or not self.is_mapped):
-                self._end_refresh_ui()
-                return GLib.SOURCE_REMOVE
-            # retry later if not yet realized
-            if not self.is_realized:
-                GLib.timeout_add(100, _finish, payload, error)
-                return GLib.SOURCE_REMOVE
+        task = Gio.Task.new(self, None, self._on_refresh_done)
+        task.run_in_thread(self._refresh_worker)
 
-            try:
-                if error:
-                    self.show_toast(f"Refresh failed! Error: {error}")
-                    self.ros2_connector.log(f"Refresh failed! Error: {error}", level="error")
-                    self._latest_refresh_successful = False
-                    payload = None
-
-                # Treat explicit False as a failure signal; everything else counts as success
-                if payload is False:
-                    self.show_banner(self.refresh_fail_text)
-                    self._latest_refresh_successful = False
-                    return GLib.SOURCE_REMOVE
-
-                self.hide_banner()
-                try:
-                    self.reset_ui()
-                    self.refresh_ui()
-                except Exception as ui_exc:
-                    self.show_toast(f"Refresh UI failed! Error: {ui_exc}")
-                    self.ros2_connector.log(f"Refresh UI failed! Error: {ui_exc}", level="error")
-                    self.show_banner(self.refresh_fail_text)
-                    self._latest_refresh_successful = False
-                    raise ui_exc  # reraise it
-
-            finally:
-                # Update the stack to show the relevant status/content page
-                GLib.idle_add(self.update_visible_content_stack_page)
-                self._end_refresh_ui()
-
-            return GLib.SOURCE_REMOVE
-
-        def _handle_cancelled(*args, refresh_token=refresh_token, cancel_event=cancel_event):
-            if refresh_token is not self._active_refresh_token:
-                return GLib.SOURCE_REMOVE
-            self._refresh_cancelled_by_user = True
-            cancel_event.set()
-            self._end_refresh_ui()
-            return GLib.SOURCE_REMOVE
-
-        def _on_done(fut):
-            try:
-                result = fut.result()
-                error = None
-            except RefreshCancelled:
-                GLib.idle_add(_handle_cancelled)
-                return
-            except concurrent.futures.CancelledError:
-                GLib.idle_add(_handle_cancelled)
-                return
-            except Exception as exc:
-                result = None
-                error = exc
-            GLib.idle_add(_finish, result, error)
-
+    def _refresh_worker(self, task, *args):
         try:
-            self._refresh_future = self.app.run_in_worker(
-                self.refresh_bg, done_callback=_on_done, priority=self.app.WORKER_PRIORITY_HIGH
-            )
-        except Exception as exc:
-            GLib.idle_add(_finish, None, exc)
+            result = self.refresh_bg()  # no GTK here
+            self._refresh_bg_success = True if result is None else bool(result)
+        except Exception as e:
+            self._refresh_bg_success = False
+            self._refresh_bg_error = e
+        finally:
+            task.return_boolean(True)
+
+    def _on_refresh_done(self, *args):
+        try:
+            if self._refresh_bg_error is not None:
+                raise self._refresh_bg_error
+
+            if not self._refresh_bg_success:
+                self.show_banner(self.refresh_fail_text)
+                self._end_refresh_ui()
+                return
+
+            self.reset_ui()
+            self._refresh_ui_deferred = False
+            self._refresh_pending_jobs = 0
+            self.refresh_ui()  # GTK here, main thread
+            if not self._refresh_ui_deferred:
+                self._end_refresh_ui()
+        except Exception as e:
+            self._on_refresh_error(e)
+            self._end_refresh_ui()
 
     def _start_refresh_ui(self):
-        self.refreshing = True
+        self.app.mark_busy()
+        self._refreshing = True
+        self._refresh_ui_deferred = False
+        self._refresh_pending_jobs = 0
         self.search_bar.set_search_mode(False)
         self.refresh_spinner.set_visible(True)
         self.refresh_btn.set_can_target(False)
@@ -298,13 +225,119 @@ class ContentPage(Adw.NavigationPage):
         self.content_stack.set_sensitive(False)
         self.refresh_spinner.start()
 
+    def _on_refresh_error(self, e):
+        # self.show_toast(f"Refresh UI failed! Error: {e}")
+        self.ros2_connector.log(f"Refresh UI failed! Error: {e}", level="error")
+        self.show_banner(self.refresh_fail_text)
+
     def _end_refresh_ui(self):
         self.refresh_spinner.stop()
+        self.hide_banner()
         self.content_stack.set_sensitive(True)
         self.refresh_icon.set_visible(True)
         self.refresh_btn.set_can_target(True)
         self.refresh_spinner.set_visible(False)
-        self.refreshing = False
+        self._refreshing = False
+        self._refresh_ui_deferred = False
+        self._refresh_pending_jobs = 0
+        self.app.unmark_busy()
+
+    def cancel_refresh(self):
+        self._refresh_cancel_event.set()
+
+    def is_refresh_cancelled(self, *, cancel_event: threading.Event | None = None) -> bool:
+        event = cancel_event or self._refresh_cancel_event
+        return event.is_set()
+
+    def wait_for_refresh_cancel(self, timeout: float, *, cancel_event: threading.Event | None = None) -> bool:
+        event = cancel_event or self._refresh_cancel_event
+        return event.wait(timeout)
+
+    def _complete_refresh_ui(self):
+        """Allow async refresh_ui implementations to end the refresh when finished."""
+        if self._refreshing:
+            self._refresh_ui_deferred = False
+            self._end_refresh_ui()
+
+    def _defer_refresh_end(self):
+        """Mark refresh_ui as async so the spinner keeps running."""
+        self._refresh_ui_deferred = True
+
+    def _begin_refresh_job(self) -> Callable[[], None]:
+        """
+        Return a completion callback for async UI work.
+
+        Call the returned function exactly once when the async UI work is done.
+        """
+        self._defer_refresh_end()
+        self._refresh_pending_jobs += 1
+
+        def _done():
+            if not self._refreshing:
+                return
+            self._refresh_pending_jobs -= 1
+            if self._refresh_pending_jobs <= 0:
+                self._complete_refresh_ui()
+
+        return _done
+
+    def _add_rows_async(
+        self,
+        group,
+        rows_iterable,
+        *,
+        batch_size: int = 50,
+        priority: int = GLib.PRIORITY_LOW,
+        on_done: Callable[[], None] | None = None,
+    ) -> None:
+        """Add rows to a group in idle batches and keep refresh state active."""
+        done = self._begin_refresh_job()
+
+        if rows_iterable is None:
+            done()
+            return
+
+        def _on_done():
+            if on_done:
+                on_done()
+            done()
+
+        group.add_rows(
+            rows_iterable,
+            batch_size=batch_size,
+            priority=priority,
+            on_done=_on_done,
+        )
+
+    def _add_item_rows_async(
+        self,
+        group,
+        items,
+        row_factory: Callable,
+        *,
+        batch_size: int = 50,
+        priority: int = GLib.PRIORITY_LOW,
+        on_done: Callable[[], None] | None = None,
+    ) -> None:
+        """Build rows from data items in idle batches without late-bound generator variables."""
+
+        def _rows():
+            for item in items or []:
+                yield row_factory(item)
+
+        self._add_rows_async(
+            group,
+            _rows(),
+            batch_size=batch_size,
+            priority=priority,
+            on_done=on_done,
+        )
+
+    def _create_list_store(self, item_type, items) -> Gio.ListStore:
+        store = Gio.ListStore.new(item_type)
+        for item in items or []:
+            store.append(item)
+        return store
 
     def refresh_bg(self) -> bool:
         """Child class should override this with blocking, long-running computation."""
@@ -365,9 +398,9 @@ class ContentPage(Adw.NavigationPage):
 
     def update_visible_content_stack_page(self):
         """Central place to decide which child the stack should show based on content/search."""
-        if not self._latest_refresh_successful:
-            self.content_stack.set_visible_child(self.refresh_page)
-            return
+        # if not self._latest_refresh_successful:
+        #     self.content_stack.set_visible_child(self.refresh_page)
+        #     return
 
         # check if pref_page exists and if filtering is applied
         if self.searchable and getattr(self, "pref_page", None):

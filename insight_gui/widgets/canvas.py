@@ -39,6 +39,7 @@ from insight_gui.widgets.canvas_blocks import (
     ParameterBlock,
     TransformBlock,
 )
+from insight_gui.utils.ros_logging import ros_log
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
@@ -663,7 +664,7 @@ class Canvas(Adw.Bin):
     def calculate_layout(self):
         # Check if we have any nodes to layout
         if not self._nx_graph.nodes():
-            print("No nodes in graph, cannot calculate layout.")
+            ros_log("No nodes in graph, cannot calculate layout.", level="warning")
             return
 
         try:
@@ -688,7 +689,7 @@ class Canvas(Adw.Bin):
             )
 
         except ImportError as e:
-            print(f"Graphviz layout failed: {e}, falling back to spring layout")
+            ros_log(f"Graphviz layout failed: {e}, falling back to spring layout", level="warning")
             self._graph_node_positions = nx.spring_layout(self._nx_graph, seed=42, k=3, iterations=50)
 
         # Get the bounds of the graph layout

@@ -70,10 +70,11 @@ class TFTreePage(ContentPage):
 
         # store received frames
         self._frames_dict = {}
+        self._frame_blocks = []
         self._connections = []
 
     def refresh_bg(self) -> bool:
-        self.canvas.clear()
+        self._frame_blocks = []
         self._connections = []
         cancel_event = self._refresh_cancel_event
 
@@ -90,21 +91,12 @@ class TFTreePage(ContentPage):
         if self.is_refresh_cancelled(cancel_event=cancel_event):
             raise RefreshCancelled()
 
-        if isinstance(self._frames_dict, dict):
-            return len(self._frames_dict) > 0
-        else:
+        if not isinstance(self._frames_dict, dict):
             return False
 
-    def refresh_ui(self):
-        """Refresh the UI by building the TF tree with proper parent-child relationships."""
-        # Clear previous connections
-        self._connections.clear()
-
-        # Build the TF tree structure
         for frame_name, frame_info in self._frames_dict.items():
             parent_frame = frame_info.get("parent", "")
 
-            # Try to get transform data
             try:
                 transform = self.tf_buffer.lookup_transform(parent_frame, frame_name, rclpy.time.Time())
             except (LookupException, ConnectivityException, ExtrapolationException) as e:
@@ -114,6 +106,18 @@ class TFTreePage(ContentPage):
                 self.ros2_connector.log(f"Unexpected error getting transform from {parent_frame} to {frame_name}: {e}")
                 continue
 
+            self._frame_blocks.append((frame_name, parent_frame, transform, frame_info))
+            if parent_frame:
+                self._connections.append((parent_frame, frame_name))
+
+            if self.is_refresh_cancelled(cancel_event=cancel_event):
+                raise RefreshCancelled()
+
+        return len(self._frame_blocks) > 0
+
+    def refresh_ui(self):
+        """Refresh the UI by building the TF tree with proper parent-child relationships."""
+        for frame_name, parent_frame, transform, frame_info in self._frame_blocks:
             # Add the child frame block
             block_id = self.canvas.add_block(
                 TransformBlock,
@@ -128,10 +132,6 @@ class TFTreePage(ContentPage):
                     "buffer_length": frame_info.get("buffer_length", 0.0),
                 },
             )
-
-            # Store connection info for later processing
-            if parent_frame:  # Only add connection if parent exists
-                self._connections.append((parent_frame, frame_name))
 
         # Create all connections between parent and child frames
         for parent_frame, child_frame in self._connections:
@@ -150,8 +150,7 @@ class TFTreePage(ContentPage):
         self.canvas.calculate_layout()
 
     def reset_ui(self):
-        # self.canvas.clear()
-        pass
+        self.canvas.clear()
 
     def trigger(self):
         # TODO
