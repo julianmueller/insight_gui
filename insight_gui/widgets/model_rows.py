@@ -20,14 +20,19 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+from typing import Callable
+
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import GObject, Pango
+from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Pango
 
 from insight_gui.models.action_item import ActionItem
+from insight_gui.models.interface_item import InterfaceTypeItem
 from insight_gui.models.node_item import NodeItem
+from insight_gui.models.package_item import PackageItem
+from insight_gui.models.parameter_item import ParameterItem
 from insight_gui.models.service_item import ServiceItem
 from insight_gui.models.topic_item import TopicItem
 from insight_gui.widgets.pref_rows import PrefRow
@@ -41,14 +46,161 @@ def _format_namespace(namespace: str | None) -> str:
     return namespace
 
 
-class NodeRow(PrefRow):
+class ModelObjectRow(PrefRow):
+    """Base row for rows backed by a GObject model item."""
+
+    def __init__(
+        self,
+        *,
+        model_item: GObject.GObject,
+        drag_enabled: bool = True,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.model_item = model_item
+        self._drag_source: Gtk.DragSource | None = None
+        self._copy_action_separator_added = False
+
+        if drag_enabled:
+            self._add_model_drag_source()
+
+    def _add_model_drag_source(self):
+        self._drag_source = Gtk.DragSource()
+        self._drag_source.set_actions(Gdk.DragAction.COPY)
+        self._drag_source.connect("prepare", self._on_drag_prepare)
+        self._drag_source.connect("drag-begin", self._on_drag_begin)
+        self._drag_source.connect("drag-end", self._on_drag_end)
+        self.add_controller(self._drag_source)
+
+    def _on_drag_prepare(self, source: Gtk.DragSource, x: float, y: float):
+        return Gdk.ContentProvider.new_for_value(self.model_item)
+
+    def _on_drag_begin(self, source: Gtk.DragSource, drag: Gdk.Drag):
+        self._primary_drag_cancelled = True
+        drag_icon = Gtk.DragIcon.get_for_drag(drag)
+        drag_icon.set_child(self._build_drag_icon())
+
+    def _on_drag_end(self, source: Gtk.DragSource, drag: Gdk.Drag, delete_data: bool):
+        self._primary_drag_cancelled = False
+
+    def _build_drag_icon(self) -> Gtk.Widget:
+        width = max(240, min(self.get_allocated_width(), 360))
+        box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=2,
+            width_request=width,
+            margin_top=6,
+            margin_bottom=6,
+            margin_start=6,
+            margin_end=6,
+            css_classes=["card", "view"],
+        )
+
+        header = Gtk.Label(
+            label=self.model_item.__item_type__,  # _drag_model_name(),
+            xalign=0,
+            ellipsize=Pango.EllipsizeMode.END,
+            single_line_mode=True,
+            max_width_chars=24,
+            margin_top=8,
+            margin_bottom=0,
+            margin_start=10,
+            margin_end=10,
+            css_classes=["caption", "accent"],
+        )
+        box.append(header)
+
+        title = Gtk.Label(
+            label=self.get_title(),
+            xalign=0,
+            ellipsize=Pango.EllipsizeMode.END,
+            single_line_mode=True,
+            max_width_chars=48,
+            margin_top=0,
+            margin_bottom=0,
+            margin_start=10,
+            margin_end=10,
+            css_classes=["heading"],
+        )
+        box.append(title)
+
+        subtitle_text = self.get_subtitle()
+        if subtitle_text:
+            subtitle = Gtk.Label(
+                label=subtitle_text,
+                xalign=0,
+                ellipsize=Pango.EllipsizeMode.MIDDLE,
+                single_line_mode=True,
+                max_width_chars=64,
+                margin_top=0,
+                margin_bottom=8,
+                margin_start=10,
+                margin_end=10,
+                css_classes=["caption", "dim-label"],
+            )
+            box.append(subtitle)
+
+        return box
+
+    def _drag_model_name(self) -> str:
+        if isinstance(self.model_item, NodeItem):
+            return "Node"
+        if isinstance(self.model_item, TopicItem):
+            return "Topic"
+        if isinstance(self.model_item, ServiceItem):
+            return "Service"
+        if isinstance(self.model_item, ActionItem):
+            return "Action"
+        if isinstance(self.model_item, PackageItem):
+            return "Package"
+        if isinstance(self.model_item, ParameterItem):
+            return "Parameter"
+        if isinstance(self.model_item, InterfaceTypeItem):
+            return "Interface"
+
+        return self.model_item.__class__.__name__.removesuffix("Item")
+
+    def _push_page(self, page_class, page_kwargs: dict):
+        nav_view = self.get_ancestor(Adw.NavigationView)
+        if nav_view:
+
+            def _open_page():
+                nav_view.push(page_class(**page_kwargs))
+                return GLib.SOURCE_REMOVE
+
+            GLib.idle_add(_open_page, priority=GLib.PRIORITY_LOW)
+
+    def _set_copy_actions(self, entries: list[tuple[str, str, str]]):
+        self.context_menu.clear()
+        self._copy_action_separator_added = False
+        for action_id, label, text in entries:
+            fallback_label = label.removeprefix("Copy ").lower()
+            self.context_menu.upsert_item(
+                action_id,
+                label,
+                lambda text=text, fallback_label=fallback_label: self._copy_text_to_clipboard(
+                    text,
+                    fallback_label=fallback_label,
+                ),
+                icon_name="edit-copy-symbolic",
+            )
+
+    def _add_model_action(self, action_id: str, label: str, callback: Callable, *, icon_name: str = ""):
+        if self.context_menu.item_count > 0 and not self._copy_action_separator_added:
+            self.context_menu.add_separator()
+            self._copy_action_separator_added = True
+
+        self.context_menu.upsert_item(action_id, label, callback, icon_name=icon_name)
+
+
+class NodeRow(ModelObjectRow):
     __gtype_name__ = "NodeRow"
 
     node = GObject.Property(type=NodeItem)
 
-    def __init__(self, *, node: NodeItem, **kwargs):
+    def __init__(self, *, node: NodeItem, nav_view: Adw.NavigationView | None = None, **kwargs):
         namespace = _format_namespace(node.namespace)
-        super().__init__(title=node.name, subtitle=namespace, **kwargs)
+        super().__init__(model_item=node, title=node.name, subtitle=namespace, **kwargs)
         self.node = node
 
         if node.hidden:
@@ -60,31 +212,35 @@ class NodeRow(PrefRow):
         self.set_filter_str(f"{node.name} {namespace} {node.full_name}".lower())
 
         # node-specific context menu entries
-        self.context_menu.clear()
-        self.context_menu.upsert_item(
-            "copy-name",
-            "Copy name",
-            lambda: self._copy_text_to_clipboard(self.node.name, fallback_label="name"),
+        self._set_copy_actions(
+            [
+                ("copy-name", "Copy name", self.node.name),
+                ("copy-namespace", "Copy namespace", namespace),
+                ("copy-full-name", "Copy full name", self.node.full_name),
+            ]
         )
-        self.context_menu.upsert_item(
-            "copy-namespace",
-            "Copy namespace",
-            lambda: self._copy_text_to_clipboard(namespace, fallback_label="namespace"),
-        )
-        self.context_menu.upsert_item(
-            "copy-full-name",
-            "Copy full name",
-            lambda: self._copy_text_to_clipboard(self.node.full_name, fallback_label="full name"),
+
+        if nav_view:
+            self.set_navigation_actions(nav_view)
+
+    def set_navigation_actions(self, nav_view: Adw.NavigationView):
+        from insight_gui.ros2_pages.node_info_page import NodeInfoPage
+
+        self.set_subpage_link(
+            nav_view=nav_view,
+            subpage_class=NodeInfoPage,
+            subpage_kwargs={"node": self.node},
+            label="Show node info page",
         )
 
 
-class TopicRow(PrefRow):
+class TopicRow(ModelObjectRow):
     __gtype_name__ = "TopicRow"
 
     topic = GObject.Property(type=TopicItem)
 
-    def __init__(self, *, topic: TopicItem, **kwargs):
-        super().__init__(title=topic.full_name, subtitle=topic.interface.full_name, **kwargs)
+    def __init__(self, *, topic: TopicItem, nav_view: Adw.NavigationView | None = None, **kwargs):
+        super().__init__(model_item=topic, title=topic.full_name, subtitle=topic.interface.full_name, **kwargs)
         self.topic = topic
 
         if topic.hidden:
@@ -97,36 +253,64 @@ class TopicRow(PrefRow):
             f"{topic.name} {_format_namespace(topic.namespace)} {topic.full_name} {topic.interface.full_name}".lower()
         )
 
-        self.context_menu.clear()
-        self.context_menu.upsert_item(
-            "copy-name",
-            "Copy name",
-            lambda: self._copy_text_to_clipboard(self.topic.name, fallback_label="name"),
+        self._set_copy_actions(
+            [
+                ("copy-name", "Copy name", self.topic.name),
+                ("copy-namespace", "Copy namespace", _format_namespace(self.topic.namespace)),
+                ("copy-full-name", "Copy full name", self.topic.full_name),
+                ("copy-interface", "Copy interface", self.topic.interface.full_name),
+            ]
         )
-        self.context_menu.upsert_item(
-            "copy-namespace",
-            "Copy namespace",
-            lambda: self._copy_text_to_clipboard(_format_namespace(self.topic.namespace), fallback_label="namespace"),
+
+        if nav_view:
+            self.set_navigation_actions(nav_view)
+
+    def set_navigation_actions(self, nav_view: Adw.NavigationView):
+        from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
+        from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
+        from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
+        from insight_gui.ros2_pages.topic_remap_page import TopicRemapPage
+        from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
+
+        self.set_subpage_link(
+            nav_view=nav_view,
+            subpage_class=TopicInfoPage,
+            subpage_kwargs={"topic": self.topic},
+            label="Show topic info page",
         )
-        self.context_menu.upsert_item(
-            "copy-full-name",
-            "Copy full name",
-            lambda: self._copy_text_to_clipboard(self.topic.full_name, fallback_label="full name"),
+        self._add_model_action(
+            "publish-topic",
+            "Publish to topic",
+            lambda: self._push_page(TopicPublisherPage, {"preselect_topic": self.topic}),
+            icon_name="rss-feed-symbolic",
         )
-        self.context_menu.upsert_item(
-            "copy-interface",
-            "Copy interface",
-            lambda: self._copy_text_to_clipboard(self.topic.interface.full_name, fallback_label="interface"),
+        self._add_model_action(
+            "subscribe-topic",
+            "Subscribe to topic",
+            lambda: self._push_page(TopicSubscriberPage, {"preselect_topic": self.topic}),
+            icon_name="subscriptions-symbolic",
+        )
+        self._add_model_action(
+            "remap-topic",
+            "Remap topic",
+            lambda: self._push_page(TopicRemapPage, {"preselect_topic": self.topic}),
+            icon_name="tactic-symbolic",
+        )
+        self._add_model_action(
+            "open-interface",
+            "Open interface",
+            lambda: self._push_page(InterfaceInfoPage, {"interface": self.topic.interface}),
+            icon_name="shapes-symbolic",
         )
 
 
-class ServiceRow(PrefRow):
+class ServiceRow(ModelObjectRow):
     __gtype_name__ = "ServiceRow"
 
     service = GObject.Property(type=ServiceItem)
 
-    def __init__(self, *, service: ServiceItem, **kwargs):
-        super().__init__(title=service.full_name, subtitle=service.interface.full_name, **kwargs)
+    def __init__(self, *, service: ServiceItem, nav_view: Adw.NavigationView | None = None, **kwargs):
+        super().__init__(model_item=service, title=service.full_name, subtitle=service.interface.full_name, **kwargs)
         self.service = service
 
         if service.hidden:
@@ -139,36 +323,50 @@ class ServiceRow(PrefRow):
             f"{service.name} {_format_namespace(service.namespace)} {service.full_name} {service.interface.full_name}".lower()
         )
 
-        self.context_menu.clear()
-        self.context_menu.upsert_item(
-            "copy-name",
-            "Copy name",
-            lambda: self._copy_text_to_clipboard(self.service.name, fallback_label="name"),
+        self._set_copy_actions(
+            [
+                ("copy-name", "Copy name", self.service.name),
+                ("copy-namespace", "Copy namespace", _format_namespace(self.service.namespace)),
+                ("copy-full-name", "Copy full name", self.service.full_name),
+                ("copy-interface", "Copy interface", self.service.interface.full_name),
+            ]
         )
-        self.context_menu.upsert_item(
-            "copy-namespace",
-            "Copy namespace",
-            lambda: self._copy_text_to_clipboard(_format_namespace(self.service.namespace), fallback_label="namespace"),
+
+        if nav_view:
+            self.set_navigation_actions(nav_view)
+
+    def set_navigation_actions(self, nav_view: Adw.NavigationView):
+        from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
+        from insight_gui.ros2_pages.service_call_page import ServiceCallPage
+        from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
+
+        self.set_subpage_link(
+            nav_view=nav_view,
+            subpage_class=ServiceInfoPage,
+            subpage_kwargs={"service": self.service},
+            label="Show service info page",
         )
-        self.context_menu.upsert_item(
-            "copy-full-name",
-            "Copy full name",
-            lambda: self._copy_text_to_clipboard(self.service.full_name, fallback_label="full name"),
+        self._add_model_action(
+            "call-service",
+            "Call service",
+            lambda: self._push_page(ServiceCallPage, {"preselect_service": self.service}),
+            icon_name="call-start-symbolic",
         )
-        self.context_menu.upsert_item(
-            "copy-interface",
-            "Copy interface",
-            lambda: self._copy_text_to_clipboard(self.service.interface.full_name, fallback_label="interface"),
+        self._add_model_action(
+            "open-interface",
+            "Open interface",
+            lambda: self._push_page(InterfaceInfoPage, {"interface": self.service.interface}),
+            icon_name="shapes-symbolic",
         )
 
 
-class ActionRow(PrefRow):
+class ActionRow(ModelObjectRow):
     __gtype_name__ = "ActionRow"
 
     action = GObject.Property(type=ActionItem)
 
-    def __init__(self, *, action: ActionItem, **kwargs):
-        super().__init__(title=action.full_name, subtitle=action.interface.full_name, **kwargs)
+    def __init__(self, *, action: ActionItem, nav_view: Adw.NavigationView | None = None, **kwargs):
+        super().__init__(model_item=action, title=action.full_name, subtitle=action.interface.full_name, **kwargs)
         self.action = action
 
         if action.hidden:
@@ -181,24 +379,150 @@ class ActionRow(PrefRow):
             f"{action.name} {_format_namespace(action.namespace)} {action.full_name} {action.interface.full_name}".lower()
         )
 
-        self.context_menu.clear()
-        self.context_menu.upsert_item(
-            "copy-name",
-            "Copy name",
-            lambda: self._copy_text_to_clipboard(self.action.name, fallback_label="name"),
+        self._set_copy_actions(
+            [
+                ("copy-name", "Copy name", self.action.name),
+                ("copy-namespace", "Copy namespace", _format_namespace(self.action.namespace)),
+                ("copy-full-name", "Copy full name", self.action.full_name),
+                ("copy-interface", "Copy interface", self.action.interface.full_name),
+            ]
         )
-        self.context_menu.upsert_item(
-            "copy-namespace",
-            "Copy namespace",
-            lambda: self._copy_text_to_clipboard(_format_namespace(self.action.namespace), fallback_label="namespace"),
+
+        if nav_view:
+            self.set_navigation_actions(nav_view)
+
+    def set_navigation_actions(self, nav_view: Adw.NavigationView):
+        from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
+        from insight_gui.ros2_pages.action_info_page import ActionInfoPage
+        from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
+
+        self.set_subpage_link(
+            nav_view=nav_view,
+            subpage_class=ActionInfoPage,
+            subpage_kwargs={"action": self.action},
+            label="Show action info page",
         )
-        self.context_menu.upsert_item(
-            "copy-full-name",
-            "Copy full name",
-            lambda: self._copy_text_to_clipboard(self.action.full_name, fallback_label="full name"),
+        self._add_model_action(
+            "send-goal",
+            "Send goal",
+            lambda: self._push_page(ActionGoalPage, {"preselect_action": self.action}),
+            icon_name="emoji-flags-symbolic",
         )
-        self.context_menu.upsert_item(
-            "copy-interface",
-            "Copy interface",
-            lambda: self._copy_text_to_clipboard(self.action.interface.full_name, fallback_label="interface"),
+        self._add_model_action(
+            "open-interface",
+            "Open interface",
+            lambda: self._push_page(InterfaceInfoPage, {"interface": self.action.interface}),
+            icon_name="shapes-symbolic",
+        )
+
+
+class PackageRow(ModelObjectRow):
+    __gtype_name__ = "PackageRow"
+
+    package = GObject.Property(type=PackageItem)
+
+    def __init__(self, *, package: PackageItem, nav_view: Adw.NavigationView | None = None, **kwargs):
+        super().__init__(model_item=package, title=package.name, subtitle=package.path, **kwargs)
+        self.package = package
+        self._set_copy_actions(
+            [
+                ("copy-name", "Copy name", self.package.name),
+                ("copy-path", "Copy path", self.package.path),
+            ]
+        )
+        self.set_filter_str(f"{package.name} {package.path}".lower())
+
+        if nav_view:
+            self.set_navigation_actions(nav_view)
+
+    def set_navigation_actions(self, nav_view: Adw.NavigationView):
+        from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
+
+        self.set_subpage_link(
+            nav_view=nav_view,
+            subpage_class=PackageInfoPage,
+            subpage_kwargs={"pkg": self.package},
+            label="Show package info page",
+        )
+
+
+class ParameterRow(ModelObjectRow):
+    __gtype_name__ = "ParameterRow"
+
+    parameter = GObject.Property(type=ParameterItem)
+
+    def __init__(self, *, parameter: ParameterItem, nav_view: Adw.NavigationView | None = None, **kwargs):
+        subtitle = "Parameter type unavailable" if not parameter.type else f"{parameter.type_str}: {parameter.value}"
+        super().__init__(model_item=parameter, title=parameter.name, subtitle=subtitle, **kwargs)
+        self.parameter = parameter
+
+        if parameter.read_only:
+            self.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
+
+        self._set_copy_actions(
+            [
+                ("copy-name", "Copy name", self.parameter.name),
+                ("copy-full-name", "Copy full name", self.parameter.full_name),
+                ("copy-value", "Copy value", str(self.parameter.value)),
+            ]
+        )
+        self.set_filter_str(f"{parameter.name} {parameter.full_name} {parameter.type_str} {parameter.value}".lower())
+
+        if nav_view and parameter.type:
+            self.set_navigation_actions(nav_view)
+
+    def set_navigation_actions(self, nav_view: Adw.NavigationView):
+        from insight_gui.ros2_pages.node_info_page import NodeInfoPage
+        from insight_gui.ros2_pages.param_edit_page import ParamEditPage
+
+        self.set_subpage_link(
+            nav_view=nav_view,
+            subpage_class=ParamEditPage,
+            subpage_kwargs={"parameter": self.parameter},
+            label="Edit parameter",
+        )
+        self._add_model_action(
+            "open-node",
+            "Open node",
+            lambda: self._push_page(NodeInfoPage, {"node": self.parameter.node}),
+            icon_name="token-symbolic",
+        )
+
+
+class InterfaceTypeRow(ModelObjectRow):
+    __gtype_name__ = "InterfaceTypeRow"
+
+    interface = GObject.Property(type=InterfaceTypeItem)
+
+    def __init__(self, *, interface: InterfaceTypeItem, nav_view: Adw.NavigationView | None = None, **kwargs):
+        super().__init__(
+            model_item=interface,
+            title=interface.name,
+            subtitle=interface.full_name,
+            tags=[interface.interface_class],
+            **kwargs,
+        )
+        self.interface = interface
+        self._set_copy_actions(
+            [
+                ("copy-name", "Copy name", self.interface.name),
+                ("copy-package", "Copy package", self.interface.package),
+                ("copy-full-name", "Copy full name", self.interface.full_name),
+            ]
+        )
+        self.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.START)
+        self.subtitle_lbl.set_tooltip_text(interface.full_name)
+        self.set_filter_str(f"{interface.name} {interface.package} {interface.full_name}".lower())
+
+        if nav_view:
+            self.set_navigation_actions(nav_view)
+
+    def set_navigation_actions(self, nav_view: Adw.NavigationView):
+        from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
+
+        self.set_subpage_link(
+            nav_view=nav_view,
+            subpage_class=InterfaceInfoPage,
+            subpage_kwargs={"interface": self.interface},
+            label="Open interface",
         )

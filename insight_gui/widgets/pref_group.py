@@ -23,6 +23,7 @@
 from typing import Callable
 import asyncio
 import re
+import time
 from difflib import SequenceMatcher
 
 import gi
@@ -58,6 +59,7 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
         description: str = "",
         placeholder_text: str = "group is empty",
         filterable: bool = True,
+        collapsable: bool = False,
         **kwargs,
     ):
         Adw.PreferencesGroup.__init__(self, **kwargs)
@@ -72,9 +74,14 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
         self.title_box: Gtk.Box = self.box.get_first_child()
         self.suffix_box: Gtk.Box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         super().set_header_suffix(self.suffix_box)
+        self._collapsed = False
+        self._collapsable = bool(collapsable)
+        self._rows_sensitive = True
 
         self.rows_box: Gtk.Box = self.title_box.get_next_sibling()
         self.listbox: Gtk.ListBox = self.rows_box.get_first_child()
+        self.collapse_btn = None
+        self.collapse_icon = None
 
         # keep track of all rows (use a Gio.ListStore instead of a python list)
         self.rows: Gio.ListStore = Gio.ListStore.new(Gtk.Widget)
@@ -82,6 +89,8 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
 
         if not title and not description:
             self.title_box.set_visible(False)  # disable group header
+        elif self._collapsable:
+            self._ensure_collapse_button()
 
         self.placeholder_row = PrefRow(title=placeholder_text, sensitive=False)
         self.placeholder_row.add_prefix_icon("dialog-error-symbolic")
@@ -108,6 +117,15 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
     def is_empty(self):
         return self.num_rows == 0
 
+    @GObject.Property(type=bool, default=False)
+    def collapsed(self) -> bool:
+        return self._collapsed
+
+    @collapsed.setter
+    def collapsed(self, value: bool) -> None:
+        self._collapsed = bool(value)
+        self._sync_collapsed_state()
+
     @GObject.Property(type=str, default="group is empty")
     def placeholder_text(self) -> str:
         return self.placeholder_row.get_title()
@@ -123,17 +141,68 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
         self.notify("num-rows")
         self.notify("is-empty")
 
+    def _on_collapse_btn_clicked(self, *args) -> None:
+        self.collapsed = not self.collapsed
+
+    def set_collapsable(self, collapsable: bool) -> None:
+        self._collapsable = bool(collapsable)
+
+        if self._collapsable and (self.get_title() or self.get_description()):
+            self._ensure_collapse_button()
+            self._sync_collapsed_state()
+            return
+
+        self.collapsed = False
+        if self.collapse_btn:
+            self.collapse_btn.set_visible(False)
+
+    def get_collapsable(self) -> bool:
+        return self._collapsable
+
+    def _ensure_collapse_button(self) -> None:
+        if self.collapse_btn:
+            self.collapse_btn.set_visible(True)
+            return
+
+        self.collapse_icon = Gtk.Image(icon_name="down-symbolic")
+        self.collapse_btn = Gtk.Button(
+            child=self.collapse_icon,
+            tooltip_text="Collapse group",
+            valign=Gtk.Align.CENTER,
+        )
+        self.collapse_btn.add_css_class("flat")
+        self.collapse_btn.connect("clicked", self._on_collapse_btn_clicked)
+        self.add_suffix_widget(self.collapse_btn)
+
+    def _sync_collapsed_state(self) -> None:
+        self.rows_box.set_visible(not self._collapsed)
+        if not self.collapse_icon or not self.collapse_btn:
+            return
+
+        if self._collapsed:
+            self.collapse_icon.set_from_icon_name("up-symbolic")
+            self.collapse_btn.set_tooltip_text("Expand group")
+        else:
+            self.collapse_icon.set_from_icon_name("down-symbolic")
+            self.collapse_btn.set_tooltip_text("Collapse group")
+
     def add(self, *args, **kwargs):
         raise NotImplementedError("use 'add_row' instead")
 
     def _append_row(self, row: Gtk.Widget):
         """Internal method to append a row immediately. Might be blocking!"""
+        row.set_sensitive(self._rows_sensitive)
         super(PrefGroup, self).add(row)
         self.rows.append(row)
 
         if isinstance(row, FilteringInterface) and row.filterable:
             row.connect("filtered", self._on_row_filtered)
             row.connect("unfiltered", self._on_row_unfiltered)
+
+    def append_row(self, row: Gtk.Widget) -> Gtk.Widget:
+        """Append a row immediately. Prefer ContentPage batching for many rows."""
+        self._append_row(row)
+        return row
 
     def add_row(self, row: Gtk.Widget) -> Gtk.Widget:
         """Add a single row to the group asynchronously."""
@@ -146,6 +215,8 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
         *,
         batch_size: int = 50,
         priority: int = GLib.PRIORITY_LOW,
+        tick_interval_ms: int = 16,
+        time_budget_ms: float = 4.0,
         on_done: Callable | None = None,
     ) -> None:
         """
@@ -159,6 +230,8 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
         rows_iter = iter(rows_iterable)
 
         def add_batch():
+            deadline = time.monotonic() + time_budget_ms / 1000.0
+            rows_added = 0
             for _ in range(batch_size):
                 try:
                     row = next(rows_iter)
@@ -167,9 +240,12 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
                         on_done()
                     return GLib.SOURCE_REMOVE
                 self._append_row(row)
+                rows_added += 1
+                if rows_added > 0 and time.monotonic() >= deadline:
+                    break
             return GLib.SOURCE_CONTINUE
 
-        GLib.idle_add(add_batch, priority=priority)
+        GLib.timeout_add(tick_interval_ms, add_batch, priority=priority)
 
     def add_rows_from_model(
         self,
@@ -178,6 +254,8 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
         *,
         batch_size: int = 50,
         priority: int = GLib.PRIORITY_LOW,
+        tick_interval_ms: int = 16,
+        time_budget_ms: float = 4.0,
         on_done: Callable | None = None,
     ) -> None:
         """Create and add rows from a GObject model asynchronously in batches."""
@@ -189,19 +267,24 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
 
         def add_batch():
             nonlocal index
+            deadline = time.monotonic() + time_budget_ms / 1000.0
+            rows_added = 0
             end = min(index + batch_size, total)
             for i in range(index, end):
                 item = model.get_item(i)
                 row = row_factory(item)
                 self._append_row(row)
-            index = end
+                index = i + 1
+                rows_added += 1
+                if rows_added > 0 and time.monotonic() >= deadline:
+                    break
             if index >= total:
                 if on_done:
                     on_done()
                 return GLib.SOURCE_REMOVE
             return GLib.SOURCE_CONTINUE
 
-        GLib.idle_add(add_batch, priority=priority)
+        GLib.timeout_add(tick_interval_ms, add_batch, priority=priority)
 
     def remove_row(self, row: Gtk.Widget):
         for i in range(self.rows.get_n_items()):
@@ -217,6 +300,11 @@ class PrefGroup(Adw.PreferencesGroup, FilteringInterface):
             super().remove(row)
             self.rows.remove(idx)
         self.set_unfiltered()
+
+    def set_rows_sensitive(self, sensitive: bool):
+        self._rows_sensitive = sensitive
+        for row in self.rows:
+            row.set_sensitive(sensitive)
 
     def add_suffix_btn(
         self,

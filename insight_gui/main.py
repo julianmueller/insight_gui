@@ -26,8 +26,6 @@ import sys
 import signal
 import argparse
 
-from insight_gui.utils.ros_logging import ros_log
-
 # from insight_gui.application import InsightApplication
 
 
@@ -65,7 +63,9 @@ def main(args=None):
 
         page_ids = get_all_page_ids()
         if args.page not in page_ids:
-            ros_log(f"Error: Page ID '{args.page}' not found. Use '--list-pages' to see all available pages.", "error")
+            sys.stderr.write(
+                f"Error: Page ID '{args.page}' not found. Use '--list-pages' to see all available pages.\n"
+            )
             sys.exit(1)
 
         start_page_id = args.page
@@ -79,7 +79,7 @@ def main(args=None):
             lines.append(f"{group.title}")
             for page in group.pages:
                 lines.append(f"\t'{page.title}' # {page.page_id}")
-        ros_log("\n".join(lines), "info")
+        sys.stdout.write(f"{'\n'.join(lines)}\n")
         sys.exit(0)
 
     # use debugpy for remote debugging if requested
@@ -88,11 +88,11 @@ def main(args=None):
             # Make sure to install debugpy with pip if not already installed
             import debugpy
 
-            ros_log("Starting debugpy... Waiting for debugger to attach.", "info")
+            sys.stderr.write("Starting debugpy... Waiting for debugger to attach.\n")
             debugpy.listen(("0.0.0.0", 5678))
             debugpy.wait_for_client()
         except ImportError:
-            ros_log("debugpy is not installed. Please install it with 'pip install debugpy'", "error")
+            sys.stderr.write("debugpy is not installed. Please install it with 'pip install debugpy'\n")
 
     # Start the application
     gui_app = None
@@ -104,7 +104,7 @@ def main(args=None):
         gui_app.run(None)
 
     except Exception as e:
-        ros_log(f"An error occurred: {e}", "error")
+        sys.stderr.write(f"An error occurred: {e}\n")
         if gui_app:
             gui_app.shutdown()
 

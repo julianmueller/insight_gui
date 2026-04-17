@@ -51,24 +51,22 @@ class TopicListPage(ContentPage):
 
     def refresh_ui(self):
         topics_by_group: Dict[PrefGroup, list] = {}
-        # TODO this is ugly
-        from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
-
-        self._topic_info_page_class = TopicInfoPage
 
         for topic in self.available_topics:
             # put all topics in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-topics-by-namespace"):
                 namespace = ""
+                title = "Topics"
             else:
                 namespace = topic.namespace if topic.namespace else "/"
+                title = namespace
 
             # get the namespace group of the topic
             if namespace in self.topic_ns_groups.keys():
                 group = self.topic_ns_groups[namespace]
             else:
                 description = "global namespace" if namespace == "/" else ""
-                group = self.pref_page.add_group(title=namespace, description=description)
+                group = self.pref_page.add_group(title=title, description=description, collapsable=True)
                 self.topic_ns_groups[namespace] = group
 
             topics_by_group.setdefault(group, []).append(topic)
@@ -84,14 +82,7 @@ class TopicListPage(ContentPage):
             )
 
     def _build_topic_row(self, topic) -> TopicRow:
-        row = TopicRow(topic=topic)
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=self._topic_info_page_class,
-            subpage_kwargs={"topic": topic},
-            label="Show topic info page",
-        )
-        return row
+        return TopicRow(topic=topic, nav_view=self.nav_view)
 
     def reset_ui(self):
         for group in reversed(self.topic_ns_groups.values()):

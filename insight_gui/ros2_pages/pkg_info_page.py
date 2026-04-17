@@ -48,10 +48,9 @@ class PackageInfoPage(ContentPage):
 
         self.pkg = pkg
         self.detach_kwargs = {"pkg": self.pkg}
-
-        package_share_dir = get_package_share_directory(self.pkg.name)
-        package_xml = os.path.join(package_share_dir, "package.xml")
-        self.xml_tree = ET.parse(package_xml).getroot()
+        self.xml_tree = None
+        self.executable_paths = []
+        self.dependency_data = {}
 
         self.link_group = self.pref_page.add_group(title="Links")
         self.link_group.add_row(PrefRow(title="Open local package folder")).add_suffix_btn(
@@ -83,49 +82,78 @@ class PackageInfoPage(ContentPage):
         self.executables_group = self.pref_page.add_group(
             title="Executables", placeholder_text="Package has no executables"
         )
-        executable_paths = get_executable_paths(package_name=self.pkg.name)
-
-        for path in sorted(executable_paths):
-            executable_name = Path(path).name
-            row: PrefRow = self.executables_group.add_row(PrefRow(title=executable_name))
-            row.add_suffix(
-                CopyButton(
-                    copy_text=f"ros2 run {self.pkg.name} {executable_name}",
-                    tooltip_text="Copy 'ros2 run' command",
-                    toast_host=self.toast_overlay,
-                )
-            )
-            row.add_suffix_btn(
-                icon_name="terminal-alt-symbolic",
-                tooltip_text="Open command in terminal",
-                func=self.on_open_terminal_command,
-                func_kwargs={"command": f"ros2 run {self.pkg.name} {executable_name}"},
-            )
-
-        # add the counts as descriptions
-        self.executables_group.set_description_to_row_count()
 
         # XML inspection
         self.xml_group = self.pref_page.add_group(title="Content of package.xml")
 
-    def on_realize(self, *args):
-        super().on_realize()
+    def refresh_bg(self) -> bool:
+        package_share_dir = get_package_share_directory(self.pkg.name)
+        package_xml = os.path.join(package_share_dir, "package.xml")
+        self.xml_tree = ET.parse(package_xml).getroot()
+        self.executable_paths = sorted(get_executable_paths(package_name=self.pkg.name))
+        self.dependency_data = {
+            depend: self._collect_dependencies(depend)
+            for depend in ("buildtool_depend", "build_depend", "exec_depend", "test_depend")
+        }
+        return True
+
+    def refresh_ui(self):
+        self._add_item_rows_async(
+            self.executables_group,
+            self.executable_paths,
+            self._build_executable_row,
+            batch_size=8,
+            on_done=self.executables_group.set_description_to_row_count,
+        )
+        self._add_rows_async(self.xml_group, self._iter_xml_rows(), batch_size=8)
+
+    def _collect_dependencies(self, depend: str) -> list[tuple[str, str | None]]:
+        dependencies = []
+        for xml_dep in self.xml_tree.findall(depend):
+            dep_pkg_name = xml_dep.text
+            try:
+                pkg_prefix = get_package_prefix(dep_pkg_name)
+            except PackageNotFoundError:
+                pkg_prefix = None
+            dependencies.append((dep_pkg_name, pkg_prefix))
+        return dependencies
+
+    def _build_executable_row(self, path: str) -> PrefRow:
+        executable_name = Path(path).name
+        row = PrefRow(title=executable_name)
+        row.add_suffix(
+            CopyButton(
+                copy_text=f"ros2 run {self.pkg.name} {executable_name}",
+                tooltip_text="Copy 'ros2 run' command",
+                toast_host=self.toast_overlay,
+            )
+        )
+        row.add_suffix_btn(
+            icon_name="terminal-alt-symbolic",
+            tooltip_text="Open command in terminal",
+            func=self.on_open_terminal_command,
+            func_kwargs={"command": f"ros2 run {self.pkg.name} {executable_name}"},
+        )
+        return row
+
+    def _iter_xml_rows(self):
+        def _text(element_name: str) -> str:
+            element = self.xml_tree.find(element_name)
+            return "" if element is None or element.text is None else str(element.text)
 
         # version
-        version = self.xml_tree.find("version").text
-        self.xml_group.add_row(PrefRow(title="Version", subtitle=str(version), css_classes=["property"]))
+        yield PrefRow(title="Version", subtitle=_text("version"), css_classes=["property"])
 
         # description
-        description = " ".join([line.strip() for line in str(self.xml_tree.find("description").text).split()])
-        desc_row = self.xml_group.add_row(
-            PrefRow(title="Description", subtitle=str(description), css_classes=["property"])
-        )
+        description = " ".join([line.strip() for line in _text("description").split()])
+        desc_row = PrefRow(title="Description", subtitle=str(description), css_classes=["property"])
         desc_row.subtitle_lbl.set_single_line_mode(False)
         desc_row.subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.NONE)
+        yield desc_row
 
         # maintainer
         maintainers = self.xml_tree.findall("maintainer")
-        maintainers_exp = self.xml_group.add_row(Adw.ExpanderRow(title="Maintainers"))
+        maintainers_exp = Adw.ExpanderRow(title="Maintainers")
         for m in maintainers:
             email = m.get("email")
             if email:
@@ -134,17 +162,20 @@ class PackageInfoPage(ContentPage):
             else:
                 row = PrefRow(title=m.text)
             maintainers_exp.add_row(row)
+        yield maintainers_exp
 
         # license
-        license_txt = self.xml_tree.find("license").text
-        self.xml_group.add_row(PrefRow(title="License", subtitle=str(license_txt), css_classes=["property"]))
+        yield PrefRow(title="License", subtitle=_text("license"), css_classes=["property"])
 
         # authors
         authors = self.xml_tree.findall("author")
         if len(authors) == 0:
-            self.xml_group.add_row(PrefRow(title="<i>No authors</i>"))
+            row = PrefRow(title="<i>No authors</i>")
+            row.set_use_markup(True)
+            row.set_sensitive(False)
+            yield row
         else:
-            authors_exp = self.xml_group.add_row(Adw.ExpanderRow(title="Authors"))
+            authors_exp = Adw.ExpanderRow(title="Authors")
             for a in authors:
                 email = a.get("email")
                 if email:
@@ -153,48 +184,39 @@ class PackageInfoPage(ContentPage):
                 else:
                     row = PrefRow(title=a.text)
                 authors_exp.add_row(row)
+            yield authors_exp
 
-        def _add_depend_expander(depend: str):
-            xml_dep_list = self.xml_tree.findall(depend)
-            if len(xml_dep_list) == 0:
-                row = self.xml_group.add_row(PrefRow(title=f"<i>No '{depend}' packages</i>"))
-                row.set_use_markup(True)
-                row.set_sensitive(False)
-                return
-
-            expander = self.xml_group.add_row(Adw.ExpanderRow(title=f"{depend} packages"))
-            for xml_dep in xml_dep_list:
-                dep_pkg_name = xml_dep.text
-                row = PrefRow(title=dep_pkg_name)
-
-                # check if package exists
-                try:
-                    pkg_prefix = get_package_prefix(dep_pkg_name)
-                    row.set_subpage_link(
-                        nav_view=self.nav_view,
-                        subpage_class=PackageInfoPage,
-                        subpage_kwargs={"pkg_name": dep_pkg_name},
-                    )
-                    row.set_subtitle(str(pkg_prefix))
-                except PackageNotFoundError:
-                    pass
-                expander.add_row(row)
-
-        # buildtool depends
-        _add_depend_expander("buildtool_depend")
-
-        # build depends
-        _add_depend_expander("build_depend")
-
-        # exec depends
-        _add_depend_expander("exec_depend")
-
-        # test depends
-        _add_depend_expander("test_depend")
+        for depend in ("buildtool_depend", "build_depend", "exec_depend", "test_depend"):
+            yield self._build_dependency_row(depend)
 
         # TODO also export ?
 
         # TODO add all the interfaces (msgs etc) that a package defines
+
+    def _build_dependency_row(self, depend: str):
+        dependency_list = self.dependency_data.get(depend, [])
+        if not dependency_list:
+            row = PrefRow(title=f"<i>No '{depend}' packages</i>")
+            row.set_use_markup(True)
+            row.set_sensitive(False)
+            return row
+
+        expander = Adw.ExpanderRow(title=f"{depend} packages")
+        for dep_pkg_name, pkg_prefix in dependency_list:
+            row = PrefRow(title=dep_pkg_name)
+            if pkg_prefix:
+                row.set_subpage_link(
+                    nav_view=self.nav_view,
+                    subpage_class=PackageInfoPage,
+                    subpage_kwargs={"pkg": PackageItem(name=dep_pkg_name, path=str(pkg_prefix))},
+                )
+                row.set_subtitle(str(pkg_prefix))
+            expander.add_row(row)
+        return expander
+
+    def reset_ui(self):
+        self.executables_group.clear()
+        self.xml_group.clear()
 
     def on_open_pkg_folder(self, *, pkg_name: str):
         try:

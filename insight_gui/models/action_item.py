@@ -8,6 +8,7 @@ from insight_gui.models.interface_item import ActionInterfaceTypeItem
 
 class ActionItem(GObject.GObject):
     __gtype_name__ = "ActionItem"
+    __item_type__ = "Action"
 
     name = GObject.Property(type=str, default="")
     namespace = GObject.Property(type=str, default="/")

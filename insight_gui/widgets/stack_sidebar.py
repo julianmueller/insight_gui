@@ -20,14 +20,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from typing import Optional
-
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, GObject, Adw, Gdk
+from gi.repository import Gtk, GObject, Adw, Gdk, Gio
 
+from insight_gui.pages import Page
 from insight_gui.widgets.pref_rows import PrefRow
 
 
@@ -39,6 +38,8 @@ class StackSidebar(Adw.PreferencesPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.groups = []
+        self._pages_by_id: dict[str, Page] = {}
+        self._spinners_by_id: dict[str, Gtk.Spinner] = {}
 
     def set_stack(self, stack: Gtk.Stack):
         self.stack = stack
@@ -50,11 +51,7 @@ class StackSidebar(Adw.PreferencesPage):
             for page in page_group.pages:
                 self.add_page_row(
                     group=group,
-                    title=page.title,
-                    page_name=page.page_id,
-                    nav_page=page.nav_page_class(),
-                    prefix_icon=page.icon_name,
-                    subtitle=page.subtitle,
+                    page=page,
                 )
 
     def add_group(self, title: str = "", description: str = ""):
@@ -66,11 +63,7 @@ class StackSidebar(Adw.PreferencesPage):
     def add_page_row(
         self,
         group: Adw.PreferencesGroup,
-        title: str,
-        page_name: str,
-        nav_page: Adw.NavigationPage,
-        prefix_icon: Optional[str] = None,
-        subtitle: Optional[str] = None,
+        page: Page,
     ):
         """Add a row to a specific group."""
         if group not in self.groups:
@@ -79,30 +72,114 @@ class StackSidebar(Adw.PreferencesPage):
         if not self.stack:
             return
 
+        self._pages_by_id[page.page_id] = page
+
         def _on_pressed(controller: Gtk.GestureClick, n_press: int, x: float, y: float):
             state = controller.get_current_event_state()
 
-            # add CTRL+click functionality to open in detached window
             if state & Gdk.ModifierType.CONTROL_MASK:
-                nav_page.detach()
-
-            # regular click
+                self.open_detached_page(page.page_id)
             else:
-                nav_view = self.stack.get_child_by_name(page_name)
+                nav_view = self.ensure_page(page.page_id)
                 self.stack.set_visible_child(nav_view)
 
-        nav_view = Adw.NavigationView()
-        nav_view.add(nav_page)
-        self.stack.add_titled(child=nav_view, name=page_name, title=title)
-
-        row = PrefRow(activatable=True, title=title, subtitle=subtitle)
-        row.add_prefix(Gtk.Image(icon_name=prefix_icon)) if prefix_icon else None
+        row = PrefRow(activatable=True, title=page.title, subtitle=page.subtitle)
+        row.add_prefix(Gtk.Image(icon_name=page.icon_name))
+        loading_spinner = Gtk.Spinner(visible=False, tooltip_text="Page is refreshing")
+        row.add_suffix(loading_spinner)
+        self._spinners_by_id[page.page_id] = loading_spinner
 
         gesture = Gtk.GestureClick()
         gesture.connect("pressed", _on_pressed)
         row.add_controller(gesture)
 
         group.add(row)
+
+    def ensure_page(self, page_id: str) -> Adw.NavigationView | None:
+        if not self.stack:
+            return None
+
+        nav_view = self.stack.get_child_by_name(page_id)
+        if nav_view:
+            return nav_view
+
+        page = self._pages_by_id.get(page_id)
+        if page is None:
+            return None
+
+        try:
+            nav_page = page.create_nav_page()
+        except Exception as exc:
+            nav_page = self._create_error_page(page, exc)
+        self._connect_refresh_spinner(page_id, nav_page)
+
+        nav_view = Adw.NavigationView()
+        nav_view.add(nav_page)
+        self.stack.add_titled(child=nav_view, name=page.page_id, title=page.title)
+        return nav_view
+
+    def open_detached_page(self, page_id: str):
+        page = self._pages_by_id.get(page_id)
+        if page is None:
+            return
+
+        from insight_gui.window import DetachedWindow
+
+        app = Gio.Application.get_default()
+        try:
+            nav_page_class = page.nav_page_class
+        except Exception as exc:
+            detached_window = Adw.ApplicationWindow(application=app, title=page.title)
+            detached_window.set_default_size(400, 500)
+            detached_window.set_content(self._create_error_status_page(page, exc))
+            app.detached_windows.append(detached_window)
+            detached_window.show()
+            return
+
+        try:
+            detached_window = DetachedWindow(app=app, nav_page_class=nav_page_class, nav_page_kwargs={})
+        except Exception as exc:
+            detached_window = Adw.ApplicationWindow(application=app, title=page.title)
+            detached_window.set_default_size(400, 500)
+            detached_window.set_content(self._create_error_status_page(page, exc))
+        app.detached_windows.append(detached_window)
+        detached_window.show()
+
+    def _create_error_page(self, page: Page, error: Exception) -> Adw.NavigationPage:
+        app = Gio.Application.get_default()
+        connector = getattr(app, "ros2_connector", None)
+        if connector:
+            connector.log(f"Failed to load page '{page.page_id}': {error}", level="error")
+
+        nav_page = Adw.NavigationPage(title=page.title)
+        nav_page.set_child(self._create_error_status_page(page, error))
+        return nav_page
+
+    def _create_error_status_page(self, page: Page, error: Exception) -> Adw.StatusPage:
+        return Adw.StatusPage(
+            title=f"{page.title} Failed to Load",
+            description=str(error),
+            icon_name="dialog-error-symbolic",
+        )
+
+    def _connect_refresh_spinner(self, page_id: str, nav_page: Adw.NavigationPage):
+        loading_spinner = self._spinners_by_id.get(page_id)
+        if loading_spinner is None:
+            return
+
+        def _on_refresh_started(*args):
+            loading_spinner.set_visible(True)
+            loading_spinner.start()
+
+        def _on_refresh_finished(*args):
+            loading_spinner.stop()
+            loading_spinner.set_visible(False)
+
+        try:
+            nav_page.connect("refresh-started", _on_refresh_started)
+            nav_page.connect("refresh-finished", _on_refresh_finished)
+        except TypeError:
+            pass
 
     def clear_all(self):
         """Clear all groups and rows."""

@@ -88,6 +88,9 @@
         <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-top-right-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/arrow2-up-symbolic.svg</file>
 
+        <file preprocess="xml-stripblanks">icons/scalable/actions/up-symbolic.svg</file>
+        <file preprocess="xml-stripblanks">icons/scalable/actions/down-symbolic.svg</file>
+
         <file preprocess="xml-stripblanks">icons/scalable/actions/vertical-arrows-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/arrow4-left-symbolic.svg</file>
         <file preprocess="xml-stripblanks">icons/scalable/actions/arrow4-right-symbolic.svg</file>

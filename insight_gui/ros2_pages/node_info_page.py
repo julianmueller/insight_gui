@@ -26,9 +26,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import GObject, Gtk, Adw
 
-from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import ActionRow, ParameterRow, ServiceRow, TopicRow
 from insight_gui.models.node_item import NodeItem
 
 
@@ -108,50 +107,45 @@ class NodeInfoPage(ContentPage):
         ) > 0
 
     def refresh_ui(self):
-        # TODO this is ugly
-        from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
-        from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
-        from insight_gui.ros2_pages.action_info_page import ActionInfoPage
-
         self._add_item_rows_async(
             self.publishers_group,
             self.publisher_list,
-            lambda topic: self._build_topic_row(topic, TopicInfoPage),
+            self._build_topic_row,
             batch_size=8,
             on_done=self.publishers_group.set_description_to_row_count,
         )
         self._add_item_rows_async(
             self.subscribers_group,
             self.subscriber_list,
-            lambda topic: self._build_topic_row(topic, TopicInfoPage),
+            self._build_topic_row,
             batch_size=8,
             on_done=self.subscribers_group.set_description_to_row_count,
         )
         self._add_item_rows_async(
             self.service_servers_group,
             self.service_server_list,
-            lambda service: self._build_service_row(service, ServiceInfoPage),
+            self._build_service_row,
             batch_size=8,
             on_done=self.service_servers_group.set_description_to_row_count,
         )
         self._add_item_rows_async(
             self.service_clients_group,
             self.service_client_list,
-            lambda service: self._build_service_row(service, ServiceInfoPage),
+            self._build_service_row,
             batch_size=8,
             on_done=self.service_clients_group.set_description_to_row_count,
         )
         self._add_item_rows_async(
             self.action_servers_group,
             self.action_servers_list,
-            lambda action: self._build_action_row(action, ActionInfoPage),
+            self._build_action_row,
             batch_size=8,
             on_done=self.action_servers_group.set_description_to_row_count,
         )
         self._add_item_rows_async(
             self.action_clients_group,
             self.action_clients_list,
-            lambda action: self._build_action_row(action, ActionInfoPage),
+            self._build_action_row,
             batch_size=8,
             on_done=self.action_clients_group.set_description_to_row_count,
         )
@@ -163,56 +157,17 @@ class NodeInfoPage(ContentPage):
             on_done=self.parameters_group.set_description_to_row_count,
         )
 
-    def _build_topic_row(self, topic, topic_info_page_class) -> PrefRow:
-        row = PrefRow(title=topic.full_name, subtitle=topic.interface.full_name)
-        if topic.hidden:
-            row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden topic")
+    def _build_topic_row(self, topic) -> TopicRow:
+        return TopicRow(topic=topic, nav_view=self.nav_view)
 
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=topic_info_page_class,
-            subpage_kwargs={"topic": topic},
-        )
-        return row
+    def _build_service_row(self, service) -> ServiceRow:
+        return ServiceRow(service=service, nav_view=self.nav_view)
 
-    def _build_service_row(self, service, service_info_page_class) -> PrefRow:
-        row = PrefRow(title=service.full_name, subtitle=service.interface.full_name)
-        if service.hidden:
-            row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden service")
+    def _build_action_row(self, action) -> ActionRow:
+        return ActionRow(action=action, nav_view=self.nav_view)
 
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=service_info_page_class,
-            subpage_kwargs={"service": service},
-        )
-        return row
-
-    def _build_action_row(self, action, action_info_page_class) -> PrefRow:
-        row = PrefRow(title=action.full_name, subtitle=action.interface.full_name)
-        if action.hidden:
-            row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden action")
-
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=action_info_page_class,
-            subpage_kwargs={"action": action},
-        )
-        return row
-
-    def _build_parameter_row(self, param) -> PrefRow:
-        if not param.type:
-            return PrefRow(title=param.name, subtitle="Parameter type unavailable")
-
-        row = PrefRow(title=param.name, subtitle=f"{param.type_str}: {param.value}")
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=ParamEditPage,
-            subpage_kwargs={"parameter": param},
-        )
-        if param.read_only:
-            row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
-
-        return row
+    def _build_parameter_row(self, param) -> ParameterRow:
+        return ParameterRow(parameter=param, nav_view=self.nav_view)
 
     def reset_ui(self):
         self.publishers_group.clear()

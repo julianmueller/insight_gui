@@ -21,7 +21,6 @@
 # =============================================================================
 
 import json
-import time
 
 from rosidl_runtime_py import message_to_yaml, message_to_csv, message_to_ordereddict
 from rosidl_runtime_py.utilities import get_message
@@ -30,7 +29,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GLib, Pango
+from gi.repository import Gtk, Adw, Gio, GLib, Gdk, Pango
 
 from insight_gui.models.topic_item import TopicItem
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
@@ -56,7 +55,7 @@ class TopicSubscriberPage(ContentPage):
         self.msg_instance = None
         self.ros2_sub = None
 
-        self.last_update_time = 0
+        self.last_update_time = None
         self.max_update_rate = 10  # in Hz
 
         # main btns in bottom bar
@@ -144,25 +143,61 @@ class TopicSubscriberPage(ContentPage):
         self.echo_text_view_row = self.echo_group.add_row(TextViewRow(editable=False, wrap_mode=Gtk.WrapMode.NONE))
 
         # TODO add rows that display infos about the topic, like qos and rate etc
+        self._install_topic_drop_target()
+
+    def _install_topic_drop_target(self):
+        self.topic_drop_target = Gtk.DropTarget.new(TopicItem, Gdk.DragAction.COPY)
+        self.topic_drop_target.connect("drop", self._on_topic_dropped)
+        self.toolbar_view.add_controller(self.topic_drop_target)
+
+    def _on_topic_dropped(self, drop_target, value, x: float, y: float) -> bool:
+        if not isinstance(value, TopicItem):
+            return False
+
+        self._select_topic(value)
+        self.show_toast(f"Selected {value.full_name}")
+        return True
+
+    def _select_topic(self, topic: TopicItem):
+        self.preselect_topic = topic
+        self.detach_kwargs = {"preselect_topic": topic}
+
+        if not hasattr(self, "available_topics") or self.available_topics is None:
+            self.available_topics = []
+
+        index = next(
+            (
+                idx
+                for idx, available_topic in enumerate(self.available_topics)
+                if available_topic.full_name == topic.full_name
+            ),
+            -1,
+        )
+
+        if index < 0:
+            self.available_topics.append(topic)
+            index = len(self.available_topics) - 1
+
+        self.available_topic_model = self._create_list_store(TopicItem, self.available_topics)
+        self.topic_combo_row.set_model(self.available_topic_model)
+        self.topic_combo_row.set_selected(index)
+        self.on_topic_changed()
 
     def refresh_bg(self) -> bool:
         self.available_topics = self.ros2_connector.collect_topics()
         return bool(self.available_topics)
 
     def refresh_ui(self):
-        self.available_topic_model = self._create_list_store(TopicItem, self.available_topics)
-        # fill the ComboBox/ListStore with available services
-        self.topic_combo_row.set_model(self.available_topic_model)
-
         preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
-        index = next(
-            (idx for idx, topic in enumerate(self.available_topics) if topic.full_name == preselect_topic),
-            0,
+        topic = next(
+            (topic for topic in self.available_topics if topic.full_name == preselect_topic),
+            self.available_topics[0],
         )
-        self.topic_combo_row.set_selected(index)
+        self._select_topic(topic)
 
     def reset_ui(self):
         self.single_echo_done = True
+        self.last_update_time = None
         self.echo_text_view_row.clear()
         self.remove_sub()
 
@@ -184,6 +219,7 @@ class TopicSubscriberPage(ContentPage):
     def on_clear_text(self, *args):
         self.echo_text_view_row.clear()
         self.msg_instance = None
+        self.last_update_time = None
 
     def on_toggle_stream_type(self, *args):
         # active = continuous stream, inactive = single shot
@@ -267,8 +303,8 @@ class TopicSubscriberPage(ContentPage):
             return
 
         # apply rate limiting
-        now = time.time()
-        if now - self.last_update_time < 1.0 / self.max_update_rate:
+        now = self.ros2_connector.get_ros_time_seconds()
+        if self.last_update_time is not None and now - self.last_update_time < 1.0 / self.max_update_rate:
             return
 
         if self.is_echoing or not self.single_echo_done:

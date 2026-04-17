@@ -28,7 +28,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.model_rows import NodeRow
@@ -58,15 +57,17 @@ class NodeListPage(ContentPage):
         for node in self.nodes:
             if not self.app.settings.get_boolean("group-nodes-by-namespace"):
                 namespace = ""
+                title = "Nodes"
                 description = ""
             else:
                 namespace = node.namespace
+                title = namespace
                 description = "global namespace" if node.namespace == "/" else ""
 
             if namespace in self.node_ns_groups.keys():
                 group = self.node_ns_groups[namespace]
             else:
-                group = self.pref_page.add_group(title=namespace, description=description)
+                group = self.pref_page.add_group(title=title, description=description, collapsable=True)
                 self.node_ns_groups[namespace] = group
 
             nodes_by_group.setdefault(group, []).append(node)
@@ -82,15 +83,7 @@ class NodeListPage(ContentPage):
             )
 
     def _build_node_row(self, node) -> NodeRow:
-        row = NodeRow(node=node)
-
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=NodeInfoPage,
-            subpage_kwargs={"node": node},
-            label="Show node info page",
-        )
-        return row
+        return NodeRow(node=node, nav_view=self.nav_view)
 
     def reset_ui(self):
         for group in reversed(self.node_ns_groups.values()):

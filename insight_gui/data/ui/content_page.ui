@@ -149,6 +149,28 @@
                                     </object>
                                 </child>
                                 <child>
+                                    <object class="AdwStatusPage" id="error_page">
+                                        <property name="title">Refresh Failed</property>
+                                        <property name="description">The page could not be refreshed.</property>
+                                        <property name="icon-name">dialog-error-symbolic</property>
+                                        <child>
+                                            <object class="GtkButton">
+                                                <property name="halign">center</property>
+                                                <property name="action-name">win.refresh</property>
+                                                <property name="child">
+                                                    <object class="AdwButtonContent">
+                                                        <property name="label">Retry</property>
+                                                        <property name="icon-name">update-symbolic</property>
+                                                    </object>
+                                                </property>
+                                                <style>
+                                                    <class name="pill" />
+                                                </style>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+                                <child>
                                     <object class="AdwBin" id="main_content_page" />
                                 </child>
                             </object>

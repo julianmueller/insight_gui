@@ -20,21 +20,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-from rosidl_runtime_py import (
-    get_message_interfaces,
-    get_service_interfaces,
-    get_action_interfaces,
-)
+from itertools import groupby
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, GLib
 
-from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import InterfaceTypeRow
 
 
 class InterfaceBrowserPage(ContentPage):
@@ -85,62 +80,53 @@ class InterfaceBrowserPage(ContentPage):
         # self.on_interface_filters_changed()
 
     def refresh_bg(self) -> bool:
-        self.available_msgs = get_message_interfaces()
-        self.available_srvs = get_service_interfaces()
-        self.available_action_msgs = get_action_interfaces()
+        self.interfaces = [
+            *self.ros2_connector.get_message_interfaces(),
+            *self.ros2_connector.get_service_interfaces(),
+            *self.ros2_connector.get_action_interfaces(),
+        ]
+        self.interfaces.sort(key=lambda interface: (interface.package, interface.interface_class, interface.name))
+        self.interfaces_by_package = [
+            (pkg_name, list(package_interfaces))
+            for pkg_name, package_interfaces in groupby(self.interfaces, key=lambda interface: interface.package)
+        ]
 
-        return len(self.available_msgs) + len(self.available_srvs) + len(self.available_action_msgs) > 0
+        return bool(self.interfaces)
 
     def refresh_ui(self):
-        # add all the message interfaces
-        for pkg_name, msgs_list in sorted(self.available_msgs.items()):
-            msg_group = self.pref_page.add_group(title=pkg_name)
-            self._add_item_rows_async(
-                msg_group,
-                sorted(msgs_list),
-                lambda msg, pkg_name=pkg_name: self._build_interface_row(pkg_name, msg, "msg"),
-                batch_size=20,
-            )
-
-        # add all the service interfaces
-        for pkg_name, srvs_list in sorted(self.available_srvs.items()):
-            srv_group = self.pref_page.add_group(title=pkg_name)
-            self._add_item_rows_async(
-                srv_group,
-                sorted(srvs_list),
-                lambda srv, pkg_name=pkg_name: self._build_interface_row(pkg_name, srv, "srv"),
-                batch_size=20,
-            )
-
-        # add all the action interfaces
-        for pkg_name, actions_list in sorted(self.available_action_msgs.items()):
-            actions_group = self.pref_page.add_group(title=pkg_name)
-            self._add_item_rows_async(
-                actions_group,
-                sorted(actions_list),
-                lambda action, pkg_name=pkg_name: self._build_interface_row(pkg_name, action, "action"),
-                batch_size=20,
-            )
-
-        # sort the groups alphabetically by title
-        self.pref_page.sort_groups()
-
-        if self.pref_page.num_groups == 0:
+        if not self.interfaces_by_package:
             self.pref_page.set_placeholder_text("No interfaces found. Refresh to try again.")
+            return
 
-    def _build_interface_row(self, pkg_name: str, interface_name: str, interface_tag: str) -> PrefRow:
-        interface_full_name = f"{pkg_name}/{interface_name}"
-        row = PrefRow(
-            title=interface_name.removeprefix("msg/").removeprefix("srv/").removeprefix("action/"),
-            subtitle=interface_full_name,
-            tags=[interface_tag],
-        )
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=InterfaceInfoPage,
-            subpage_kwargs={"interface_full_name": interface_full_name},
-        )
-        return row
+        done = self._begin_refresh_job()
+        package_iter = iter(self.interfaces_by_package)
+
+        def add_package_groups():
+            if not self._refreshing:
+                return GLib.SOURCE_REMOVE
+
+            for _ in range(1):
+                try:
+                    pkg_name, interfaces = next(package_iter)
+                except StopIteration:
+                    done()
+                    return GLib.SOURCE_REMOVE
+
+                group = self.pref_page.add_group(title=pkg_name, collapsable=True)
+                self._add_item_rows_async(
+                    group,
+                    interfaces,
+                    self._build_interface_row,
+                    batch_size=16,
+                    on_done=group.set_description_to_row_count,
+                )
+
+            return GLib.SOURCE_CONTINUE
+
+        GLib.timeout_add(self._row_add_interval_ms, add_package_groups, priority=GLib.PRIORITY_LOW)
+
+    def _build_interface_row(self, interface) -> InterfaceTypeRow:
+        return InterfaceTypeRow(interface=interface, nav_view=self.nav_view)
 
     def reset_ui(self):
         self.pref_page.clear()

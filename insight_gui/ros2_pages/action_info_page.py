@@ -27,11 +27,9 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
 from insight_gui.models.action_item import ActionItem
-from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
-from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import InterfaceTypeRow, NodeRow
 
 
 # TODO test this class, because i havent had an action in the list to look at its info
@@ -85,12 +83,7 @@ class ActionInfoPage(ContentPage):
 
     def refresh_ui(self):
         # create a row for the action type # TODO maybe rather add the request/response/feedback as rows?
-        interface_type_row = PrefRow(title=self.action_interface_full_name)
-        interface_type_row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=InterfaceInfoPage,
-            subpage_kwargs={"interface": self.action.interface},
-        )
+        interface_type_row = InterfaceTypeRow(interface=self.action.interface, nav_view=self.nav_view)
         self._add_rows_async(self.action_interface_type_group, (interface_type_row,), batch_size=1)
         self._add_item_rows_async(
             self.action_servers_group,
@@ -107,17 +100,8 @@ class ActionInfoPage(ContentPage):
             on_done=self.action_clients_group.set_description_to_row_count,
         )
 
-    def _build_node_row(self, node) -> PrefRow:
-        row = PrefRow(title=node.name, subtitle=node.full_name)
-        if node.hidden:
-            row.add_prefix_icon(icon_name="eye-not-looking-symbolic", tooltip_text="Hidden node")
-
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=NodeInfoPage,
-            subpage_kwargs={"node": node},
-        )
-        return row
+    def _build_node_row(self, node) -> NodeRow:
+        return NodeRow(node=node, nav_view=self.nav_view)
 
     def reset_ui(self):
         self.action_interface_type_group.clear()
@@ -128,4 +112,4 @@ class ActionInfoPage(ContentPage):
     #     self._on_goto_action_goal_page()
 
     def _on_goto_action_goal_page(self):
-        self.nav_view.push(ActionGoalPage(preselect_action=self.action))
+        self._push_subpage(ActionGoalPage, {"preselect_action": self.action})

@@ -22,6 +22,7 @@
 
 import concurrent.futures
 import threading
+import time
 from typing import Callable
 
 import gi
@@ -30,13 +31,16 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GObject, GLib, Gio
 
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.breadcrumbs import BreadcrumbsBar
 
 
 class ContentPage(Adw.NavigationPage):
     __gtype_name__ = "ContentPage"
+    __gsignals__ = {
+        "refresh-started": (GObject.SignalFlags.RUN_FIRST, None, ()),
+        "refresh-finished": (GObject.SignalFlags.RUN_FIRST, None, ()),
+    }
 
     def __init__(
         self,
@@ -54,7 +58,7 @@ class ContentPage(Adw.NavigationPage):
         super().connect("unmap", self.on_unmap)
 
         self.app = Gio.Application.get_default()
-        self.ros2_connector: ROS2Connector = self.app.ros2_connector
+        self.ros2_connector = self.app.ros2_connector
 
         self.is_mapped = False
         self.is_realized = False
@@ -98,6 +102,7 @@ class ContentPage(Adw.NavigationPage):
         self.empty_search_page: Adw.StatusPage = builder.get_object("empty_search_page")
         self.empty_search_clear_btn: Gtk.Button = builder.get_object("empty_search_clear_btn")
         self.empty_search_clear_btn.connect("clicked", self.on_clear_search_clicked)
+        self.error_page: Adw.StatusPage = builder.get_object("error_page")
         self.bottom_bar: Gtk.ActionBar = builder.get_object("bottom_bar")
 
         super().set_child(self.toolbar_view)
@@ -136,6 +141,16 @@ class ContentPage(Adw.NavigationPage):
         self._refresh_bg_success = True
         self._refresh_bg_error: Exception | None = None
         self._refresh_cancel_event = threading.Event()
+        self._auto_refresh_started = False
+        self._auto_refresh_source_id = 0
+        self._auto_refresh_delay_ms = 250
+        self._row_add_jobs: list[dict] = []
+        self._row_add_source_id = 0
+        self._row_add_interval_ms = 10
+        self._row_add_time_budget_ms = 5.0
+        self._content_interactive = True
+        self._active_toast_titles: set[str] = set()
+        self._toast_lock = threading.Lock()
 
         self.pref_page = PrefPage()
         self.pref_page.connect("group-filtered", self._on_groups_filtered_changed)
@@ -155,18 +170,57 @@ class ContentPage(Adw.NavigationPage):
             self.nav_view.connect("pushed", self.update_breadcrumbs)
             self.nav_view.connect("popped", self.update_breadcrumbs)
 
-        # refresh the gui if allowed
-        if self.auto_refresh_on_realize:
-            self.refresh()
-
     def on_unrealize(self, *args):
         self.is_realized = False
+        self._cancel_pending_row_adds()
 
     def on_map(self, *args):
         self.is_mapped = True
+        self._schedule_auto_refresh()
 
     def on_unmap(self, *args):
         self.is_mapped = False
+        if self._auto_refresh_source_id:
+            GLib.source_remove(self._auto_refresh_source_id)
+            self._auto_refresh_source_id = 0
+
+    def _schedule_auto_refresh(self):
+        if not self.auto_refresh_on_realize or self._auto_refresh_started or self._auto_refresh_source_id:
+            return
+
+        def _start_auto_refresh():
+            self._auto_refresh_source_id = 0
+            if not self.is_mapped or not self.is_realized:
+                return GLib.SOURCE_REMOVE
+
+            if self.ros2_connector.is_starting and not self.ros2_connector.is_running:
+                self._auto_refresh_source_id = GLib.timeout_add(
+                    100,
+                    _start_auto_refresh,
+                    priority=GLib.PRIORITY_LOW,
+                )
+                return GLib.SOURCE_REMOVE
+
+            self._auto_refresh_started = True
+            self.refresh()
+            return GLib.SOURCE_REMOVE
+
+        self._auto_refresh_source_id = GLib.timeout_add(
+            self._auto_refresh_delay_ms,
+            _start_auto_refresh,
+            priority=GLib.PRIORITY_LOW,
+        )
+
+    def _push_subpage(self, subpage_class: type[Adw.NavigationPage], subpage_kwargs: dict | None = None):
+        nav_view = getattr(self, "nav_view", None) or super().get_ancestor(Adw.NavigationView)
+        if not nav_view:
+            return
+
+        def _open_subpage():
+            nav_view.push(subpage_class(**(subpage_kwargs or {})))
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(_open_subpage, priority=GLib.PRIORITY_LOW)
 
     # TODO maybe change the whole refresh thing, so that there is only one refresh method, which always happens in the
     # bg and every update on the ui is performed with 'idle_add'. with this, the refresh is progressive and not all at
@@ -174,6 +228,11 @@ class ContentPage(Adw.NavigationPage):
     def refresh(self):
         if self._refreshing:
             return
+
+        if self._auto_refresh_source_id:
+            GLib.source_remove(self._auto_refresh_source_id)
+            self._auto_refresh_source_id = 0
+        self._auto_refresh_started = True
 
         self._refresh_cancel_event.clear()
         self._start_refresh_ui()
@@ -216,24 +275,26 @@ class ContentPage(Adw.NavigationPage):
     def _start_refresh_ui(self):
         self.app.mark_busy()
         self._refreshing = True
+        self.emit("refresh-started")
         self._refresh_ui_deferred = False
         self._refresh_pending_jobs = 0
         self.search_bar.set_search_mode(False)
         self.refresh_spinner.set_visible(True)
         self.refresh_btn.set_can_target(False)
         self.refresh_icon.set_visible(False)
-        self.content_stack.set_sensitive(False)
+        self._set_content_interactive(False)
         self.refresh_spinner.start()
 
     def _on_refresh_error(self, e):
         # self.show_toast(f"Refresh UI failed! Error: {e}")
+        self._cancel_pending_row_adds()
         self.ros2_connector.log(f"Refresh UI failed! Error: {e}", level="error")
-        self.show_banner(self.refresh_fail_text)
+        self.show_error_status(e)
 
     def _end_refresh_ui(self):
         self.refresh_spinner.stop()
         self.hide_banner()
-        self.content_stack.set_sensitive(True)
+        self._set_content_interactive(True)
         self.refresh_icon.set_visible(True)
         self.refresh_btn.set_can_target(True)
         self.refresh_spinner.set_visible(False)
@@ -241,6 +302,7 @@ class ContentPage(Adw.NavigationPage):
         self._refresh_ui_deferred = False
         self._refresh_pending_jobs = 0
         self.app.unmark_busy()
+        self.emit("refresh-finished")
 
     def cancel_refresh(self):
         self._refresh_cancel_event.set()
@@ -281,6 +343,106 @@ class ContentPage(Adw.NavigationPage):
 
         return _done
 
+    def _queue_rows_for_smooth_add(
+        self,
+        group,
+        rows_iterable,
+        *,
+        batch_size: int,
+        on_done: Callable[[], None] | None = None,
+    ) -> None:
+        self._row_add_jobs.append(
+            {
+                "group": group,
+                "rows_iter": iter(rows_iterable),
+                "batch_size": max(1, batch_size),
+                "on_done": on_done,
+            }
+        )
+        self._ensure_row_add_source()
+
+    def _ensure_row_add_source(self):
+        if self._row_add_source_id:
+            return
+
+        self._row_add_source_id = GLib.timeout_add(
+            self._row_add_interval_ms,
+            self._process_row_add_jobs,
+            priority=GLib.PRIORITY_LOW,
+        )
+
+    def _process_row_add_jobs(self):
+        if not self._refreshing:
+            self._row_add_source_id = 0
+            self._row_add_jobs.clear()
+            return GLib.SOURCE_REMOVE
+
+        if not self._row_add_jobs:
+            self._row_add_source_id = 0
+            return GLib.SOURCE_REMOVE
+
+        deadline = time.monotonic() + self._row_add_time_budget_ms / 1000.0
+        rows_added_total = 0
+
+        while self._row_add_jobs:
+            job = self._row_add_jobs.pop(0)
+            rows_added_for_job = 0
+            job_finished = False
+
+            try:
+                while rows_added_for_job < job["batch_size"]:
+                    try:
+                        row = next(job["rows_iter"])
+                    except StopIteration:
+                        job_finished = True
+                        break
+
+                    if not self._content_interactive:
+                        row.set_sensitive(False)
+                    job["group"].append_row(row)
+                    rows_added_for_job += 1
+                    rows_added_total += 1
+
+                    if rows_added_total > 0 and time.monotonic() >= deadline:
+                        break
+
+                if job_finished:
+                    if job["on_done"]:
+                        job["on_done"]()
+                else:
+                    self._row_add_jobs.append(job)
+
+            except Exception as e:
+                self._row_add_source_id = 0
+                self._row_add_jobs.clear()
+                self._on_refresh_error(e)
+                self._end_refresh_ui()
+                return GLib.SOURCE_REMOVE
+
+            if rows_added_total > 0 and time.monotonic() >= deadline:
+                break
+
+        if not self._row_add_jobs:
+            self._row_add_source_id = 0
+            return GLib.SOURCE_REMOVE
+
+        return GLib.SOURCE_CONTINUE
+
+    def _cancel_pending_row_adds(self):
+        if self._row_add_source_id:
+            GLib.source_remove(self._row_add_source_id)
+            self._row_add_source_id = 0
+        self._row_add_jobs.clear()
+
+    def _set_content_interactive(self, interactive: bool):
+        self._content_interactive = interactive
+        self.main_content_page.set_opacity(1.0 if interactive else 0.55)
+        self.bottom_bar.set_sensitive(interactive)
+
+        pref_page = getattr(self, "pref_page", None)
+        if pref_page is not None:
+            pref_page.set_rows_sensitive(interactive)
+
     def _add_rows_async(
         self,
         group,
@@ -302,10 +464,10 @@ class ContentPage(Adw.NavigationPage):
                 on_done()
             done()
 
-        group.add_rows(
+        self._queue_rows_for_smooth_add(
+            group,
             rows_iterable,
             batch_size=batch_size,
-            priority=priority,
             on_done=_on_done,
         )
 
@@ -413,6 +575,12 @@ class ContentPage(Adw.NavigationPage):
 
         self.content_stack.set_visible_child(self.main_content_page)
 
+    def show_error_status(self, error: Exception | str, *, title: str = "Refresh Failed") -> None:
+        self.error_page.set_title(title)
+        self.error_page.set_description(str(error))
+        self.error_page.set_icon_name("dialog-error-symbolic")
+        self.content_stack.set_visible_child(self.error_page)
+
     def detach(self, *args):
         from insight_gui.window import DetachedWindow
 
@@ -427,12 +595,47 @@ class ContentPage(Adw.NavigationPage):
 
     def show_toast(self, title: str, *, priority: Adw.ToastPriority = Adw.ToastPriority.NORMAL, timeout: int = 2):
         """Show a toast message"""
-        self.toast_overlay.add_toast(Adw.Toast(title=title, priority=priority, timeout=timeout))
+        title = str(title)
+        if not self._reserve_toast_title(title):
+            return
+
+        def _add_toast():
+            self.toast_overlay.add_toast(Adw.Toast(title=title, priority=priority, timeout=timeout))
+            self._release_toast_title_later(title, timeout=timeout)
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(_add_toast)
 
     def show_toast_w_btn(self, toast_text: str, btn_label: str, func: Callable, **func_kwargs):
-        toast = Adw.Toast(title=str(toast_text), button_label=str(btn_label))
-        toast.connect("button-clicked", lambda toast, *_: func(**func_kwargs))
-        self.toast_overlay.add_toast(toast)
+        toast_text = str(toast_text)
+        if not self._reserve_toast_title(toast_text):
+            return
+
+        def _add_toast():
+            toast = Adw.Toast(title=toast_text, button_label=str(btn_label))
+            toast.connect("button-clicked", lambda toast, *_: func(**func_kwargs))
+            self.toast_overlay.add_toast(toast)
+            self._release_toast_title_later(toast_text, timeout=5)
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(_add_toast)
+
+    def _reserve_toast_title(self, title: str) -> bool:
+        with self._toast_lock:
+            if title in self._active_toast_titles:
+                return False
+            self._active_toast_titles.add(title)
+            return True
+
+    def _release_toast_title_later(self, title: str, *, timeout: int) -> None:
+        release_after_seconds = max(1, int(timeout) + 1)
+
+        def _release():
+            with self._toast_lock:
+                self._active_toast_titles.discard(title)
+            return GLib.SOURCE_REMOVE
+
+        GLib.timeout_add_seconds(release_after_seconds, _release)
 
     def show_banner(self, banner_text: str):
         self.banner.set_title(str(banner_text))

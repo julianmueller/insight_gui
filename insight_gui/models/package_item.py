@@ -6,6 +6,7 @@ from gi.repository import GObject
 
 class PackageItem(GObject.GObject):
     __gtype_name__ = "PackageItem"
+    __item_type__ = "Package"
 
     name = GObject.Property(type=str, default="")
     path = GObject.Property(type=str, default="")

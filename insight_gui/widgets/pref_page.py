@@ -61,6 +61,7 @@ class PrefPage(Adw.PreferencesPage):
 
         self.groups: Gio.ListStore = Gio.ListStore(item_type=PrefGroup.__gtype__)
         self.groups.connect("items-changed", self._on_groups_changed)
+        self._rows_sensitive = True
 
         self.placeholder_group = PrefGroup(sensitive=False, placeholder_text=placeholder_text)
         self.set_placeholder_text(placeholder_text)
@@ -99,15 +100,25 @@ class PrefPage(Adw.PreferencesPage):
         title: str = "",
         description: str = "",
         filterable: bool = True,
+        collapsable: bool = False,
         **kwargs,
     ) -> PrefGroup:
         # check if pref group already exists
         pref_group = self.get_group(title)
         if pref_group:
+            if collapsable:
+                pref_group.set_collapsable(True)
             return pref_group
 
         else:
-            pref_group = PrefGroup(title=title, description=description, filterable=filterable, **kwargs)
+            pref_group = PrefGroup(
+                title=title,
+                description=description,
+                filterable=filterable,
+                collapsable=collapsable,
+                **kwargs,
+            )
+            pref_group.set_rows_sensitive(self._rows_sensitive)
             pref_group.connect("filtered", self._on_groups_filtered_changed)
             pref_group.connect("unfiltered", self.on_groups_unfiltered_changed)
             super().add(pref_group)
@@ -160,6 +171,11 @@ class PrefPage(Adw.PreferencesPage):
             idx = self.groups.get_n_items() - 1
             pref_group = self.groups.get_item(idx)
             self.remove_group(pref_group)
+
+    def set_rows_sensitive(self, sensitive: bool):
+        self._rows_sensitive = sensitive
+        for i in range(self.groups.get_n_items()):
+            self.groups.get_item(i).set_rows_sensitive(sensitive)
 
     def get_total_row_count(self) -> int:
         """Return total number of rows across all groups (excludes placeholders)."""

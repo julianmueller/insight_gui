@@ -26,7 +26,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Gio, Gdk, Adw
+from gi.repository import Gtk, Gio, Gdk, Adw, GLib
 
 
 class ContextMenu:
@@ -57,7 +57,7 @@ class ContextMenu:
         # listen for right-clicks
         self._click_controller = Gtk.GestureClick()
         self._click_controller.set_button(Gdk.BUTTON_SECONDARY)
-        self._click_controller.connect("pressed", self._on_button_pressed)
+        self._click_controller.connect("released", self._on_button_released)
         self.target.add_controller(self._click_controller)
 
         # keyboard menu key support
@@ -94,6 +94,7 @@ class ContextMenu:
         label: str,
         callback: Callable,
         *,
+        icon_name: str = "",
         position: int | None = None,
     ):
         """Add or replace an item identified by action_id."""
@@ -105,6 +106,7 @@ class ContextMenu:
                 "id": action_id,
                 "label": label,
                 "callback": callback,
+                "icon_name": icon_name,
             },
         )
         self._rebuild_menu()
@@ -127,6 +129,8 @@ class ContextMenu:
             self._action_group.add_action(action)
 
             menu_item = Gio.MenuItem.new(item["label"], f"{self.action_prefix}.{item['id']}")
+            if item.get("icon_name"):
+                menu_item.set_icon(Gio.ThemedIcon.new(item["icon_name"]))
             section.append_item(menu_item)
 
         if section.get_n_items() > 0:
@@ -154,10 +158,17 @@ class ContextMenu:
         if overlay:
             overlay.add_toast(Adw.Toast(title=text))
 
-    def _on_button_pressed(self, controller: Gtk.GestureClick, n_press: int, x: float, y: float):
+    def _on_button_released(self, controller: Gtk.GestureClick, n_press: int, x: float, y: float):
         if controller.get_current_button() != Gdk.BUTTON_SECONDARY:
             return
-        self.popup(x, y)
+
+        def _popup_after_click():
+            if self._popover.get_visible():
+                self._popover.popdown()
+            self.popup(x, y)
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(_popup_after_click, priority=GLib.PRIORITY_DEFAULT_IDLE)
 
     def _on_key_pressed(self, _controller, keyval: int, _keycode: int, state: Gdk.ModifierType):
         if keyval == Gdk.KEY_Menu or (keyval == Gdk.KEY_F10 and state & Gdk.ModifierType.SHIFT_MASK):

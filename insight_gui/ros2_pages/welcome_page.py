@@ -24,16 +24,18 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
-
-from insight_gui.widgets.content_page import ContentPage
+from gi.repository import Adw
 
 
-class WelcomePage(ContentPage):
+class WelcomePage(Adw.NavigationPage):
     __gtype_name__ = "WelcomePage"
 
+    refreshable = False
+    searchable = False
+    detachable = False
+
     def __init__(self, **kwargs):
-        super().__init__(refreshable=False, searchable=False, detachable=False, **kwargs)
+        super().__init__(**kwargs)
         super().set_title("Welcome to Insight GUI")
 
         status_page = Adw.StatusPage(
@@ -41,5 +43,7 @@ class WelcomePage(ContentPage):
             description="Select the pages in the left navigation.",
             icon_name="insight",
         )
-        self.content_stack.add_child(status_page)
-        self.content_stack.set_visible_child(status_page)
+        super().set_child(status_page)
+
+    def trigger(self):
+        pass

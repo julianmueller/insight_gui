@@ -34,7 +34,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GLib, Pango
+from gi.repository import Gtk, Adw, Gio, GLib, Gdk, Pango
 
 from insight_gui.models.action_item import ActionItem
 from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
@@ -162,6 +162,44 @@ class ActionGoalPage(ContentPage):
             func=self.on_copy_result_to_clipboard,
         )
         self.result_text_view_row = self.result_group.add_row(TextViewRow(editable=False, wrap_mode=Gtk.WrapMode.NONE))
+        self._install_action_drop_target()
+
+    def _install_action_drop_target(self):
+        self.action_drop_target = Gtk.DropTarget.new(ActionItem, Gdk.DragAction.COPY)
+        self.action_drop_target.connect("drop", self._on_action_dropped)
+        self.toolbar_view.add_controller(self.action_drop_target)
+
+    def _on_action_dropped(self, drop_target, value, x: float, y: float) -> bool:
+        if not isinstance(value, ActionItem):
+            return False
+
+        self._select_action(value)
+        self.show_toast(f"Selected {value.full_name}")
+        return True
+
+    def _select_action(self, action: ActionItem):
+        self.preselect_action = action
+        self.detach_kwargs = {"preselect_action": action}
+
+        if not hasattr(self, "available_actions") or self.available_actions is None:
+            self.available_actions = []
+
+        index = next(
+            (
+                idx
+                for idx, available_action in enumerate(self.available_actions)
+                if available_action.full_name == action.full_name
+            ),
+            -1,
+        )
+        if index < 0:
+            self.available_actions.append(action)
+            index = len(self.available_actions) - 1
+
+        self.available_action_model = self._create_list_store(ActionItem, self.available_actions)
+        self.action_combo_row.set_model(self.available_action_model)
+        self.action_combo_row.set_selected(index)
+        self.on_action_selected()
 
     def refresh_bg(self) -> bool:
         self.available_actions = self.ros2_connector.collect_actions()
@@ -173,11 +211,12 @@ class ActionGoalPage(ContentPage):
         self.action_combo_row.set_model(self.available_action_model)
 
         preselect_action = getattr(self.preselect_action, "full_name", self.preselect_action)
-        index = next(
-            (idx for idx, action in enumerate(self.available_actions) if action.full_name == preselect_action),
-            0,
-        )
-        self.action_combo_row.set_selected(index)
+        action = next((action for action in self.available_actions if action.full_name == preselect_action), None)
+        if not action and self.available_actions:
+            action = self.available_actions[0]
+
+        if action:
+            self._select_action(action)
 
     def reset_ui(self):
         # clear previous action list

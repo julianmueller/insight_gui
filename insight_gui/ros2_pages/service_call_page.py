@@ -32,7 +32,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GLib, Pango, GObject
+from gi.repository import Gtk, Adw, Gio, GLib, Gdk, Pango, GObject
 
 from insight_gui.models.service_item import ServiceItem
 from insight_gui.widgets.content_page import ContentPage
@@ -149,6 +149,44 @@ class ServiceCallPage(ContentPage):
         self.response_text_view_row = self.response_group.add_row(
             TextViewRow(editable=False, wrap_mode=Gtk.WrapMode.NONE)
         )
+        self._install_service_drop_target()
+
+    def _install_service_drop_target(self):
+        self.service_drop_target = Gtk.DropTarget.new(ServiceItem, Gdk.DragAction.COPY)
+        self.service_drop_target.connect("drop", self._on_service_dropped)
+        self.toolbar_view.add_controller(self.service_drop_target)
+
+    def _on_service_dropped(self, drop_target, value, x: float, y: float) -> bool:
+        if not isinstance(value, ServiceItem):
+            return False
+
+        self._select_service(value)
+        self.show_toast(f"Selected {value.full_name}")
+        return True
+
+    def _select_service(self, service: ServiceItem):
+        self.preselect_service = service
+        self.detach_kwargs = {"preselect_service": service}
+
+        if not hasattr(self, "available_services") or self.available_services is None:
+            self.available_services = []
+
+        index = next(
+            (
+                idx
+                for idx, available_service in enumerate(self.available_services)
+                if available_service.full_name == service.full_name
+            ),
+            -1,
+        )
+        if index < 0:
+            self.available_services.append(service)
+            index = len(self.available_services) - 1
+
+        self.service_list_store = self._create_list_store(ServiceItem, self.available_services)
+        self.service_row.set_model(self.service_list_store)
+        self.service_row.set_selected(index)
+        self.on_service_selected()
 
     def refresh_bg(self) -> bool:
         self.available_services = self.ros2_connector.collect_services()
@@ -158,13 +196,13 @@ class ServiceCallPage(ContentPage):
         self.service_list_store = self._create_list_store(ServiceItem, self.available_services)
         self.service_row.set_model(self.service_list_store)
 
-        # set the selected service to the preselected one
         preselect_service = getattr(self.preselect_service, "full_name", self.preselect_service)
-        index = next(
-            (idx for idx, service in enumerate(self.available_services) if service.full_name == preselect_service),
-            0,
-        )
-        self.service_row.set_selected(index)
+        service = next((service for service in self.available_services if service.full_name == preselect_service), None)
+        if not service and self.available_services:
+            service = self.available_services[0]
+
+        if service:
+            self._select_service(service)
 
     def reset_ui(self):
         # clear previous service list

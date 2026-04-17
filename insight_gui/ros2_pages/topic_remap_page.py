@@ -32,13 +32,12 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, Pango
+from gi.repository import Gtk, Adw, Gio, Gdk, Pango
 
 from insight_gui.models.topic_item import TopicItem
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
-from insight_gui.utils.gtk_utils import find_str_in_list_store
 
 
 class TopicRemapPage(ContentPage):
@@ -120,6 +119,44 @@ class TopicRemapPage(ContentPage):
             )
         )
         self.toggle_button.connect("clicked", self.on_toggle_clicked)
+        self._install_topic_drop_target()
+
+    def _install_topic_drop_target(self):
+        self.topic_drop_target = Gtk.DropTarget.new(TopicItem, Gdk.DragAction.COPY)
+        self.topic_drop_target.connect("drop", self._on_topic_dropped)
+        self.toolbar_view.add_controller(self.topic_drop_target)
+
+    def _on_topic_dropped(self, drop_target, value, x: float, y: float) -> bool:
+        if not isinstance(value, TopicItem):
+            return False
+
+        self._select_topic(value)
+        self.show_toast(f"Selected {value.full_name}")
+        return True
+
+    def _select_topic(self, topic: TopicItem):
+        self.preselect_topic = topic
+        self.detach_kwargs = {"preselect_topic": topic}
+
+        if not hasattr(self, "available_topics") or self.available_topics is None:
+            self.available_topics = []
+
+        index = next(
+            (
+                idx
+                for idx, available_topic in enumerate(self.available_topics)
+                if available_topic.full_name == topic.full_name
+            ),
+            -1,
+        )
+        if index < 0:
+            self.available_topics.append(topic)
+            index = len(self.available_topics) - 1
+
+        self.topic_list_store = self._create_list_store(TopicItem, self.available_topics)
+        self.topic_row.set_model(self.topic_list_store)
+        self.topic_row.set_selected(index)
+        self.on_topic_changed()
 
     # ------------------------------------------------------------------
     # Lifecycle helpers
@@ -133,14 +170,12 @@ class TopicRemapPage(ContentPage):
         self.topic_row.set_model(self.topic_list_store)
 
         preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
-        found_index = next(
-            (idx for idx, topic in enumerate(self.available_topics) if topic.full_name == preselect_topic),
-            -1,
-        )
-        if found_index >= 0:
-            self.topic_row.set_selected(found_index)
-        elif self.topic_list_store.get_n_items() > 0:
-            self.topic_row.set_selected(0)
+        topic = next((topic for topic in self.available_topics if topic.full_name == preselect_topic), None)
+        if not topic and self.available_topics:
+            topic = self.available_topics[0]
+
+        if topic:
+            self._select_topic(topic)
 
     def reset_ui(self):
         self.topic_list_store.remove_all()
@@ -263,10 +298,11 @@ class TopicRemapPage(ContentPage):
     # ------------------------------------------------------------------
     def _get_topic_type(self, topic_name: str) -> Optional[str]:
         for topic in self.available_topics:
-            if topic.full_name == topic_name and topic.type_names:
-                if len(topic.type_names) == 1:
-                    return topic.type_names[0]
-                return ", ".join(topic.type_names)
+            type_names = getattr(topic, "type_names", [topic.interface.full_name])
+            if topic.full_name == topic_name and type_names:
+                if len(type_names) == 1:
+                    return type_names[0]
+                return ", ".join(type_names)
         return None
 
     def _build_target_topic(self) -> str:

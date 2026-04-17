@@ -20,39 +20,19 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
+from __future__ import annotations
+
 import re
 import time
 from threading import Thread, Lock, RLock
-from typing import Callable, Tuple, List
+from typing import Callable, Tuple, List, TYPE_CHECKING
 
-import rclpy
-from rclpy.node import Node
-from rclpy.qos import QoSProfile
-from rclpy.publisher import Publisher, MsgType
-from rclpy.subscription import Subscription
-from rclpy.service import Service, SrvType, SrvTypeRequest, SrvTypeResponse
-from rclpy.timer import Timer
-from rclpy.action import ActionClient
-from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
-from rclpy.action import get_action_names_and_types
-from rclpy.action.graph import (
-    get_action_client_names_and_types_by_node,
-    get_action_server_names_and_types_by_node,
-)
-from rclpy.parameter_client import AsyncParameterClient
-from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
-
-# from rosidl_runtime_py.utilities import get_action
-
-# ROS2 API imports for data collection # TODO replace all of them with rclpy implementations
-from ros2node.api import get_node_names, _is_hidden_name
-from ros2topic.api import get_topic_names_and_types  # , get_msg_class
-from ros2service.api import get_service_names_and_types
-from ros2param.api import (
-    get_parameter_type_string,
-    call_get_parameters,
-    get_value,
-)
+if TYPE_CHECKING:
+    from rclpy.publisher import Publisher, MsgType
+    from rclpy.qos import QoSProfile
+    from rclpy.service import SrvType, SrvTypeRequest, SrvTypeResponse
+    from rclpy.subscription import Subscription
+    from rclpy.timer import Timer
 
 import gi
 
@@ -63,8 +43,12 @@ from insight_gui.models.node_item import NodeItem
 from insight_gui.models.topic_item import TopicItem
 from insight_gui.models.service_item import ServiceItem
 from insight_gui.models.action_item import ActionItem
+from insight_gui.models.interface_item import (
+    ActionInterfaceTypeItem,
+    ServiceInterfaceTypeItem,
+    TopicInterfaceTypeItem,
+)
 from insight_gui.models.parameter_item import ParameterItem
-from insight_gui.utils.ros_logging import ros_log
 
 
 class ROS2Connector(GObject.GObject):
@@ -74,8 +58,8 @@ class ROS2Connector(GObject.GObject):
         super().__init__()
         self.app = Gio.Application.get_default()
 
-        self._executor: MultiThreadedExecutor | None = None
-        self.ros2_node: Node = None
+        self._executor = None
+        self.ros2_node = None
         self.thread: Thread = None
         self._start_thread: Thread = None
         self.is_running = False
@@ -85,6 +69,9 @@ class ROS2Connector(GObject.GObject):
         self._node_lock = RLock()
 
     def _ensure_rclpy(self):
+        import rclpy
+        from rclpy.executors import MultiThreadedExecutor
+
         if self._executor is not None:
             return
 
@@ -130,6 +117,8 @@ class ROS2Connector(GObject.GObject):
             self.is_starting = False
 
     def start_node(self, *args, **kwargs):
+        from rclpy.node import Node
+
         with self._node_lock:
             if self.is_running and self.thread and self.thread.is_alive():
                 return
@@ -180,6 +169,9 @@ class ROS2Connector(GObject.GObject):
         self.start_node()
 
     def spin(self, *args, **kwargs):
+        import rclpy
+        from rclpy.executors import ExternalShutdownException
+
         try:
             while rclpy.ok() and self.is_running:
                 try:
@@ -227,8 +219,13 @@ class ROS2Connector(GObject.GObject):
         full_name: str,
         type_names: List[str],
         *,
-        hidden_func: Callable[[str], bool] = topic_or_service_is_hidden,
+        hidden_func: Callable[[str], bool] | None = None,
     ):
+        if hidden_func is None:
+            from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
+
+            hidden_func = topic_or_service_is_hidden
+
         if not type_names:
             return None
 
@@ -243,6 +240,8 @@ class ROS2Connector(GObject.GObject):
         return item
 
     def _wait_for_future(self, future, *, timeout_sec: float | None = None):
+        import rclpy
+
         start = time.monotonic()
         while rclpy.ok() and not future.done():
             if timeout_sec is not None and timeout_sec > 0 and (time.monotonic() - start) > timeout_sec:
@@ -254,6 +253,11 @@ class ROS2Connector(GObject.GObject):
 
         return future.result()
 
+    def get_ros_time_seconds(self) -> float:
+        if not self.ros2_node:
+            return 0.0
+        return self.ros2_node.get_clock().now().nanoseconds / 1e9
+
     def add_publisher(
         self,
         msg_type: MsgType,
@@ -262,6 +266,8 @@ class ROS2Connector(GObject.GObject):
         **kwargs,
     ) -> Publisher:
         if isinstance(qos_profile, int):
+            from rclpy.qos import QoSProfile
+
             qos_profile = QoSProfile(depth=qos_profile)
         return self.ros2_node.create_publisher(msg_type, topic_name, qos_profile=qos_profile)
 
@@ -328,6 +334,8 @@ class ROS2Connector(GObject.GObject):
         if not self.is_running:
             return None
 
+        from rclpy.action import ActionClient
+
         action_client = ActionClient(self.ros2_node, action_type, action_name)
 
         if not action_client.wait_for_server(timeout_sec=2.0):
@@ -344,6 +352,8 @@ class ROS2Connector(GObject.GObject):
             return []
 
         try:
+            from ros2node.api import get_node_names, _is_hidden_name
+
             with self._rpc_lock:
                 node_names = get_node_names(node=self.ros2_node, include_hidden_nodes=True)
             nodes = [
@@ -361,6 +371,8 @@ class ROS2Connector(GObject.GObject):
             return []
 
         try:
+            from ros2topic.api import get_topic_names_and_types
+
             with self._rpc_lock:
                 topics = get_topic_names_and_types(node=self.ros2_node, include_hidden_topics=True)
             if not self.app.settings.get_boolean("show-action-topics"):
@@ -445,6 +457,8 @@ class ROS2Connector(GObject.GObject):
             return []
 
         try:
+            from ros2service.api import get_service_names_and_types
+
             with self._rpc_lock:
                 services = get_service_names_and_types(node=self.ros2_node, include_hidden_services=True)
             if not self.app.settings.get_boolean("show-action-services"):
@@ -550,6 +564,8 @@ class ROS2Connector(GObject.GObject):
             return []
 
         try:
+            from rclpy.action import get_action_names_and_types
+
             with self._rpc_lock:
                 available_actions = get_action_names_and_types(node=self.ros2_node)
 
@@ -570,6 +586,8 @@ class ROS2Connector(GObject.GObject):
             return []
 
         try:
+            from rclpy.action.graph import get_action_client_names_and_types_by_node
+
             with self._rpc_lock:
                 action_clients = get_action_client_names_and_types_by_node(
                     node=self.ros2_node,
@@ -598,6 +616,8 @@ class ROS2Connector(GObject.GObject):
             return []
 
         try:
+            from rclpy.action.graph import get_action_server_names_and_types_by_node
+
             with self._rpc_lock:
                 action_servers = get_action_server_names_and_types_by_node(
                     node=self.ros2_node,
@@ -626,6 +646,9 @@ class ROS2Connector(GObject.GObject):
             return []
 
         try:
+            from rclpy.parameter_client import AsyncParameterClient
+            from ros2param.api import get_parameter_type_string
+
             client = AsyncParameterClient(node=self.ros2_node, remote_node_name=node.full_name)
             ready = client.wait_for_services(timeout_sec=5.0)
             if not ready:
@@ -686,6 +709,8 @@ class ROS2Connector(GObject.GObject):
             return None
 
         try:
+            from ros2param.api import call_get_parameters, get_value
+
             values = call_get_parameters(
                 node=self.ros2_node,
                 node_name=parameter.node.name,
@@ -701,6 +726,44 @@ class ROS2Connector(GObject.GObject):
                 level="error",
             )
             return None
+
+    def get_message_interfaces(self) -> list[TopicInterfaceTypeItem]:
+        """Collect installed message interfaces as detached GObject items."""
+        try:
+            from rosidl_runtime_py import get_message_interfaces as rosidl_get_message_interfaces
+
+            return self._get_interface_items(rosidl_get_message_interfaces(), TopicInterfaceTypeItem)
+        except Exception as e:
+            self.log(f"Error getting message interfaces: {e}", level="error")
+            return []
+
+    def get_service_interfaces(self) -> list[ServiceInterfaceTypeItem]:
+        """Collect installed service interfaces as detached GObject items."""
+        try:
+            from rosidl_runtime_py import get_service_interfaces as rosidl_get_service_interfaces
+
+            return self._get_interface_items(rosidl_get_service_interfaces(), ServiceInterfaceTypeItem)
+        except Exception as e:
+            self.log(f"Error getting service interfaces: {e}", level="error")
+            return []
+
+    def get_action_interfaces(self) -> list[ActionInterfaceTypeItem]:
+        """Collect installed action interfaces as detached GObject items."""
+        try:
+            from rosidl_runtime_py import get_action_interfaces as rosidl_get_action_interfaces
+
+            return self._get_interface_items(rosidl_get_action_interfaces(), ActionInterfaceTypeItem)
+        except Exception as e:
+            self.log(f"Error getting action interfaces: {e}", level="error")
+            return []
+
+    def _get_interface_items(self, interfaces_by_package: dict, item_type) -> list:
+        items = [
+            item_type(full_name=f"{pkg_name}/{interface_name}")
+            for pkg_name, interface_names in interfaces_by_package.items()
+            for interface_name in interface_names
+        ]
+        return sorted(items, key=lambda item: item.full_name)
 
     # def get_parameter_type(self, parameter: ParameterItem) -> str | None:
     #     """Get parameter type for a specific parameter with caching support."""
@@ -752,13 +815,21 @@ class ROS2Connector(GObject.GObject):
 
     def log(self, message: str, level: str = "info") -> None:
         """Log a message with the specified severity level (debug, [info], warning, error, fatal)."""
-        logger = self.ros2_node.get_logger() if self.ros2_node else None
-        if logger is None:
-            ros_log(message, level=level)
+        message = str(message)
+        if not self.ros2_node:
             return
 
-        log_func = getattr(logger, level, None)
-        if log_func is None:
+        logger = self.ros2_node.get_logger()
+        if level == "debug":
+            logger.debug(message)
+        elif level == "info":
+            logger.info(message)
+        elif level in ("warn", "warning"):
+            logger.warn(message)
+        elif level == "error":
+            logger.error(message)
+        elif level == "fatal":
+            logger.fatal(message)
+        else:
             logger.info(f"{level} is not a valid logging level. Defaulting to info.")
-            log_func = logger.info
-        log_func(str(message))
+            logger.info(message)

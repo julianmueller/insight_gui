@@ -20,8 +20,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # =============================================================================
 
-import time
-
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -53,9 +51,9 @@ class ImageViewerPage(ContentPage):
         self.cv_bridge = CvBridge()
         self.sub = None
 
-        self.last_update_time = 0
+        self.last_update_time = None
         self.max_update_rate = 10  # in Hz
-        self._last_msg_wall_time: float = None
+        self._last_msg_ros_time: float = None
 
         # main btns in bottom bar
         self.play_pause_stream_btn = super().add_bottom_widget(
@@ -129,12 +127,56 @@ class ImageViewerPage(ContentPage):
         self.height_lbl = self.height_row.add_suffix_lbl("")
         self.encoding_lbl = self.encoding_row.add_suffix_lbl("")
         self.frequency_lbl = self.frequency_row.add_suffix_lbl("")
+        self._install_topic_drop_target()
+
+    def _install_topic_drop_target(self):
+        self.topic_drop_target = Gtk.DropTarget.new(TopicItem, Gdk.DragAction.COPY)
+        self.topic_drop_target.connect("drop", self._on_topic_dropped)
+        self.toolbar_view.add_controller(self.topic_drop_target)
+
+    def _on_topic_dropped(self, drop_target, value, x: float, y: float) -> bool:
+        if not isinstance(value, TopicItem):
+            return False
+        if not self._is_image_topic(value):
+            self.show_toast(f"{value.full_name} is not a sensor_msgs/msg/Image topic")
+            return False
+
+        self._select_topic(value)
+        self.show_toast(f"Selected {value.full_name}")
+        return True
+
+    def _is_image_topic(self, topic: TopicItem) -> bool:
+        type_names = getattr(topic, "type_names", [topic.interface.full_name])
+        return "sensor_msgs/msg/Image" in type_names
+
+    def _select_topic(self, topic: TopicItem):
+        self.preselect_topic = topic
+        self.detach_kwargs = {"preselect_topic": topic}
+
+        if not hasattr(self, "available_img_topics") or self.available_img_topics is None:
+            self.available_img_topics = []
+
+        if not any(available_topic.full_name == topic.full_name for available_topic in self.available_img_topics):
+            self.available_img_topics.append(topic)
+
+        index = self._find_topic_index(topic.full_name)
+        if index < 0:
+            self.img_topic_list_store.append(Gtk.StringObject.new(topic.full_name))
+            index = self.img_topic_list_store.get_n_items() - 1
+
+        self.img_topic_row.set_selected(index)
+        self.on_img_topic_changed()
+
+    def _find_topic_index(self, topic_name: str) -> int:
+        for index in range(self.img_topic_list_store.get_n_items()):
+            item = self.img_topic_list_store.get_item(index)
+            if item and item.get_string() == topic_name:
+                return index
+        return -1
 
     def refresh_bg(self) -> bool:
         available_topics = self.ros2_connector.collect_topics()
-        self.available_img_topics = [
-            topic for topic in available_topics if "sensor_msgs/msg/Image" in topic.type_names
-        ]
+        self.available_img_topics = [topic for topic in available_topics if self._is_image_topic(topic)]
         return bool(self.available_img_topics)
 
     def refresh_ui(self):
@@ -144,10 +186,9 @@ class ImageViewerPage(ContentPage):
 
         # set the selected service to the preselected one
         preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
-        for index, topic in enumerate(self.available_img_topics):
-            if topic.full_name == preselect_topic:
-                self.img_topic_row.set_selected(index)
-                break
+        topic = next((topic for topic in self.available_img_topics if topic.full_name == preselect_topic), None)
+        if topic:
+            self._select_topic(topic)
 
     def reset_ui(self):
         self.img_topic_list_store.remove_all()
@@ -170,7 +211,8 @@ class ImageViewerPage(ContentPage):
 
     def on_clear_img(self, *args):
         self.img_row.reset_image_to_default_icon()
-        self._last_msg_wall_time = None
+        self._last_msg_ros_time = None
+        self.last_update_time = None
         self.frequency_lbl.set_label("")
 
     def on_toggle_stream_type(self, *args):
@@ -196,7 +238,11 @@ class ImageViewerPage(ContentPage):
 
         self.remove_sub()
 
-        topic_name = self.img_topic_row.get_selected_item().get_string()
+        selected_item = self.img_topic_row.get_selected_item()
+        if not selected_item:
+            return
+
+        topic_name = selected_item.get_string()
         if topic_name:
             # TODO maybe add another button to actually subscribe to the topic and not create it by changing the name?
             self.sub = self.ros2_connector.add_subsciption(Image, topic_name, self.img_topic_callback)
@@ -207,17 +253,17 @@ class ImageViewerPage(ContentPage):
         if not self.is_mapped:
             return
 
-        now = time.time()
+        now = self.ros2_connector.get_ros_time_seconds()
         frequency_text = ""
-        if self._last_msg_wall_time is not None:
-            dt = now - self._last_msg_wall_time
+        if self._last_msg_ros_time is not None:
+            dt = now - self._last_msg_ros_time
             if dt > 0:
                 freq = 1.0 / dt
                 frequency_text = f"{freq:.1f} Hz"
-        self._last_msg_wall_time = now
+        self._last_msg_ros_time = now
 
         # apply rate limiting
-        if now - self.last_update_time < 1.0 / self.max_update_rate:
+        if self.last_update_time is not None and now - self.last_update_time < 1.0 / self.max_update_rate:
             return
 
         if self.is_streaming or not self.single_img_done:

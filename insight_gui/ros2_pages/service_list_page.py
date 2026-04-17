@@ -28,7 +28,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.model_rows import ServiceRow
@@ -56,15 +55,17 @@ class ServiceListPage(ContentPage):
             # put all services in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-services-by-namespace"):
                 namespace = ""
+                title = "Services"
             else:
                 namespace = service.namespace if service.namespace else "/"
+                title = namespace
 
             # get the namespace group of the service
             if namespace in self.service_ns_groups.keys():
                 group = self.service_ns_groups[namespace]
             else:
                 description = "global namespace" if namespace == "/" else ""
-                group = self.pref_page.add_group(title=namespace, description=description)
+                group = self.pref_page.add_group(title=title, description=description, collapsable=True)
                 self.service_ns_groups[namespace] = group
 
             services_by_group.setdefault(group, []).append(service)
@@ -80,14 +81,7 @@ class ServiceListPage(ContentPage):
             )
 
     def _build_service_row(self, service) -> ServiceRow:
-        row = ServiceRow(service=service)
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=ServiceInfoPage,
-            subpage_kwargs={"service": service},
-            label="Show service info page",
-        )
-        return row
+        return ServiceRow(service=service, nav_view=self.nav_view)
 
     def reset_ui(self):
         for group in reversed(self.service_ns_groups.values()):

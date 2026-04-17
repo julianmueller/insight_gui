@@ -28,7 +28,6 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.action_info_page import ActionInfoPage
 from insight_gui.widgets.content_page import ContentPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.model_rows import ActionRow
@@ -56,15 +55,17 @@ class ActionListPage(ContentPage):
             # put all actions in one group if grouping is disabled
             if not self.app.settings.get_boolean("group-actions-by-namespace"):
                 namespace = ""
+                title = "Actions"
             else:
                 namespace = action.namespace if action.namespace else "/"
+                title = namespace
 
             # get the namespace group of the action
             if namespace in self.action_ns_groups.keys():
                 group = self.action_ns_groups[namespace]
             else:
                 description = "global namespace" if namespace == "/" else ""
-                group = self.pref_page.add_group(title=namespace, description=description)
+                group = self.pref_page.add_group(title=title, description=description, collapsable=True)
                 self.action_ns_groups[namespace] = group
 
             actions_by_group.setdefault(group, []).append(action)
@@ -80,14 +81,7 @@ class ActionListPage(ContentPage):
             )
 
     def _build_action_row(self, action) -> ActionRow:
-        row = ActionRow(action=action)
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=ActionInfoPage,
-            subpage_kwargs={"action": action},
-            label="Show action info page",
-        )
-        return row
+        return ActionRow(action=action, nav_view=self.nav_view)
 
     def reset_ui(self):
         for group in reversed(self.action_ns_groups.values()):

@@ -32,7 +32,13 @@ from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango
 from insight_gui.widgets.buttons import ToggleButton, CopyButton
 from insight_gui.widgets.context_menu import ContextMenu
 from insight_gui.widgets.filtering_interface import FilteringInterface
-from insight_gui.utils.ros_logging import ros_log
+
+
+def _log(message: str, level: str = "info") -> None:
+    app = Gio.Application.get_default()
+    connector = getattr(app, "ros2_connector", None)
+    if connector:
+        connector.log(message, level=level)
 
 
 class PrefRow(Adw.ActionRow, FilteringInterface):
@@ -104,17 +110,22 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
         self._primary_action_callback: Callable | None = None
         self._primary_action_expects_state = False
         self._primary_click_controller: Gtk.GestureClick | None = None
+        self._primary_press_x: float | None = None
+        self._primary_press_y: float | None = None
+        self._primary_drag_cancelled = False
 
         self.context_menu = ContextMenu(target=self, action_prefix="row")
         self.context_menu.upsert_item(
             "copy-title",
             "Copy title",
             lambda: self._copy_text_to_clipboard(self.get_title(), fallback_label="title"),
+            icon_name="edit-copy-symbolic",
         )
         self.context_menu.upsert_item(
             "copy-subtitle",
             "Copy subtitle",
             lambda: self._copy_text_to_clipboard(self.get_subtitle(), fallback_label="subtitle"),
+            icon_name="edit-copy-symbolic",
         )
 
     def set_filtered(self, visible: bool):
@@ -142,6 +153,23 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
     def _on_primary_pressed(self, controller: Gtk.GestureClick, n_press: int, x: float, y: float):
         if controller.get_current_button() != Gdk.BUTTON_PRIMARY:
             return
+        self._primary_press_x = x
+        self._primary_press_y = y
+        self._primary_drag_cancelled = False
+
+    def _on_primary_released(self, controller: Gtk.GestureClick, n_press: int, x: float, y: float):
+        if controller.get_current_button() != Gdk.BUTTON_PRIMARY:
+            return
+        if self._primary_drag_cancelled:
+            return
+        if self._primary_press_x is None or self._primary_press_y is None:
+            return
+
+        settings = Gtk.Settings.get_default()
+        drag_threshold = settings.get_property("gtk-dnd-drag-threshold") if settings else 8
+        if abs(x - self._primary_press_x) > drag_threshold or abs(y - self._primary_press_y) > drag_threshold:
+            return
+
         self.trigger_primary_action(state=controller.get_current_event_state())
 
     def set_primary_action(
@@ -152,6 +180,7 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
         tooltip_text: str = "",
         pass_event_state: bool = False,
         show_next_icon: bool = False,
+        icon_name: str = "go-next-symbolic",
     ):
         self._primary_action_callback = callback
         self._primary_action_expects_state = pass_event_state
@@ -168,10 +197,17 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
         self._primary_click_controller = Gtk.GestureClick()
         self._primary_click_controller.set_button(Gdk.BUTTON_PRIMARY)
         self._primary_click_controller.connect("pressed", self._on_primary_pressed)
+        self._primary_click_controller.connect("released", self._on_primary_released)
         super().add_controller(self._primary_click_controller)
         super().set_activatable(True)
 
-        self.context_menu.upsert_item("primary-action", label, lambda: self.trigger_primary_action(), position=0)
+        self.context_menu.upsert_item(
+            "primary-action",
+            label,
+            lambda: self.trigger_primary_action(),
+            icon_name=icon_name,
+            position=0,
+        )
         if self.context_menu.item_count > 1:
             self.context_menu.add_separator(position=1)
 
@@ -266,15 +302,20 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
         label: str = "Open",
     ):
         def _trigger(state: Gdk.ModifierType | None = None):
-            subpage = subpage_class(**subpage_kwargs)
+            def _open_subpage():
+                subpage = subpage_class(**subpage_kwargs)
 
-            # add CTRL+click functionality to open in detached window
-            if state and state & Gdk.ModifierType.CONTROL_MASK:
-                subpage.detach()
+                # add CTRL+click functionality to open in detached window
+                if state and state & Gdk.ModifierType.CONTROL_MASK:
+                    subpage.detach()
 
-            # regular click
-            else:
-                nav_view.push(subpage)
+                # regular click
+                else:
+                    nav_view.push(subpage)
+
+                return GLib.SOURCE_REMOVE
+
+            GLib.idle_add(_open_subpage, priority=GLib.PRIORITY_LOW)
 
         self.set_primary_action(
             label=label,
@@ -282,6 +323,7 @@ class PrefRow(Adw.ActionRow, FilteringInterface):
             tooltip_text="Open details",
             pass_event_state=True,
             show_next_icon=True,
+            icon_name="go-next-symbolic",
         )
 
     def set_subtitle(self, subtitle: str, max_lines: int = 1):
@@ -593,7 +635,7 @@ class TextViewRow(AdditionalContentRow):
     # TODO not really working
     def filter_by_tags(self, tag_names: list[str]):
         tag_table = self.text_buffer.get_tag_table()
-        tag_table.foreach(lambda tag: ros_log(tag.get_property("name"), level="debug"))
+        tag_table.foreach(lambda tag: _log(tag.get_property("name"), level="debug"))
 
         def toggle_tag_visibility(tag):
             if tag.get_property("name") not in tag_names:
@@ -749,32 +791,32 @@ class ImageViewRow(AdditionalContentRow):
 
     def on_save_image(self, *args):
         # TODO implement saving behaviour
-        ros_log("Saving images is not implemented yet.", level="debug")
+        _log("Saving images is not implemented yet.", level="debug")
         pass
 
     def on_copy_image(self, *args):
         # TODO implement copying behaviour
-        ros_log("Copying images is not implemented yet.", level="debug")
+        _log("Copying images is not implemented yet.", level="debug")
         pass
 
     def on_zoom_in(self, *args):
         # TODO implement zoom in
-        ros_log("Image zoom in is not implemented yet.", level="debug")
+        _log("Image zoom in is not implemented yet.", level="debug")
         pass
 
     def on_zoom_out(self, *args):
         # TODO implement zoom out
-        ros_log("Image zoom out is not implemented yet.", level="debug")
+        _log("Image zoom out is not implemented yet.", level="debug")
         pass
 
     def on_fit_to_width(self, *args):
         # TODO implement fit to width
-        ros_log("Image fit to width is not implemented yet.", level="debug")
+        _log("Image fit to width is not implemented yet.", level="debug")
         pass
 
     def on_open_image(self, *args):
         # TODO implement open image
-        ros_log("Opening images is not implemented yet.", level="debug")
+        _log("Opening images is not implemented yet.", level="debug")
         pass
 
 
@@ -828,7 +870,15 @@ class ColumnViewRow(AdditionalContentRow):
         def _on_factory_bind(_factory, list_item, property_name):
             label_widget = list_item.get_child()
             log_message = list_item.get_item()
-            label_widget.set_label(str(getattr(log_message, property_name)))
+            gobject_property_name = property_name.replace("_", "-")
+            try:
+                value = getattr(log_message, property_name)
+            except AttributeError:
+                try:
+                    value = log_message.get_property(gobject_property_name)
+                except TypeError:
+                    value = ""
+            label_widget.set_label(str(value))
 
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", _on_factory_setup)
@@ -839,7 +889,22 @@ class ColumnViewRow(AdditionalContentRow):
         self.column_view.append_column(column)
 
         if is_sortable:
-            prop_expr = Gtk.PropertyExpression.new(self.row_object, None, property_name)
+            gobject_property_name = property_name.replace("_", "-")
+            property_names = {prop.name for prop in self.row_object.list_properties()}
+            if gobject_property_name not in property_names:
+                _log(
+                    f"Cannot sort column '{title}': '{gobject_property_name}' is not a property of {self.row_object.__name__}",
+                    level="warning",
+                )
+                return
+
+            prop_expr = Gtk.PropertyExpression.new(self.row_object, None, gobject_property_name)
+            if prop_expr is None:
+                _log(
+                    f"Cannot sort column '{title}': GTK rejected property '{gobject_property_name}'",
+                    level="warning",
+                )
+                return
             sorter = Gtk.NumericSorter.new(prop_expr) if is_numeric else Gtk.StringSorter.new(prop_expr)
             column.set_sorter(sorter)
 
@@ -878,7 +943,11 @@ class ColumnViewRow(AdditionalContentRow):
         if not row_object or not self.filter_conditions:
             return True  # No filters applied, show all rows
 
-        row_properties = {p.name: getattr(row_object, p.name) for p in row_object.list_properties()}
+        row_properties = {}
+        for prop in row_object.list_properties():
+            value = row_object.get_property(prop.name)
+            row_properties[prop.name] = value
+            row_properties[prop.name.replace("-", "_")] = value
 
         for property_name, filter_value in self.filter_conditions.items():
             if property_name not in row_properties:
@@ -1243,7 +1312,7 @@ class SearchRow(Adw.PreferencesRow, FilteringInterface):
         if search_func:
             self.search_func = search_func
         else:
-            self.search_func = lambda _text: ros_log("No search function specified.", level="debug")
+            self.search_func = lambda _text: _log("No search function specified.", level="debug")
 
         for css_class in css_classes:
             super().add_css_class(css_class)

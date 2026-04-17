@@ -27,12 +27,22 @@ from dataclasses import dataclass, field
 from functools import partial
 from collections.abc import Callable
 
-from insight_gui.utils.ros_logging import ros_log
+import gi
+
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio
 
 
 WORKER_PRIORITY_HIGH = 0
 WORKER_PRIORITY_NORMAL = 10
 WORKER_PRIORITY_LOW = 20
+
+
+def _log(message: str, level: str = "info") -> None:
+    app = Gio.Application.get_default()
+    connector = getattr(app, "ros2_connector", None)
+    if connector:
+        connector.log(message, level=level)
 
 
 @dataclass(order=True)
@@ -163,7 +173,7 @@ class BackgroundWorker:
                 try:
                     work_item.done_callback(work_item.future)
                 except Exception as cb_exc:
-                    ros_log(f"Worker done_callback raised: {cb_exc}", level="error")
+                    _log(f"Worker done_callback raised: {cb_exc}", level="error")
             with self._lock:
                 work_item.running = False
                 self._active_workers -= 1

@@ -235,7 +235,17 @@ class InterfaceInfoPage(ContentPage):
         #     subpage_btn.add_controller(gesture_click)
 
     def _build_field_row(self, field) -> PrefRow:
-        return PrefRow(title=field.name, subtitle=field.dds_type)
+        row = PrefRow(title=field.name, subtitle=field.dds_type)
+        nested_interface_full_name = getattr(field, "nested_interface_full_name", "")
+        if nested_interface_full_name:
+            row.subtitle_lbl.set_tooltip_text(nested_interface_full_name)
+            row.set_subpage_link(
+                nav_view=self.nav_view,
+                subpage_class=InterfaceInfoPage,
+                subpage_kwargs={"interface_full_name": nested_interface_full_name},
+                label=f"Open {nested_interface_full_name}",
+            )
+        return row
 
     def _on_open_interface_file(self, *args):
         interface_file_path = get_interface_path(self.interface.full_name)

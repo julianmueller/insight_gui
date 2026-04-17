@@ -8,6 +8,7 @@ from insight_gui.models.interface_item import ServiceInterfaceTypeItem
 
 class ServiceItem(GObject.GObject):
     __gtype_name__ = "ServiceItem"
+    __item_type__ = "Service"
 
     name = GObject.Property(type=str, default="")
     namespace = GObject.Property(type=str, default="/")

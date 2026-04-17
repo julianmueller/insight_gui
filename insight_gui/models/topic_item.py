@@ -8,6 +8,7 @@ from insight_gui.models.interface_item import TopicInterfaceTypeItem
 
 class TopicItem(GObject.GObject):
     __gtype_name__ = "TopicItem"
+    __item_type__ = "Topic"
 
     name = GObject.Property(type=str, default="")
     namespace = GObject.Property(type=str, default="/")

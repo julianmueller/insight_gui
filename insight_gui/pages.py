@@ -21,35 +21,10 @@
 # =============================================================================
 
 from __future__ import annotations
+from importlib import import_module
 import re
 
 from gi.repository import GObject
-
-from insight_gui.widgets.content_page import ContentPage
-from insight_gui.ros2_pages.pkg_list_page import PackageListPage
-from insight_gui.ros2_pages.node_list_page import NodeListPage
-from insight_gui.ros2_pages.topic_list_page import TopicListPage
-from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
-from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
-from insight_gui.ros2_pages.topic_remap_page import TopicRemapPage
-from insight_gui.ros2_pages.service_list_page import ServiceListPage
-from insight_gui.ros2_pages.service_call_page import ServiceCallPage
-from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
-from insight_gui.ros2_pages.action_list_page import ActionListPage
-from insight_gui.ros2_pages.launch_list_page import LaunchListPage
-from insight_gui.ros2_pages.interface_browser_page import InterfaceBrowserPage
-from insight_gui.ros2_pages.graph_page import GraphPage
-from insight_gui.ros2_pages.param_list_page import ParameterListPage
-from insight_gui.ros2_pages.tf_page import TransformsPage
-from insight_gui.ros2_pages.tf_static_broadcaster_page import StaticTransformBroadcasterPage
-from insight_gui.ros2_pages.tf_tree_page import TFTreePage
-from insight_gui.ros2_pages.img_viewer_page import ImageViewerPage
-from insight_gui.ros2_pages.joint_states_page import JointStatesPage
-from insight_gui.ros2_pages.controller_manager_page import ControllerManagerPage
-from insight_gui.ros2_pages.teleop_page import TeleoperatorPage
-from insight_gui.ros2_pages.log_page import LoggerPage
-from insight_gui.ros2_pages.doctor_page import DoctorPage
-from insight_gui.ros2_pages.multicast_page import MulticastPage
 
 
 class Page(GObject.Object):
@@ -61,7 +36,7 @@ class Page(GObject.Object):
         icon_name: str,
         page_id: str,
         group_id: str = "",
-        nav_page_class: ContentPage,
+        nav_page_class,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -71,7 +46,12 @@ class Page(GObject.Object):
         self._icon_name = icon_name
         self._page_id = page_id
         self._group_id = group_id
-        self._nav_page_class = nav_page_class
+        if isinstance(nav_page_class, str):
+            self._nav_page_class_path = nav_page_class
+            self._nav_page_class = None
+        else:
+            self._nav_page_class = nav_page_class
+            self._nav_page_class_path = f"{nav_page_class.__module__}.{nav_page_class.__name__}"
 
     @GObject.Property(type=str)
     def title(self) -> str:
@@ -98,8 +78,15 @@ class Page(GObject.Object):
         self._group_id = group_id
 
     @GObject.Property(type=object)
-    def nav_page_class(self) -> list:
+    def nav_page_class(self):
+        if self._nav_page_class is None:
+            module_name, class_name = self._nav_page_class_path.rsplit(".", 1)
+            module = import_module(module_name)
+            self._nav_page_class = getattr(module, class_name)
         return self._nav_page_class
+
+    def create_nav_page(self, **kwargs):
+        return self.nav_page_class(**kwargs)
 
     def __eq__(self, other):
         return (
@@ -177,7 +164,7 @@ all_pages = [
                 subtitle="Browse all packages",
                 icon_name="package-symbolic",
                 page_id="pkg_list",
-                nav_page_class=PackageListPage,
+                nav_page_class="insight_gui.ros2_pages.pkg_list_page.PackageListPage",
             ),
         ],
     ),
@@ -189,28 +176,28 @@ all_pages = [
                 subtitle="Browse all active nodes",
                 icon_name="token-symbolic",
                 page_id="node_list",
-                nav_page_class=NodeListPage,
+                nav_page_class="insight_gui.ros2_pages.node_list_page.NodeListPage",
             ),
             Page(
                 title="Launch Files",
                 subtitle="Browse launch files",
                 icon_name="rocket-launch-symbolic",
                 page_id="launch_list",
-                nav_page_class=LaunchListPage,
+                nav_page_class="insight_gui.ros2_pages.launch_list_page.LaunchListPage",
             ),
             Page(
                 title="Parameters",
                 subtitle="Manage node parameters",
                 icon_name="instant-mix-symbolic",
                 page_id="param_list",
-                nav_page_class=ParameterListPage,
+                nav_page_class="insight_gui.ros2_pages.param_list_page.ParameterListPage",
             ),
             Page(
                 title="Graph",
                 subtitle="ROS2 computational graph",
                 icon_name="graph3-symbolic",
                 page_id="graph_page",
-                nav_page_class=GraphPage,
+                nav_page_class="insight_gui.ros2_pages.graph_page.GraphPage",
             ),
         ],
     ),
@@ -222,35 +209,35 @@ all_pages = [
                 subtitle="Browse topics",
                 icon_name="list-t-symbolic",
                 page_id="topic_list",
-                nav_page_class=TopicListPage,
+                nav_page_class="insight_gui.ros2_pages.topic_list_page.TopicListPage",
             ),
             Page(
                 title="Publisher",
                 subtitle="Publish to topics",
                 icon_name="rss-feed-symbolic",
                 page_id="topic_pub",
-                nav_page_class=TopicPublisherPage,
+                nav_page_class="insight_gui.ros2_pages.topic_pub_page.TopicPublisherPage",
             ),
             Page(
                 title="Subscriber",
                 subtitle="Subscribe to topics",
                 icon_name="subscriptions-symbolic",
                 page_id="topic_sub",
-                nav_page_class=TopicSubscriberPage,
+                nav_page_class="insight_gui.ros2_pages.topic_sub_page.TopicSubscriberPage",
             ),
             Page(
                 title="Image Viewer",
                 subtitle="View image topics",
                 icon_name="image-x-generic-symbolic",
                 page_id="img_viewer",
-                nav_page_class=ImageViewerPage,
+                nav_page_class="insight_gui.ros2_pages.img_viewer_page.ImageViewerPage",
             ),
             Page(
                 title="Remap",
                 subtitle="Remap topics",
                 icon_name="tactic-symbolic",
                 page_id="remap",
-                nav_page_class=TopicRemapPage,
+                nav_page_class="insight_gui.ros2_pages.topic_remap_page.TopicRemapPage",
             ),
         ],
     ),
@@ -262,14 +249,14 @@ all_pages = [
                 subtitle="Browse services",
                 icon_name="list-s-symbolic",
                 page_id="service_list",
-                nav_page_class=ServiceListPage,
+                nav_page_class="insight_gui.ros2_pages.service_list_page.ServiceListPage",
             ),
             Page(
                 title="Service Caller",
                 subtitle="Call services",
                 icon_name="call-start-symbolic",
                 page_id="srv_caller",
-                nav_page_class=ServiceCallPage,
+                nav_page_class="insight_gui.ros2_pages.service_call_page.ServiceCallPage",
             ),
         ],
     ),
@@ -281,14 +268,14 @@ all_pages = [
                 subtitle="Browse actions",
                 icon_name="list-a-symbolic",
                 page_id="action_list",
-                nav_page_class=ActionListPage,
+                nav_page_class="insight_gui.ros2_pages.action_list_page.ActionListPage",
             ),
             Page(
                 title="Action Goal",
                 subtitle="Send action goals",
                 icon_name="emoji-flags-symbolic",
                 page_id="action_goal",
-                nav_page_class=ActionGoalPage,
+                nav_page_class="insight_gui.ros2_pages.action_goal_page.ActionGoalPage",
             ),
         ],
     ),
@@ -300,7 +287,7 @@ all_pages = [
                 subtitle="Browse interface definitions",
                 icon_name="shapes-symbolic",
                 page_id="interface_browser",
-                nav_page_class=InterfaceBrowserPage,
+                nav_page_class="insight_gui.ros2_pages.interface_browser_page.InterfaceBrowserPage",
             ),
         ],
     ),
@@ -312,21 +299,21 @@ all_pages = [
                 subtitle="Inspect transformations",
                 icon_name="coordinates-symbolic",
                 page_id="tf",
-                nav_page_class=TransformsPage,
+                nav_page_class="insight_gui.ros2_pages.tf_page.TransformsPage",
             ),
             Page(
                 title="Static Transform Broadcaster",
                 subtitle="Broadcast to /tf_static",
                 icon_name="bigtop-updates-symbolic",
                 page_id="tf_static_broadcaster",
-                nav_page_class=StaticTransformBroadcasterPage,
+                nav_page_class="insight_gui.ros2_pages.tf_static_broadcaster_page.StaticTransformBroadcasterPage",
             ),
             Page(
                 title="TF-Tree",
                 subtitle="Inspect all TFs as a tree",
                 icon_name="forest-symbolic",
                 page_id="tf_tree",
-                nav_page_class=TFTreePage,
+                nav_page_class="insight_gui.ros2_pages.tf_tree_page.TFTreePage",
             ),
         ],
     ),
@@ -346,14 +333,14 @@ all_pages = [
                 subtitle="Manipulate joints",
                 icon_name="sliders-horizontal-symbolic",
                 page_id="joint_states",
-                nav_page_class=JointStatesPage,
+                nav_page_class="insight_gui.ros2_pages.joint_states_page.JointStatesPage",
             ),
             Page(
                 title="Teleoperator",
                 subtitle="Teleoperate a robot",
                 icon_name="gamepad-symbolic",
                 page_id="teleop",
-                nav_page_class=TeleoperatorPage,
+                nav_page_class="insight_gui.ros2_pages.teleop_page.TeleoperatorPage",
             ),
         ],
     ),
@@ -384,7 +371,7 @@ all_pages = [
                 subtitle="System logs",
                 icon_name="logviewer-symbolic",
                 page_id="logger",
-                nav_page_class=LoggerPage,
+                nav_page_class="insight_gui.ros2_pages.log_page.LoggerPage",
             ),
             # Page(
             #     title="Documentation",
@@ -405,14 +392,14 @@ all_pages = [
                 subtitle="Test multicast send/receive",
                 icon_name="cell-tower-symbolic",
                 page_id="multicast",
-                nav_page_class=MulticastPage,
+                nav_page_class="insight_gui.ros2_pages.multicast_page.MulticastPage",
             ),
             Page(
                 title="Doctor",
                 subtitle="System diagnostics",
                 icon_name="doctor-symbolic",
                 page_id="doctor",
-                nav_page_class=DoctorPage,
+                nav_page_class="insight_gui.ros2_pages.doctor_page.DoctorPage",
             ),
         ],
     ),

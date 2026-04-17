@@ -112,6 +112,7 @@
 - ~~replace "webbrowser" stuff with gtk File/Web Launcher~~
 - ~~change that the overwritten _deferred_init of the subclasses of contentpage use the refresh methods instead~~
 - ~~turn interface dialog into content page~~
+- ~~change all "prints" into ros2_connector.logs~~
 - remove "status_page" in window.ui
 - rename all function, to fit GTK style "on_xxx" and "do_xxx"
 - clean up the mess of XXX.connect_(..., func(**func_kwargs)) and connect_data(...) and rather use connect(..., data)
@@ -121,7 +122,6 @@
 - be strict/consistent about private ("_") instance variables and method names!
 - move expensive imports into methods/classes only where needed
 - use CustomFilter in filter_func to ignore emptry_row etc
-- change all "prints" into ros2_connector.logs
 - add groups for common ros2 interfaces formats (Pose/Quaternion/Transform etc) where exisiting rows that are implemented (like tf calc page normalize quat etc) can be reused
     - maybe even for images??
 - GObject refactor pages todo:

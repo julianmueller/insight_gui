@@ -31,13 +31,8 @@ from gi.repository import GObject, Gtk, Adw, Gdk, Gio, GLib
 from insight_gui.pages import all_pages
 
 from insight_gui.ros2_pages.welcome_page import WelcomePage
-from insight_gui.ros2_pages.overview_page import OverviewPage
-
-from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
 
 from insight_gui.utils.adw_colors import AdwAccentColor
-from insight_gui.utils.ros_logging import ros_log
-from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.stack_sidebar import StackSidebar
 
 
@@ -48,7 +43,7 @@ class BaseWindow(Adw.ApplicationWindow):
         super().__init__(application=app, **kwargs)
 
         self.app: Adw.Application = app
-        self.ros2_connector: ROS2Connector = app.ros2_connector
+        self.ros2_connector = app.ros2_connector
 
         self._setup_accent_colors()
 
@@ -115,20 +110,25 @@ class BaseWindow(Adw.ApplicationWindow):
         self.add_controller(self.shortcut_controller)
 
     def on_refresh(self, *args):
-        if self.current_page and self.current_page.refreshable:
-            self.current_page.refresh()  # TODO maybe use "use_cache=False" here? but this brings troubles with the refreshing func etc
+        page = self.current_page
+        if page and getattr(page, "refreshable", False):
+            page.refresh()  # TODO maybe use "use_cache=False" here? but this brings troubles with the refreshing func etc
 
     def on_detach(self, *args):
-        if self.current_page and self.current_page.detachable:
-            self.current_page.detach()
+        page = self.current_page
+        if page and getattr(page, "detachable", False):
+            page.detach()
 
     def on_toggle_search(self, *args):
-        if self.current_page and self.current_page.searchable:
-            self.current_page.toggle_search()
+        page = self.current_page
+        if page and getattr(page, "searchable", False):
+            page.toggle_search()
 
     def on_page_trigger(self, *args):
-        if self.current_page:
-            self.current_page.trigger()
+        page = self.current_page
+        trigger = getattr(page, "trigger", None)
+        if callable(trigger):
+            trigger()
 
     def on_close(self, *args):
         self.close()
@@ -189,24 +189,24 @@ class MainWindow(BaseWindow):
         self.stack_sidebar.set_stack(self.nav_views_stack)
         self.stack_sidebar.update_from_page_groups(self.page_groups)
 
-        overview_nav_view = Adw.NavigationView()
-        overview_nav_view.add(OverviewPage(page_groups=self.page_groups))
-        self.nav_views_stack.add_named(overview_nav_view, "overview")
+        self._overview_nav_view = None
 
         welcome_nav_view = Adw.NavigationView()
         welcome_nav_view.add(WelcomePage())
         self.nav_views_stack.add_named(welcome_nav_view, "welcome")
 
         # load page from cli arg
-        if start_page_id and self.nav_views_stack.get_child_by_name(start_page_id):
-            self.nav_views_stack.set_visible_child_name(start_page_id)
+        if start_page_id and self.open_page(start_page_id):
+            pass
 
         # load last page, if setting is enabled
         elif self.app.settings.get_boolean("restore-last-page"):
             last_page = self.app.settings.get_string("last-page")
 
-            if last_page and self.nav_views_stack.get_child_by_name(last_page):
-                self.nav_views_stack.set_visible_child_name(last_page)
+            if last_page and self.open_page(last_page):
+                pass
+            else:
+                self.nav_views_stack.set_visible_child_name("welcome")
 
         # load welcome page per default
         else:
@@ -237,12 +237,14 @@ class MainWindow(BaseWindow):
         return self.nav_views_stack.get_visible_child().get_visible_page()
 
     def on_preferences_dialog(self, *args):
+        from insight_gui.ros2_pages.preferences_dialog import PreferencesDialog
+
         self.preferences_dialog = PreferencesDialog(ros2_connector=self.ros2_connector)
         self.preferences_dialog.present(self)
 
     def on_shortcuts_dialog(self, *args):
         # ShortcutsDialog().present(self) # TODO
-        ros_log("Shortcuts dialog is not implemented yet.", level="warning")
+        self.ros2_connector.log("Shortcuts dialog is not implemented yet.", level="warning")
 
     def on_about_dialog(self, *args):
         self.about_dialog = Adw.AboutDialog(
@@ -260,7 +262,34 @@ class MainWindow(BaseWindow):
 
     def on_overview_btn_clicked(self, *args):
         self.split_view.set_show_content(True)
-        self.nav_views_stack.set_visible_child_name("overview")
+        self.nav_views_stack.set_visible_child(self._ensure_overview_page())
+
+    def _ensure_overview_page(self) -> Adw.NavigationView:
+        if self._overview_nav_view:
+            return self._overview_nav_view
+
+        from insight_gui.ros2_pages.overview_page import OverviewPage
+
+        self._overview_nav_view = Adw.NavigationView()
+        self._overview_nav_view.add(OverviewPage(page_groups=self.page_groups))
+        self.nav_views_stack.add_named(self._overview_nav_view, "overview")
+        return self._overview_nav_view
+
+    def open_page(self, page_id: str, *, detached: bool = False) -> bool:
+        if page_id == "overview" and not detached:
+            self.nav_views_stack.set_visible_child(self._ensure_overview_page())
+            return True
+
+        if detached:
+            self.stack_sidebar.open_detached_page(page_id)
+            return True
+
+        nav_view = self.stack_sidebar.ensure_page(page_id)
+        if not nav_view:
+            return False
+
+        self.nav_views_stack.set_visible_child(nav_view)
+        return True
 
     def on_stack_page_changed(self, *args):
         # save the last page in settings

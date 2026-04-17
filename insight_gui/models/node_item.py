@@ -6,6 +6,7 @@ from gi.repository import GObject, Gio
 
 class NodeItem(GObject.GObject):
     __gtype_name__ = "NodeItem"
+    __item_type__ = "Node"
 
     namespace = GObject.Property(type=str, default="/")
     name = GObject.Property(type=str, default="")

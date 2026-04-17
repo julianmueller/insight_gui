@@ -143,6 +143,69 @@ class TeleoperatorPage(ContentPage):
         # TODO
         self.linear_scaling = 1.0
         self.angular_scaling = 1.0
+        self._install_topic_drop_target()
+
+    def _install_topic_drop_target(self):
+        self.topic_drop_target = Gtk.DropTarget.new(TopicItem, Gdk.DragAction.COPY)
+        self.topic_drop_target.connect("drop", self._on_topic_dropped)
+        self.toolbar_view.add_controller(self.topic_drop_target)
+
+    def _on_topic_dropped(self, drop_target, value, x: float, y: float) -> bool:
+        if not isinstance(value, TopicItem):
+            return False
+        if not self._find_supported_topic_type(value):
+            self.show_toast(f"{value.full_name} is not a Twist or Joy topic")
+            return False
+
+        self._select_topic(value)
+        self.show_toast(f"Selected {value.full_name}")
+        return True
+
+    def _select_topic(self, topic: TopicItem):
+        self.preselect_topic = topic
+        self.detach_kwargs = {"preselect_topic": topic}
+
+        if not hasattr(self, "available_teleop_topic_items") or self.available_teleop_topic_items is None:
+            self.available_teleop_topic_items = []
+        if not hasattr(self, "available_teleop_topics") or self.available_teleop_topics is None:
+            self.available_teleop_topics = []
+
+        if not any(available_topic.full_name == topic.full_name for available_topic in self.available_teleop_topic_items):
+            self.available_teleop_topic_items.append(topic)
+        if topic.full_name not in self.available_teleop_topics:
+            self.available_teleop_topics.append(topic.full_name)
+        if find_str_in_list_store(self.teleop_topic_list_store, topic.full_name) < 0:
+            self.teleop_topic_list_store.append(Gtk.StringObject.new(topic.full_name))
+
+        self.topic_row.set_text(topic.full_name)
+        self.topic_name = topic.full_name
+        if self._set_selected_teleop_type(topic):
+            self.create_pub()
+            self.teleop_row.enable()
+
+    def _find_supported_topic_type(self, topic: TopicItem) -> str:
+        type_names = getattr(topic, "type_names", [topic.interface.full_name])
+        return next(
+            (
+                topic_type
+                for topic_type in type_names
+                if topic_type in (self.TELEOP_TYPE_TWIST, self.TELEOP_TYPE_JOY)
+            ),
+            "",
+        )
+
+    def _set_selected_teleop_type(self, topic: TopicItem) -> bool:
+        selected_topic_type = self._find_supported_topic_type(topic)
+        found_index = find_str_in_list_store(self.teleop_type_list_store, selected_topic_type)
+        if found_index < 0:
+            self.teleop_type_row.set_selected(0)
+            super().show_toast(f"There seems to be a problem with the topic type: {selected_topic_type}")
+            return False
+
+        self.teleop_type_row.set_selected(found_index)
+        self.teleop_type_row.set_sensitive(False)
+        self.teleop_type = selected_topic_type
+        return True
 
     def refresh_bg(self) -> bool:
         available_topics = self.ros2_connector.collect_topics()
@@ -151,7 +214,7 @@ class TeleoperatorPage(ContentPage):
 
         if available_topics:
             for topic in available_topics:
-                if any(t in (self.TELEOP_TYPE_TWIST, self.TELEOP_TYPE_JOY) for t in topic.type_names):
+                if self._find_supported_topic_type(topic):
                     self.available_teleop_topic_items.append(topic)
                     self.available_teleop_topics.append(topic.full_name)
 
@@ -163,9 +226,10 @@ class TeleoperatorPage(ContentPage):
             self.teleop_topic_list_store.append(Gtk.StringObject.new(topic_name))
 
         # set the selected service to the preselected one
-        found_index = find_str_in_list_store(self.teleop_topic_list_store, self.preselect_topic)
-        if found_index >= 0:
-            self.topic_row.set_text(self.preselect_topic)
+        preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
+        topic = next((topic for topic in self.available_teleop_topic_items if topic.full_name == preselect_topic), None)
+        if topic:
+            self._select_topic(topic)
         else:
             self.topic_row.set_text("")
 
@@ -204,6 +268,7 @@ class TeleoperatorPage(ContentPage):
             self.pub = None
 
     def on_topic_name_applied(self, *args):
+        self.teleop_type_row.set_sensitive(True)
         self.create_pub()
         self.teleop_row.enable()
 
@@ -214,24 +279,7 @@ class TeleoperatorPage(ContentPage):
                 super().show_toast(f"Could not resolve message type for {item_text}")
                 return
 
-            selected_topic_type = next(
-                (
-                    topic_type
-                    for topic_type in topic.type_names
-                    if topic_type in (self.TELEOP_TYPE_TWIST, self.TELEOP_TYPE_JOY)
-                ),
-                "",
-            )
-            found_index = find_str_in_list_store(self.teleop_type_list_store, selected_topic_type)
-            if found_index >= 0:
-                self.teleop_type_row.set_selected(found_index)
-                self.teleop_type_row.set_sensitive(False)
-            else:
-                self.teleop_type_row.set_selected(0)
-                super().show_toast(f"There seems to be a problem with the topic type: {selected_topic_type}")
-
-            self.create_pub()
-            self.teleop_row.enable()
+            self._select_topic(topic)
 
         except InvalidTopicNameException as e:
             self.topic_row.set_text("")

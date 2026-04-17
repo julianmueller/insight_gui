@@ -26,9 +26,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw
 
-from insight_gui.ros2_pages.param_edit_page import ParamEditPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import ParameterRow
 
 
 class ParameterListPage(ContentPage):
@@ -71,19 +70,8 @@ class ParameterListPage(ContentPage):
                 on_done=group.set_description_to_row_count,
             )
 
-    def _build_parameter_row(self, param) -> PrefRow:
-        row = PrefRow(title=param.name, subtitle=f"{param.type_str}: {param.value}")
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=ParamEditPage,
-            subpage_kwargs={"parameter": param},
-        )
-
-        # if the parameter is read-only, a prefix icon is added to the row
-        if param.read_only:
-            row.add_prefix_icon(icon_name="lock-alt-symbolic", tooltip_text="Read-only parameter")
-
-        return row
+    def _build_parameter_row(self, param) -> ParameterRow:
+        return ParameterRow(parameter=param, nav_view=self.nav_view)
 
     def reset_ui(self):
         self.pref_page.clear()

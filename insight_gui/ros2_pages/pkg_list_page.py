@@ -29,9 +29,8 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GLib, Gio
 
 from insight_gui.ros2_pages.pkg_new_dialog import PackageNewDialog
-from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import PackageRow
 from insight_gui.models.package_item import PackageItem
 
 
@@ -44,7 +43,11 @@ class PackageListPage(ContentPage):
         super().set_placeholder_text("Refresh to show packages")
         super().set_search_entry_placeholder_text("Search for Packages")
 
-        self.pkg_list_group = self.pref_page.add_group(placeholder_text="Refresh to show packages")
+        self.pkg_list_group = self.pref_page.add_group(
+            title="Packages",
+            placeholder_text="Refresh to show packages",
+            collapsable=True,
+        )
         self.pkgs_store: Gio.ListStore = Gio.ListStore.new(PackageItem)
 
         self.new_pkg_btn = super().add_bottom_left_btn(
@@ -80,15 +83,9 @@ class PackageListPage(ContentPage):
             priority=GLib.PRIORITY_LOW,
         )
 
-    def _build_pkg_row(self, pkg_name: str, pkg_path: str) -> PrefRow:
+    def _build_pkg_row(self, pkg_name: str, pkg_path: str) -> PackageRow:
         pkg = PackageItem(name=pkg_name, path=pkg_path)
-        row = PrefRow(title=pkg.name, subtitle=pkg.path)
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=PackageInfoPage,
-            subpage_kwargs={"pkg": pkg},
-        )
-        return row
+        return PackageRow(package=pkg, nav_view=self.nav_view)
 
     def reset_ui(self):
         pass

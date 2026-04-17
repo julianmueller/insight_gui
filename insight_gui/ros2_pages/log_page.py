@@ -23,7 +23,6 @@
 from datetime import datetime
 
 from rcl_interfaces.msg import Log
-from rclpy.logging import LoggingSeverity
 
 import gi
 
@@ -37,6 +36,15 @@ from insight_gui.widgets.pref_rows import MultiToggleButtonRow, ColumnViewRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
+LOG_SEVERITY_NAMES = {
+    Log.DEBUG: "DEBUG",
+    Log.INFO: "INFO",
+    Log.WARN: "WARN",
+    Log.ERROR: "ERROR",
+    Log.FATAL: "FATAL",
+}
+
+
 # TODO maybe move this also into the models folder?
 class LogMessageItem(GObject.Object):
     timestamp = GObject.Property(type=str, default="")
@@ -48,14 +56,14 @@ class LogMessageItem(GObject.Object):
         self,
         *,
         unix_time: float,
-        severity: LoggingSeverity,
+        severity: str,
         message: str,
         node_name: str,
     ):
         super().__init__()
 
         self.timestamp = datetime.fromtimestamp(unix_time).strftime("%Y-%m-%d %H:%M:%S.%f")
-        self.severity = str(severity.name)
+        self.severity = severity
         self.message = str(message)
         self.node_name = node_name
 
@@ -98,31 +106,31 @@ class LoggerPage(ContentPage):
         )
 
         self.debug_filter_btn = self.severity_filter_row.add_toggle_btn(
-            unique_id=str(LoggingSeverity.DEBUG.name),
+            unique_id=LOG_SEVERITY_NAMES[Log.DEBUG],
             labels="DEBUG",
             default_active=True,
             css_classes=[],
         )
         self.info_filter_btn = self.severity_filter_row.add_toggle_btn(
-            unique_id=str(LoggingSeverity.INFO.name),
+            unique_id=LOG_SEVERITY_NAMES[Log.INFO],
             labels="INFO",
             default_active=True,
             css_classes=["success"],
         )
         self.warning_filter_btn = self.severity_filter_row.add_toggle_btn(
-            unique_id=str(LoggingSeverity.WARN.name),
+            unique_id=LOG_SEVERITY_NAMES[Log.WARN],
             labels="WARN",
             default_active=True,
             css_classes=["warning"],
         )
         self.error_filter_btn = self.severity_filter_row.add_toggle_btn(
-            unique_id=str(LoggingSeverity.ERROR.name),
+            unique_id=LOG_SEVERITY_NAMES[Log.ERROR],
             labels="ERROR",
             default_active=True,
             css_classes=["error"],
         )
         self.fatal_filter_btn = self.severity_filter_row.add_toggle_btn(
-            unique_id=str(LoggingSeverity.FATAL.name),
+            unique_id=LOG_SEVERITY_NAMES[Log.FATAL],
             labels="FATAL",
             default_active=True,
             css_classes=["error"],
@@ -152,11 +160,7 @@ class LoggerPage(ContentPage):
         self.column_view_row.add_column("Timestamp", "timestamp", is_sortable=True, is_numeric=False)
         self.column_view_row.add_column("Severity", "severity", is_sortable=True, is_numeric=False)
         self.column_view_row.add_column("Message", "message", is_sortable=False, is_numeric=False, expand=True)
-        self.column_view_row.add_column("Node", "node", is_sortable=True, is_numeric=False, expand=False)
-
-        # # Get the default ROS logger and attach a custom log handler
-        # logger = get_logger("custom_logger")
-        # logger.set_handler(custom_log_handler)
+        self.column_view_row.add_column("Node", "node_name", is_sortable=True, is_numeric=False, expand=False)
 
         self.play_pause_btn.activate()
 
@@ -174,19 +178,17 @@ class LoggerPage(ContentPage):
         #     self.rosout_sub = None
 
     def on_unrealize(self, *args):
-        # super().on_unrealize(*args)
+        super().on_unrealize(*args)
         # TODO remove subscription
         # self.ros2_connector.remove_subscription(self.rosout_sub)
-        pass
 
     def on_map(self, *args):
+        super().on_map(*args)
         # TODO make the logger start (again) logging when page is currently visible
-        # super().on_map(*args)
-        pass
 
     def on_unmap(self, *args):
+        super().on_unmap(*args)
         # TODO make the logger stop logging when page is currently not visible
-        pass
 
     def on_severities_changed(self, widget: MultiToggleButtonRow, *args):
         active_log_levels = widget.get_active_buttons()
@@ -198,7 +200,7 @@ class LoggerPage(ContentPage):
 
     def on_regex_node_filter_changed(self, *args):
         text = self.regex_node_filter_row.get_text()
-        self.column_view_row.apply_filter(node=text)
+        self.column_view_row.apply_filter(node_name=text)
 
     def on_node_filter_changed(self, *args):
         node_name = self.node_filter_row.get_selected_item().get_string()
@@ -220,7 +222,7 @@ class LoggerPage(ContentPage):
             self.column_view_row.add_row(
                 LogMessageItem(
                     unix_time=float(log_msg.stamp.sec + log_msg.stamp.nanosec / 1e9),
-                    severity=LoggingSeverity(log_msg.level),
+                    severity=LOG_SEVERITY_NAMES.get(log_msg.level, str(log_msg.level)),
                     message=log_msg.msg,
                     node_name=log_msg.name,
                 )

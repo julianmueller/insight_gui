@@ -28,7 +28,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
-from gi.repository import Gtk, Adw, Gdk, Gsk, Graphene, GObject, GLib
+from gi.repository import Gtk, Adw, Gdk, Gsk, Graphene, GObject, GLib, Gio
 
 from insight_gui.widgets.canvas_blocks import (
     BaseBlock,
@@ -39,11 +39,22 @@ from insight_gui.widgets.canvas_blocks import (
     ParameterBlock,
     TransformBlock,
 )
-from insight_gui.utils.ros_logging import ros_log
+from insight_gui.models.action_item import ActionItem
+from insight_gui.models.node_item import NodeItem
+from insight_gui.models.parameter_item import ParameterItem
+from insight_gui.models.service_item import ServiceItem
+from insight_gui.models.topic_item import TopicItem
 from insight_gui.widgets.pref_page import PrefPage
 from insight_gui.widgets.pref_group import PrefGroup
 from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.widgets.canvas_sidebar import CanvasSidebar
+
+
+def _log(message: str, level: str = "info") -> None:
+    app = Gio.Application.get_default()
+    connector = getattr(app, "ros2_connector", None)
+    if connector:
+        connector.log(message, level=level)
 
 
 class Canvas(Adw.Bin):
@@ -54,7 +65,7 @@ class Canvas(Adw.Bin):
     zoom_min = GObject.Property(type=float, default=0.2)
     zoom_max = GObject.Property(type=float, default=5.0)
 
-    def __init__(self):
+    def __init__(self, *, accept_model_drops: bool = False):
         super().__init__()
 
         self.pan_offset = Graphene.Point(0.0, 0.0)
@@ -183,6 +194,49 @@ class Canvas(Adw.Bin):
         self._connections = set()
         self._highlighted_blocks = set()  # Highlighted blocks
         self._highlighted_connections = set()  # Highlighted connections
+
+        if accept_model_drops:
+            self._install_model_drop_targets()
+
+    def _install_model_drop_targets(self):
+        self._model_drop_targets = []
+        for model_type in (NodeItem, TopicItem, ServiceItem, ActionItem, ParameterItem):
+            drop_target = Gtk.DropTarget.new(model_type, Gdk.DragAction.COPY)
+            drop_target.connect("drop", self._on_model_dropped)
+            self.fixed.add_controller(drop_target)
+            self._model_drop_targets.append(drop_target)
+
+    def _on_model_dropped(self, drop_target, value, x: float, y: float) -> bool:
+        block_class, block_args = self._get_block_for_model(value)
+        if not block_class:
+            return False
+
+        block_uuid = self.add_block(block_class=block_class, block_args=block_args)
+        block = self.get_block(block_uuid)
+        if not block:
+            return False
+
+        visual_x = max(0.0, x)
+        visual_y = max(0.0, y)
+        original_x = visual_x / self.zoom_factor if self.zoom_factor else visual_x
+        original_y = visual_y / self.zoom_factor if self.zoom_factor else visual_y
+        block.pos = (original_x, original_y)
+        self.fixed.move(block, visual_x, visual_y)
+        self.drawing_area.queue_draw()
+        return True
+
+    def _get_block_for_model(self, value) -> tuple[type[BaseBlock] | None, dict]:
+        if isinstance(value, NodeItem):
+            return NodeBlock, {"node": value}
+        if isinstance(value, TopicItem):
+            return TopicBlock, {"topic": value}
+        if isinstance(value, ServiceItem):
+            return ServiceBlock, {"service": value}
+        if isinstance(value, ActionItem):
+            return ActionBlock, {"action": value}
+        if isinstance(value, ParameterItem):
+            return ParameterBlock, {"parameter": value}
+        return None, {}
 
     def _on_zoom_factor_changed(self, *args):
         """Handle zoom factor changes and update the canvas accordingly."""
@@ -664,7 +718,7 @@ class Canvas(Adw.Bin):
     def calculate_layout(self):
         # Check if we have any nodes to layout
         if not self._nx_graph.nodes():
-            ros_log("No nodes in graph, cannot calculate layout.", level="warning")
+            _log("No nodes in graph, cannot calculate layout.", level="warning")
             return
 
         try:
@@ -689,7 +743,7 @@ class Canvas(Adw.Bin):
             )
 
         except ImportError as e:
-            ros_log(f"Graphviz layout failed: {e}, falling back to spring layout", level="warning")
+            _log(f"Graphviz layout failed: {e}, falling back to spring layout", level="warning")
             self._graph_node_positions = nx.spring_layout(self._nx_graph, seed=42, k=3, iterations=50)
 
         # Get the bounds of the graph layout

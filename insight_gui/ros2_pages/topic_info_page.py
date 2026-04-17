@@ -29,10 +29,8 @@ from gi.repository import Gtk, Adw
 from insight_gui.models.topic_item import TopicItem
 from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
 from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
-from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
-from insight_gui.ros2_pages.node_info_page import NodeInfoPage
 from insight_gui.widgets.content_page import ContentPage
-from insight_gui.widgets.pref_rows import PrefRow
+from insight_gui.widgets.model_rows import InterfaceTypeRow, NodeRow
 
 
 class TopicInfoPage(ContentPage):
@@ -92,12 +90,7 @@ class TopicInfoPage(ContentPage):
 
     def refresh_ui(self):
         # create a row for the message type
-        interface_type_row = PrefRow(title=self.topic_interface_full_name)
-        interface_type_row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=InterfaceInfoPage,
-            subpage_kwargs={"interface": self.topic.interface},
-        )
+        interface_type_row = InterfaceTypeRow(interface=self.topic.interface, nav_view=self.nav_view)
         self._add_rows_async(self.topic_interface_type_group, (interface_type_row,), batch_size=1)
         self._add_item_rows_async(
             self.publishers_group,
@@ -114,17 +107,8 @@ class TopicInfoPage(ContentPage):
             on_done=self.subscribers_group.set_description_to_row_count,
         )
 
-    def _build_node_row(self, node) -> PrefRow:
-        row = PrefRow(title=node.name, subtitle=node.full_name)
-        if node.hidden:
-            row.add_prefix_icon("eye-not-looking-symbolic", tooltip_text="Hidden node")
-
-        row.set_subpage_link(
-            nav_view=self.nav_view,
-            subpage_class=NodeInfoPage,
-            subpage_kwargs={"node": node},
-        )
-        return row
+    def _build_node_row(self, node) -> NodeRow:
+        return NodeRow(node=node, nav_view=self.nav_view)
 
     def reset_ui(self):
         self.topic_interface_type_group.clear()
@@ -135,7 +119,7 @@ class TopicInfoPage(ContentPage):
     #     self._on_goto_subscriber_page()
 
     def _on_goto_publisher_page(self, *args):
-        self.nav_view.push(TopicPublisherPage(preselect_topic=self.topic))
+        self._push_subpage(TopicPublisherPage, {"preselect_topic": self.topic})
 
     def _on_goto_subscriber_page(self, *args):
-        self.nav_view.push(TopicSubscriberPage(preselect_topic=self.topic))
+        self._push_subpage(TopicSubscriberPage, {"preselect_topic": self.topic})

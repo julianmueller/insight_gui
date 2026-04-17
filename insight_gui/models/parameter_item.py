@@ -9,6 +9,7 @@ from .node_item import NodeItem
 # TODO implement full parameter functionality
 class ParameterItem(GObject.GObject):
     __gtype_name__ = "ParameterItem"
+    __item_type__ = "Parameter"
 
     name = GObject.Property(type=str, default="")
     node = GObject.Property(type=NodeItem)

@@ -33,13 +33,12 @@ from rosidl_runtime_py import (
 )
 from rosidl_runtime_py.utilities import get_message
 from rclpy.validate_full_topic_name import validate_full_topic_name
-from rclpy.exceptions import InvalidTopicNameException
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GLib, Pango
+from gi.repository import Gtk, Adw, Gio, GLib, Gdk, Pango
 
 from insight_gui.models.topic_item import TopicItem
 from insight_gui.widgets.content_page import ContentPage
@@ -178,6 +177,58 @@ class TopicPublisherPage(ContentPage):
         self.pub_text_view_row = self.pub_group.add_row(TextViewRow(editable=True, wrap_mode=Gtk.WrapMode.NONE))
 
         # TODO add rows that display infos about the topic, like qos and rate etc
+        self._install_topic_drop_target()
+
+    def _install_topic_drop_target(self):
+        self.topic_drop_target = Gtk.DropTarget.new(TopicItem, Gdk.DragAction.COPY)
+        self.topic_drop_target.connect("drop", self._on_topic_dropped)
+        self.toolbar_view.add_controller(self.topic_drop_target)
+
+    def _on_topic_dropped(self, drop_target, value, x: float, y: float) -> bool:
+        if not isinstance(value, TopicItem):
+            return False
+
+        self._select_topic(value)
+        self.show_toast(f"Selected {value.full_name}")
+        return True
+
+    def _select_topic(self, topic: TopicItem):
+        self.preselect_topic = topic
+        self.detach_kwargs = {"preselect_topic": topic}
+
+        if not hasattr(self, "available_topics") or self.available_topics is None:
+            self.available_topics = []
+
+        if not any(available_topic.full_name == topic.full_name for available_topic in self.available_topics):
+            self.available_topics.append(topic)
+
+        if find_str_in_list_store(self.topic_row.list_store, topic.full_name) < 0:
+            self.topic_row.list_store.append(Gtk.StringObject.new(topic.full_name))
+
+        self.topic_row.set_text(topic.full_name)
+        self._set_selected_topic_type(topic)
+
+    def _set_selected_topic_type(self, topic: TopicItem) -> bool:
+        selected_topic_type = topic.interface.full_name
+        self.topic_type_name = selected_topic_type
+        self.topic_name = topic.full_name
+
+        found_index = find_str_in_list_store(self.topic_type_list_store, selected_topic_type)
+        if found_index < 0:
+            self.topic_type_list_store.append(Gtk.StringObject.new(selected_topic_type))
+            found_index = self.topic_type_list_store.get_n_items() - 1
+
+        try:
+            self.msg_class = get_message(selected_topic_type)
+        except Exception as exc:
+            self.disable_publish_btn()
+            super().show_toast(f"Could not resolve message class for {topic.full_name}: {exc}")
+            return False
+
+        self.topic_type_row.set_selected(found_index)
+        self.topic_type_row.set_sensitive(False)
+        self.create_pub()
+        return True
 
     def refresh_bg(self) -> bool:
         self.available_msgs = get_message_interfaces()  # this could move to the ros2_connector and be cached
@@ -196,8 +247,9 @@ class TopicPublisherPage(ContentPage):
                 self.topic_type_list_store.append(Gtk.StringObject.new(msg_type_full_name))
 
         preselect_topic = getattr(self.preselect_topic, "full_name", self.preselect_topic)
-        if preselect_topic and any(topic.full_name == preselect_topic for topic in self.available_topics):
-            self.topic_row.set_text(preselect_topic)
+        topic = next((topic for topic in self.available_topics if topic.full_name == preselect_topic), None)
+        if topic:
+            self._select_topic(topic)
         else:
             self.topic_row.set_text("")
 
@@ -245,30 +297,62 @@ class TopicPublisherPage(ContentPage):
         self.toggle_stream_btn.playing = False
 
     def is_publish_ready(self, *args) -> bool:
+        self.topic_name = self._normalize_topic_name(self.topic_name or self.topic_row.get_text())
         if not self.topic_name:
             # TODO check if topic name is a valid name (use rosidl functions?)
             super().show_toast("No valid topic name")
             return False
 
-        if self.is_publishing and not float(self.publishing_rate_row.get_text()):
-            # TODO check rate a bit more sophisticated
-            super().show_toast("No valid rate")
+        if not self._is_valid_topic_name(self.topic_name, toast=True):
+            return False
+
+        if self.is_publishing:
+            try:
+                rate = float(self.publishing_rate_row.get_text())
+            except ValueError:
+                rate = 0.0
+            if rate <= 0:
+                # TODO check rate a bit more sophisticated
+                super().show_toast("No valid rate")
+                return False
 
         return True
 
-    def publish_msg(self, *args):
-        if not self.textfield_to_msg():
-            return
-
+    def _publish_current_msg(self):
         if not self.ros2_pub:
             return
 
         self.single_pub_done = False
         self.ros2_pub.publish(self.msg_instance)
 
+    def _publish_stream_msg(self):
+        try:
+            self._publish_current_msg()
+        except Exception as exc:
+            def _stop_after_error(exc=exc):
+                super(TopicPublisherPage, self).show_toast(f"Publishing failed: {exc}")
+                self.stop_stream()
+                return GLib.SOURCE_REMOVE
+
+            GLib.idle_add(_stop_after_error)
+
+    def publish_msg(self, *args):
+        if not self.textfield_to_msg():
+            if self.is_publishing:
+                self.stop_stream()
+            return
+
+        self._publish_current_msg()
+
     def on_toggle_stream(self, *args):
         self.is_publishing = self.toggle_stream_btn.playing
         if not self.is_publish_ready():
+            if self.is_publishing:
+                self.stop_stream()
+            return
+
+        if self.is_publishing and not self.textfield_to_msg():
+            self.stop_stream()
             return
 
         if self.is_publishing:
@@ -286,7 +370,7 @@ class TopicPublisherPage(ContentPage):
 
     def start_stream(self, *args):
         rate = float(self.publishing_rate_row.get_text())
-        self.pub_timer = self.ros2_connector.add_timer_callback(period=1.0 / rate, callback=self.publish_msg)
+        self.pub_timer = self.ros2_connector.add_timer_callback(period=1.0 / rate, callback=self._publish_stream_msg)
         self.topic_row.set_sensitive(False)
         self.topic_type_row.set_sensitive(False)
         self.publishing_rate_row.set_sensitive(False)
@@ -298,51 +382,33 @@ class TopicPublisherPage(ContentPage):
         self.topic_type_row.set_sensitive(True)
         self.publishing_rate_row.set_sensitive(True)
         self.pub_text_view_row.set_sensitive(True)
-        self.pub_timer.destroy()
+        if self.pub_timer:
+            self.pub_timer.destroy()
+            self.pub_timer = None
         self.is_publishing = False
+        if self.toggle_stream_btn.playing:
+            self.toggle_stream_btn.playing = False
 
     def on_topic_name_applied(self, *args):
-        try:
-            topic_name = self.topic_row.get_text()
-            if not topic_name or not validate_full_topic_name(topic_name):
-                super().show_toast("Invalid topic name")
-                return
+        topic_name = self._normalize_topic_name(self.topic_row.get_text())
+        self.topic_row.set_text(topic_name)
 
-            self.topic_type_row.set_sensitive(True)
-            self.topic_name = topic_name
-            self.create_pub()
-
-        except InvalidTopicNameException as e:
-            self.topic_row.set_text("")
+        if not self._is_valid_topic_name(topic_name, toast=True):
             self.topic_name = None
-            super().show_toast(e)
+            self.disable_publish_btn()
+            return
+
+        self.topic_type_row.set_sensitive(True)
+        self.topic_name = topic_name
+        self.create_pub()
 
     def on_topic_suggestion_applied(self, _, item_text: str):
-        try:
-            topic = next((topic for topic in self.available_topics if topic.full_name == item_text), None)
-            if not topic:
-                super().show_toast(f"Could not resolve type for topic {item_text}")
-                return
+        topic = next((topic for topic in self.available_topics if topic.full_name == item_text), None)
+        if not topic:
+            super().show_toast(f"Could not resolve type for topic {item_text}")
+            return
 
-            selected_topic_type = topic.interface.full_name
-            found_index = find_str_in_list_store(self.topic_type_list_store, selected_topic_type)
-            if found_index >= 0:
-                self.topic_type_row.set_selected(found_index)
-                self.topic_type_row.set_sensitive(False)
-            else:
-                self.topic_type_row.set_selected(0)
-                super().show_toast(f"There seems to be a problem with the topic type: {selected_topic_type}")
-                return
-
-            self.msg_class = get_message(selected_topic_type)
-            self.topic_type_name = selected_topic_type
-            self.topic_name = self.topic_row.get_text()  # equals item_text
-            self.create_pub()
-
-        except InvalidTopicNameException as e:
-            self.topic_row.set_text("")
-            self.topic_name = None
-            super().show_toast(e)
+        self._select_topic(topic)
 
     def on_topic_type_changed(self, *args):
         if self.topic_type_list_store.get_n_items() <= 0:
@@ -375,17 +441,40 @@ class TopicPublisherPage(ContentPage):
 
         self.publishing_rate = float(rate)
 
+    def _normalize_topic_name(self, topic_name: str | None) -> str:
+        topic_name = (topic_name or "").strip()
+        if topic_name and not topic_name.startswith("/"):
+            topic_name = f"/{topic_name}"
+        return topic_name
+
+    def _is_valid_topic_name(self, topic_name: str, *, toast: bool = False) -> bool:
+        try:
+            result = validate_full_topic_name(topic_name)
+        except Exception as exc:
+            result = exc
+
+        if result is True:
+            return True
+
+        if toast:
+            message = str(result) if result else "Invalid topic name"
+            super().show_toast(message)
+        return False
+
     def check_topic_name_and_type(self, topic_name: str, topic_type: str, toast: bool = False):
-        if not topic_name or not validate_full_topic_name(topic_name):
-            if toast:
-                super().show_toast("Invalid topic name")
+        topic_name = self._normalize_topic_name(topic_name)
+        if not topic_name or not self._is_valid_topic_name(topic_name, toast=toast):
             return False
+
+        self.topic_name = topic_name
+        self.topic_row.set_text(topic_name)
 
         # check if the topic name is already published with a different type
         available_topics = getattr(self, "available_topics", None) or self.ros2_connector.collect_topics()
         for topic in available_topics or []:
-            if topic_name == topic.full_name and topic_name != self.topic_name:
-                if topic_type not in topic.type_names:
+            if topic_name == topic.full_name:
+                type_names = getattr(topic, "type_names", [topic.interface.full_name])
+                if topic_type not in type_names:
                     if toast:
                         super().show_toast(f"Topic {topic_name} already published with a different type!")
                     return False
@@ -393,6 +482,7 @@ class TopicPublisherPage(ContentPage):
         return True
 
     def create_pub(self):
+        self.topic_name = self._normalize_topic_name(self.topic_name or self.topic_row.get_text())
         if not self.msg_class or not self.topic_name:
             return
 

@@ -61,7 +61,7 @@ class GraphPage(ContentPage):
         # TODO make the graph viz adjustable, by exposing a selection for the different nx layouts and its params
 
         # Create canvas
-        self.canvas = Canvas()
+        self.canvas = Canvas(accept_model_drops=True)
         self.main_content_page.set_child(self.canvas)
 
     def refresh_bg(self):

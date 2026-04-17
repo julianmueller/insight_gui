@@ -89,7 +89,7 @@ class LaunchListPage(ContentPage):
             if pkg_name in self.pkg_launch_groups.keys():
                 group = self.pkg_launch_groups[pkg_name]
             else:
-                group = self.pref_page.add_group(title=pkg_name, description=pkg_info["path"])
+                group = self.pref_page.add_group(title=pkg_name, description=pkg_info["path"], collapsable=True)
                 self.pkg_launch_groups[pkg_name] = group
 
             self._add_item_rows_async(

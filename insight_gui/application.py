@@ -23,6 +23,7 @@
 # =============================================================================
 
 from pathlib import Path
+import sys
 
 # # HOTFIX for https://discourse.gnome.org/t/gtk4-efficiency-and-performance-in-x11-export-remote-drawing-mode/8786
 # os.environ["GSK_RENDERER"] = "cairo"
@@ -36,10 +37,6 @@ gi.require_version("Adw", "1")
 gi.require_version("GLib", "2.0")
 from gi.repository import GObject, Gtk, Adw, GLib, Gio, Gdk
 
-# custom imports
-from insight_gui.window import MainWindow
-from insight_gui.ros2_connector import ROS2Connector
-from insight_gui.utils.ros_logging import ros_log
 # from insight_gui.utils.background_worker import (
 #     BackgroundWorker,
 #     WORKER_PRIORITY_HIGH,
@@ -78,6 +75,7 @@ class InsightApplication(Adw.Application):
 
         self.main_window: Adw.ApplicationWindow = None
         self.detached_windows: list[Adw.ApplicationWindow] = []
+        self._ros2_autostart_source_id = 0
 
         # Initialize settings
         try:
@@ -89,7 +87,7 @@ class InsightApplication(Adw.Application):
             self.settings = Gio.Settings.new_full(schema, None, None)
 
         except Exception as e:
-            ros_log(f"Application: Could not initialize GSettings normally: {e}", level="error")
+            sys.stderr.write(f"Application: Could not initialize GSettings normally: {e}\n")
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -103,6 +101,8 @@ class InsightApplication(Adw.Application):
         Gtk.Window.set_default_icon_name("insight")
 
         # ros2 connector handles all connections to the ros2 node
+        from insight_gui.ros2_connector import ROS2Connector
+
         self.ros2_connector = ROS2Connector()
 
         # Define "app.ros2_node_start" action
@@ -122,11 +122,12 @@ class InsightApplication(Adw.Application):
         ros2_node_is_running_action.connect("notify::state", self.ros2_connector.on_node_state_changed)
         self.add_action(ros2_node_is_running_action)
 
-        # Start ROS 2 in the background so application startup is not blocked by rclpy/node initialization.
-        self.ros2_connector.start_node_async()
+        # ROS 2 autostart is queued after the first window is presented.
 
     def do_activate(self):
         if not self.main_window:
+            from insight_gui.window import MainWindow
+
             self.main_window = MainWindow(
                 app=self, title="Insight", icon_name="insight", start_page_id=self._start_page_id
             )
@@ -149,8 +150,28 @@ class InsightApplication(Adw.Application):
 
         self.main_window.connect("close-request", self.shutdown)
         self.main_window.present()
+        self._queue_ros2_autostart()
+
+    def _queue_ros2_autostart(self):
+        if self._ros2_autostart_source_id or self.ros2_connector.is_running or self.ros2_connector.is_starting:
+            return
+
+        self._ros2_autostart_source_id = GLib.timeout_add(
+            100,
+            self._start_ros2_node,
+            priority=GLib.PRIORITY_LOW,
+        )
+
+    def _start_ros2_node(self):
+        self._ros2_autostart_source_id = 0
+        self.ros2_connector.start_node_async()
+        return GLib.SOURCE_REMOVE
 
     def shutdown(self, *args):
+        if self._ros2_autostart_source_id:
+            GLib.source_remove(self._ros2_autostart_source_id)
+            self._ros2_autostart_source_id = 0
+
         # First ask pages to cancel any ongoing refresh so worker tasks can exit quickly
         # try:
         #     self.main_window.current_page.cancel_refresh()

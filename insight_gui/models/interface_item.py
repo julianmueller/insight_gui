@@ -5,19 +5,12 @@ import gi
 gi.require_version("GObject", "2.0")
 from gi.repository import GObject, Gio
 
-from rosidl_runtime_py.utilities import get_message, get_service, get_action
-from rosidl_parser.definition import (
-    NamespacedType,
-    UnboundedSequence,
-    BoundedSequence,
-    Array,
-    BoundedString,
-    UnboundedString,
-    BoundedWString,
-    UnboundedWString,
-    BasicType,
-)
-from insight_gui.utils.ros_logging import ros_log
+
+def _log(message: str, level: str = "info") -> None:
+    app = Gio.Application.get_default()
+    connector = getattr(app, "ros2_connector", None)
+    if connector:
+        connector.log(message, level=level)
 
 
 # see https://docs.ros.org/en/jazzy/Concepts/Basic/About-Interfaces.html
@@ -50,6 +43,7 @@ class FieldItem(GObject.GObject):
     dds_type = GObject.Property(type=str, default="")
     default_value = GObject.Property(type=str, default="")
     constant = GObject.Property(type=bool, default=False)
+    nested_interface_full_name = GObject.Property(type=str, default="")
 
     field_obj = GObject.Property(type=object, default=None)
 
@@ -60,6 +54,7 @@ class FieldItem(GObject.GObject):
         field_obj: object,
         dds_type: str,
         default_value: str = "",
+        nested_interface_full_name: str = "",
     ):
         super().__init__()
         self.name = name
@@ -67,6 +62,7 @@ class FieldItem(GObject.GObject):
         self.dds_type = dds_type
         self.python_type = field_obj.__class__.__name__
         self.default_value = default_value
+        self.nested_interface_full_name = nested_interface_full_name
 
         if re.match(r"^([A-Z]+(?:_|[A-Z]|[0-9])*)+", self.name):
             self.constant = True
@@ -77,6 +73,7 @@ class FieldItem(GObject.GObject):
 
 class InterfaceTypeItem(GObject.GObject):
     __gtype_name__ = "InterfaceTypeItem"
+    __item_type__ = "Interface"
 
     package = GObject.Property(type=str, default="")
     interface_class = GObject.Property(type=str, default="")
@@ -115,10 +112,27 @@ class InterfaceTypeItem(GObject.GObject):
 
     @staticmethod
     def parse_rosidl_obj(rosidl_obj) -> Gio.ListStore:
+        from rosidl_parser.definition import (
+            NamespacedType,
+            UnboundedSequence,
+            BoundedSequence,
+            Array,
+            BoundedString,
+            UnboundedString,
+            BoundedWString,
+            UnboundedWString,
+            BasicType,
+        )
+
         if rosidl_obj is None:
             return Gio.ListStore.new(GObject.GObject)
 
         fields = Gio.ListStore.new(GObject.GObject)
+
+        def _nested_interface_full_name(slot_type) -> str:
+            if hasattr(slot_type, "namespaced_name"):
+                return "/".join(slot_type.namespaced_name())
+            return ""
 
         # Iterate through the message fields
         for (field_name, field_type), slot_type in zip(
@@ -129,12 +143,11 @@ class InterfaceTypeItem(GObject.GObject):
 
             # for nested messages
             if isinstance(slot_type, NamespacedType):
-                # nested_interface_type_full_name = "/".join(slot_type.namespaced_name())
                 field = FieldItem(
                     name=field_name,
-                    field_obj=field_obj,  # InterfaceTypeItem(full_name=nested_interface_type_full_name),  # rosidl_obj=field_obj),
+                    field_obj=field_obj,
                     dds_type=field_type,  # eg 'uint32'
-                    # python_type=type(field_obj).__name__,  # eg 'int'
+                    nested_interface_full_name=_nested_interface_full_name(slot_type),
                 )
                 fields.append(field)
 
@@ -150,21 +163,24 @@ class InterfaceTypeItem(GObject.GObject):
 
             # for sequences of defined lengths
             elif isinstance(slot_type, (UnboundedSequence, BoundedSequence)):
-                if isinstance(slot_type.value_type, BasicType):
-                    name = f"sequence of <{slot_type.value_type.typename}>"
-                elif isinstance(
+                nested_interface_full_name = ""
+                if not isinstance(
                     slot_type.value_type, (BasicType, BoundedString, UnboundedString, BoundedWString, UnboundedWString)
                 ):
-                    name = "sequence of <string>"
-                else:
-                    nested_msg_type_full_name = "/".join(slot_type.value_type.namespaced_name())
-                    name = f"sequence of <{nested_msg_type_full_name}>"
+                    nested_interface_full_name = _nested_interface_full_name(slot_type.value_type)
 
-                field = FieldItem(name=name, field_obj=field_obj, dds_type=field_type)
+                field = FieldItem(
+                    name=field_name,
+                    field_obj=field_obj,
+                    dds_type=field_type,
+                    nested_interface_full_name=nested_interface_full_name,
+                )
                 fields.append(field)
 
             # for arrays
             elif isinstance(slot_type, Array):
+                nested_interface_full_name = _nested_interface_full_name(slot_type.value_type)
+
                 # Remove brackets and split the list
                 content = str(field_obj).strip("[]").split()
                 total_count = len(content)
@@ -174,7 +190,12 @@ class InterfaceTypeItem(GObject.GObject):
                 else:
                     field_obj = f"[{content[0]} {content[1]} ... {content[-2]} {content[-1]}] <i>x{total_count}</i>"
 
-                field = FieldItem(name=field_name, field_obj=field_obj, dds_type=field_type)
+                field = FieldItem(
+                    name=field_name,
+                    field_obj=field_obj,
+                    dds_type=field_type,
+                    nested_interface_full_name=nested_interface_full_name,
+                )
                 fields.append(field)
 
             # for strings
@@ -205,6 +226,7 @@ class InterfaceTypeItem(GObject.GObject):
 
 class TopicInterfaceTypeItem(InterfaceTypeItem):
     __gtype_name__ = "TopicInterfaceTypeItem"
+    __item_type__ = "Topic Interface <msg>"
 
     msg_fields = GObject.Property(type=object, default=None)
 
@@ -227,15 +249,18 @@ class TopicInterfaceTypeItem(InterfaceTypeItem):
 
     def import_rosidl_obj(self):
         try:
+            from rosidl_runtime_py.utilities import get_message
+
             rosidl_class = get_message(self.full_name)
             self.rosidl_obj = rosidl_class()
         except Exception as e:
-            ros_log(f"Failed to load python class for message '{self.full_name}': {e}", level="error")
+            _log(f"Failed to load python class for message '{self.full_name}': {e}", level="error")
             raise e
 
 
 class ServiceInterfaceTypeItem(InterfaceTypeItem):
     __gtype_name__ = "ServiceInterfaceTypeItem"
+    __item_type__ = "Service Interface <srv>"
 
     request_fields = GObject.Property(type=object, default=None)
     response_fields = GObject.Property(type=object, default=None)
@@ -260,16 +285,19 @@ class ServiceInterfaceTypeItem(InterfaceTypeItem):
 
     def import_rosidl_obj(self):
         try:
+            from rosidl_runtime_py.utilities import get_service
+
             rosidl_class = get_service(self.full_name)
             self.request_rosidl_obj = rosidl_class.Request()
             self.response_rosidl_obj = rosidl_class.Response()
         except Exception as e:
-            ros_log(f"Failed to resolve service class for '{self.full_name}': {e}", level="error")
+            _log(f"Failed to resolve service class for '{self.full_name}': {e}", level="error")
             raise e
 
 
 class ActionInterfaceTypeItem(InterfaceTypeItem):
     __gtype_name__ = "ActionInterfaceTypeItem"
+    __item_type__ = "Action Interface <action>"
 
     goal_fields = GObject.Property(type=object, default=None)
     feedback_fields = GObject.Property(type=object, default=None)
@@ -297,12 +325,14 @@ class ActionInterfaceTypeItem(InterfaceTypeItem):
 
     def import_rosidl_obj(self):
         try:
+            from rosidl_runtime_py.utilities import get_action
+
             rosidl_class = get_action(self.full_name)
             self.goal_rosidl_obj = rosidl_class.Goal()
             self.feedback_rosidl_obj = rosidl_class.Feedback()
             self.result_rosidl_obj = rosidl_class.Result()
         except Exception as e:
-            ros_log(f"Failed to resolve action class for '{self.full_name}': {e}", level="error")
+            _log(f"Failed to resolve action class for '{self.full_name}': {e}", level="error")
             raise e
 
 
