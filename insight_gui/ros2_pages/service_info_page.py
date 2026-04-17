@@ -52,16 +52,16 @@ class ServiceInfoPage(ContentPage):
         )
 
         # Service Interface Type
-        self.service_interface_type_group = self.pref_page.add_group(title="Service Interface Type")
+        self.service_interface_type_group = self.pref_page.add_group(title="Service Interface Type", collapsable=True)
 
         # Service Servers
         self.service_servers_group = self.pref_page.add_group(
-            title="Service Servers", placeholder_text="This service has no servers."
+            title="Service Servers", placeholder_text="This service has no servers.", collapsable=True
         )
 
         # Service Clients
         self.service_clients_group = self.pref_page.add_group(
-            title="Service Clients", placeholder_text="This service has no clients."
+            title="Service Clients", placeholder_text="This service has no clients.", collapsable=True
         )
 
     def refresh_bg(self) -> bool:

@@ -21,7 +21,6 @@
 # =============================================================================
 
 import os
-from pathlib import Path
 
 from rclpy.validate_node_name import validate_node_name
 from rclpy.validate_namespace import validate_namespace
@@ -31,11 +30,11 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GLib
+from gi.repository import Gtk, Adw, Gio
 
 from insight_gui.ros2_connector import ROS2Connector
 from insight_gui.widgets.pref_page import PrefPage
-from insight_gui.widgets.pref_rows import PrefRow, ButtonRow
+from insight_gui.widgets.pref_rows import PrefRow
 from insight_gui.widgets.buttons import PlayPauseButton
 
 
@@ -401,51 +400,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
         #     )
         # )
 
-        # CACHING PAGE #######################
-
-        self.caching_page = PrefPage(title="Caching", icon_name="speedometer-symbolic")
-        super().add(self.caching_page)
-
-        # Caching Options
-        caching_group = self.caching_page.add_group(
-            title="Caching Options", description="Configure caching behavior for performance"
-        )
-
-        self.enable_caching_row = caching_group.add_row(
-            Adw.SwitchRow(
-                title="Enable Caching",
-                subtitle="Cache node, topic, etc. information for faster access",
-                active=True,
-            )
-        )
-        self.app.settings.bind("enable-caching", self.enable_caching_row, "active", Gio.SettingsBindFlags.DEFAULT)
-
-        self.cache_expiration_row = caching_group.add_row(
-            Adw.SpinRow(
-                title="Cache Expiration Time",
-                subtitle="Time in seconds after which the cache expires and new data is fetched",
-                adjustment=Gtk.Adjustment(value=5, lower=0, upper=60, step_increment=0.1, page_increment=2),
-                digits=1,
-                numeric=True,
-                visible=self.enable_caching_row.get_active(),
-            )
-        )
-        self.enable_caching_row.bind_property(
-            "active", self.cache_expiration_row, "visible", Gio.SettingsBindFlags.DEFAULT
-        )
-        self.app.settings.bind(
-            "cache-expiration-time", self.cache_expiration_row, "value", Gio.SettingsBindFlags.DEFAULT
-        )
-
-        self.clear_cache_row = caching_group.add_row(
-            ButtonRow(
-                label="Clear Cache",
-                tooltip_text="Clear all cached data and refresh the lists",
-                func=self.ros2_connector.clear_cache,
-                css_classes=["destructive-action"],
-            )
-        )
-
         # # Refresh and Update Settings
         # refresh_group = self.filter_page.add_group(title="Refresh Behavior")
 
@@ -545,8 +499,24 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
     def on_apply_env_var(self, entry_row: Adw.EntryRow, env_var_name: str, *args):
         """Apply environment variables and restart ROS2 node"""
-        os.environ[env_var_name] = entry_row.get_text().strip()
-        self.ros2_connector.restart_node()
+        value = entry_row.get_text().strip()
+
+        if env_var_name == "ROS_DOMAIN_ID" and value:
+            try:
+                if int(value) < 0:
+                    raise ValueError
+            except ValueError:
+                self.show_toast("ROS_DOMAIN_ID must be a non-negative integer")
+                self.update_env_vars()
+                return
+
+        if value:
+            os.environ[env_var_name] = value
+        else:
+            os.environ.pop(env_var_name, None)
+
+        self.ros2_connector.restart_node_async(reinitialize_rclpy=env_var_name == "ROS_DOMAIN_ID")
+        self.show_toast(f"Applied {env_var_name}. Restarting ROS2 node.")
 
         # os.environ["ROS_AUTOMATIC_DISCOVERY_RANGE"] = self.env_auto_discovery_row.get_text()
         # os.environ["ROS_STATIC_PEERS"] = self.env_static_peers_row.get_text()
@@ -566,7 +536,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         try:
             validate_node_name(node_name)
             self.app.settings.set_string("gui-node-name", node_name)
-            self.ros2_connector.restart_node()
+            self.ros2_connector.restart_node_async()
             self.show_toast(f"Applied GUI-Node name: '{node_name}'")
             self.last_valid_gui_node_name = node_name
 
@@ -590,7 +560,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         try:
             validate_namespace(full_namespace)
             self.app.settings.set_string("gui-node-namespace", node_namespace)
-            self.ros2_connector.restart_node()
+            self.ros2_connector.restart_node_async()
             self.show_toast(f"Applied full GUI-Node name: '{full_namespace}'")
             self.last_valid_gui_node_namespace = node_namespace
 

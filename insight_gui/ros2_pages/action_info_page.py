@@ -53,16 +53,16 @@ class ActionInfoPage(ContentPage):
         )
 
         # Action Interface Type
-        self.action_interface_type_group = self.pref_page.add_group(title="Action Interface Type")
+        self.action_interface_type_group = self.pref_page.add_group(title="Action Interface Type", collapsable=True)
 
         # Action Servers
         self.action_servers_group = self.pref_page.add_group(
-            title="Action Servers", placeholder_text="This action has no servers."
+            title="Action Servers", placeholder_text="This action has no servers.", collapsable=True
         )
 
         # Action Clients
         self.action_clients_group = self.pref_page.add_group(
-            title="Action Clients", placeholder_text="This action has no clients."
+            title="Action Clients", placeholder_text="This action has no clients.", collapsable=True
         )
 
     def refresh_bg(self) -> bool:

@@ -60,16 +60,16 @@ class TopicInfoPage(ContentPage):
         )
 
         # Topic Interface Type
-        self.topic_interface_type_group = self.pref_page.add_group(title="Topic Interface Type")
+        self.topic_interface_type_group = self.pref_page.add_group(title="Topic Interface Type", collapsable=True)
 
         # Publishers
         self.publishers_group = self.pref_page.add_group(
-            title="Publishers", placeholder_text="This topic has no publishers."
+            title="Publishers", placeholder_text="This topic has no publishers.", collapsable=True
         )
 
         # Subscribers
         self.subscribers_group = self.pref_page.add_group(
-            title="Subscribers", placeholder_text="This topic has no subscribers."
+            title="Subscribers", placeholder_text="This topic has no subscribers.", collapsable=True
         )
 
     def refresh_bg(self) -> bool:

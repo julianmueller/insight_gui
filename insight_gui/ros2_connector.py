@@ -22,6 +22,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import time
 from threading import Thread, Lock, RLock
@@ -65,8 +66,24 @@ class ROS2Connector(GObject.GObject):
         self.is_running = False
         self.is_starting = False
         self.start_time = None
+        self._rclpy_domain_id: int | None = None
         self._rpc_lock = Lock()
         self._node_lock = RLock()
+
+    def _get_ros_domain_id_from_env(self) -> int | None:
+        domain_id = os.getenv("ROS_DOMAIN_ID", "").strip()
+        if not domain_id:
+            return None
+
+        try:
+            parsed_domain_id = int(domain_id)
+        except ValueError:
+            raise ValueError(f"ROS_DOMAIN_ID must be an integer, got '{domain_id}'")
+
+        if parsed_domain_id < 0:
+            raise ValueError(f"ROS_DOMAIN_ID must be non-negative, got '{domain_id}'")
+
+        return parsed_domain_id
 
     def _ensure_rclpy(self):
         import rclpy
@@ -80,7 +97,8 @@ class ROS2Connector(GObject.GObject):
                 return
 
             if not rclpy.ok():
-                rclpy.init(args=None)  # TODO use ROS_DOMAIN_ID here
+                self._rclpy_domain_id = self._get_ros_domain_id_from_env()
+                rclpy.init(args=None, domain_id=self._rclpy_domain_id)
             self._executor = MultiThreadedExecutor(num_threads=4)
 
     def _ensure_spin_thread(self):
@@ -108,11 +126,32 @@ class ROS2Connector(GObject.GObject):
         self._start_thread = Thread(target=self._start_node_worker, name="ros2-start-thread", daemon=True)
         self._start_thread.start()
 
+    def restart_node_async(self, *args, reinitialize_rclpy: bool = False, **kwargs):
+        if self.is_starting:
+            return
+
+        self.is_starting = True
+        self._start_thread = Thread(
+            target=self._restart_node_worker,
+            kwargs={"reinitialize_rclpy": reinitialize_rclpy},
+            name="ros2-restart-thread",
+            daemon=True,
+        )
+        self._start_thread.start()
+
     def _start_node_worker(self):
         try:
             self.start_node()
         except Exception as exc:
             self.log(f"Failed to start ROS2 node: {exc}", level="error")
+        finally:
+            self.is_starting = False
+
+    def _restart_node_worker(self, *, reinitialize_rclpy: bool = False):
+        try:
+            self.restart_node(reinitialize_rclpy=reinitialize_rclpy)
+        except Exception as exc:
+            self.log(f"Failed to restart ROS2 node: {exc}", level="error")
         finally:
             self.is_starting = False
 
@@ -144,7 +183,7 @@ class ROS2Connector(GObject.GObject):
                 self._set_running_action_state(self.is_running)
 
     def stop_node(self, *args, **kwargs):
-        if not self.is_running:
+        if not self.is_running and not self.ros2_node:
             return
 
         self.is_running = False
@@ -162,11 +201,32 @@ class ROS2Connector(GObject.GObject):
         self.ros2_node = None
         self._set_running_action_state(False)
 
-    def restart_node(self, *args, **kwargs):
+    def restart_node(self, *args, reinitialize_rclpy: bool = False, **kwargs):
         """Restart the ROS2 node."""
-        if self.is_running:
+        if self.is_running or self.ros2_node:
             self.stop_node()
+        if reinitialize_rclpy:
+            self._shutdown_rclpy_context()
         self.start_node()
+
+    def _shutdown_rclpy_context(self):
+        import rclpy
+
+        with self._node_lock:
+            if self._executor:
+                try:
+                    self._executor.shutdown(timeout_sec=1.0)
+                except Exception:
+                    pass
+                self._executor = None
+
+            if rclpy.ok():
+                try:
+                    rclpy.shutdown()
+                except Exception:
+                    pass
+
+            self._rclpy_domain_id = None
 
     def spin(self, *args, **kwargs):
         import rclpy
@@ -198,14 +258,19 @@ class ROS2Connector(GObject.GObject):
 
         if self.is_running:
             self.stop_node()
-        # rclpy.shutdown()
+        self._shutdown_rclpy_context()
 
     def on_node_state_changed(self, action: Gio.Action, value: GLib.Variant):
         action.set_state(GLib.Variant.new_boolean(self.is_running))
 
     def set_ros_domain_id(self, domain_id: int):
-        # TODO implement this using rclpy.init(args=None, domain_id=self.app.settings.get_string("...")))
-        pass
+        if domain_id is None:
+            os.environ.pop("ROS_DOMAIN_ID", None)
+        else:
+            if int(domain_id) < 0:
+                raise ValueError("ROS_DOMAIN_ID must be non-negative")
+            os.environ["ROS_DOMAIN_ID"] = str(int(domain_id))
+        self.restart_node_async(reinitialize_rclpy=True)
 
     def _split_full_name(self, full_name: str) -> tuple[str, str]:
         if "/" not in full_name:

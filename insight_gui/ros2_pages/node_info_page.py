@@ -47,37 +47,40 @@ class NodeInfoPage(ContentPage):
 
         # Publishers
         self.publishers_group = self.pref_page.add_group(
-            title="Publishers", placeholder_text="This node has no publishers."
+            title="Publishers", placeholder_text="This node has no publishers.", collapsable=True
         )
 
         # Subscribers
         self.subscribers_group = self.pref_page.add_group(
-            title="Subscribers", placeholder_text="This node has no subscribers."
+            title="Subscribers", placeholder_text="This node has no subscribers.", collapsable=True
         )
 
         # Service Servers
         self.service_servers_group = self.pref_page.add_group(
-            title="Service Servers", description="", placeholder_text="This node has no service servers."
+            title="Service Servers",
+            description="",
+            placeholder_text="This node has no service servers.",
+            collapsable=True,
         )
 
         # Service Clients
         self.service_clients_group = self.pref_page.add_group(
-            title="Service Clients", placeholder_text="This node has no service clients."
+            title="Service Clients", placeholder_text="This node has no service clients.", collapsable=True
         )
 
         # Action Servers
         self.action_servers_group = self.pref_page.add_group(
-            title="Action Servers", placeholder_text="This node has no action servers."
+            title="Action Servers", placeholder_text="This node has no action servers.", collapsable=True
         )
 
         # Action Clients
         self.action_clients_group = self.pref_page.add_group(
-            title="Action Clients", placeholder_text="This node has no action clients."
+            title="Action Clients", placeholder_text="This node has no action clients.", collapsable=True
         )
 
         # Parameters
         self.parameters_group = self.pref_page.add_group(
-            title="Parameters", placeholder_text="This node has no parameters."
+            title="Parameters", placeholder_text="This node has no parameters.", collapsable=True
         )
 
     def refresh_bg(self) -> bool:

@@ -139,21 +139,6 @@
             <description>Display top breadcrumbs bar (a &gt; b &gt; ...) for navigation</description>
         </key>
 
-        <!-- CACHING SETTING -->
-
-        <key name="enable-caching" type="b">
-            <default>true</default>
-            <summary>Enable Caching</summary>
-            <description>Cache node, topic, etc. information for faster access</description>
-        </key>
-
-        <key name="cache-expiration-time" type="d">
-            <default>5</default>
-            <range min="0" max="60" />
-            <summary>Cache Expiration Time</summary>
-            <description>Time in seconds after which the cache expires and new data is fetched</description>
-        </key>
-
         <!-- <key name="auto-refresh" type="b">
             <default>false</default>
             <summary>Auto Refresh</summary>

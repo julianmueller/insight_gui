@@ -26,7 +26,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Pango
+from gi.repository import GObject, Gtk, Adw, Gdk, GLib, Gio, Pango
 
 from insight_gui.models.action_item import ActionItem
 from insight_gui.models.interface_item import InterfaceTypeItem
@@ -81,7 +81,40 @@ class ModelObjectRow(PrefRow):
         drag_icon.set_child(self._build_drag_icon())
 
     def _on_drag_end(self, source: Gtk.DragSource, drag: Gdk.Drag, delete_data: bool):
+        if self._drag_finished_outside_window(drag):
+            self._open_detached_info_page()
+
         self._primary_drag_cancelled = False
+
+    def _drag_finished_outside_window(self, drag: Gdk.Drag) -> bool:
+        if not self._get_info_page():
+            return False
+        if drag.get_selected_action():
+            return False
+
+        device = drag.get_device()
+        source_surface = self._get_source_surface(drag)
+        if not device or not source_surface:
+            return False
+
+        try:
+            is_over_surface, x, y, _mask = source_surface.get_device_position(device)
+        except (TypeError, RuntimeError):
+            return False
+
+        if not is_over_surface:
+            return True
+
+        return x < 0 or y < 0 or x >= source_surface.get_width() or y >= source_surface.get_height()
+
+    def _get_source_surface(self, drag: Gdk.Drag) -> Gdk.Surface | None:
+        native = self.get_native()
+        if native:
+            surface = native.get_surface()
+            if surface:
+                return surface
+
+        return drag.get_surface()
 
     def _build_drag_icon(self) -> Gtk.Widget:
         width = max(240, min(self.get_allocated_width(), 360))
@@ -160,6 +193,43 @@ class ModelObjectRow(PrefRow):
 
         return self.model_item.__class__.__name__.removesuffix("Item")
 
+    def _get_info_page(self):
+        return None
+
+    def _open_detached_info_page(self) -> bool:
+        info_page = self._get_info_page()
+        if not info_page:
+            return False
+
+        app = Gio.Application.get_default()
+        if not app:
+            return False
+
+        page_class, page_kwargs = info_page
+
+        def _open_window():
+            from insight_gui.window import DetachedWindow
+
+            try:
+                detached_window = DetachedWindow(
+                    app=app,
+                    nav_page_class=page_class,
+                    nav_page_kwargs=page_kwargs,
+                )
+            except Exception as exc:
+                connector = getattr(app, "ros2_connector", None)
+                if connector:
+                    connector.log(f"Failed to open detached detail window: {exc}", level="error")
+                return GLib.SOURCE_REMOVE
+
+            if hasattr(app, "detached_windows"):
+                app.detached_windows.append(detached_window)
+            detached_window.show()
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(_open_window, priority=GLib.PRIORITY_LOW)
+        return True
+
     def _push_page(self, page_class, page_kwargs: dict):
         nav_view = self.get_ancestor(Adw.NavigationView)
         if nav_view:
@@ -184,6 +254,18 @@ class ModelObjectRow(PrefRow):
                 ),
                 icon_name="edit-copy-symbolic",
             )
+        self._add_detached_info_action()
+
+    def _add_detached_info_action(self):
+        if not self._get_info_page():
+            return
+
+        self._add_model_action(
+            "open-detached",
+            f"Open {self._drag_model_name().lower()} detached",
+            self._open_detached_info_page,
+            icon_name="arrow2-top-right-symbolic",
+        )
 
     def _add_model_action(self, action_id: str, label: str, callback: Callable, *, icon_name: str = ""):
         if self.context_menu.item_count > 0 and not self._copy_action_separator_added:
@@ -224,14 +306,19 @@ class NodeRow(ModelObjectRow):
             self.set_navigation_actions(nav_view)
 
     def set_navigation_actions(self, nav_view: Adw.NavigationView):
-        from insight_gui.ros2_pages.node_info_page import NodeInfoPage
+        page_class, page_kwargs = self._get_info_page()
 
         self.set_subpage_link(
             nav_view=nav_view,
-            subpage_class=NodeInfoPage,
-            subpage_kwargs={"node": self.node},
+            subpage_class=page_class,
+            subpage_kwargs=page_kwargs,
             label="Show node info page",
         )
+
+    def _get_info_page(self):
+        from insight_gui.ros2_pages.node_info_page import NodeInfoPage
+
+        return NodeInfoPage, {"node": self.node}
 
 
 class TopicRow(ModelObjectRow):
@@ -267,15 +354,15 @@ class TopicRow(ModelObjectRow):
 
     def set_navigation_actions(self, nav_view: Adw.NavigationView):
         from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
-        from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
         from insight_gui.ros2_pages.topic_pub_page import TopicPublisherPage
         from insight_gui.ros2_pages.topic_remap_page import TopicRemapPage
         from insight_gui.ros2_pages.topic_sub_page import TopicSubscriberPage
+        page_class, page_kwargs = self._get_info_page()
 
         self.set_subpage_link(
             nav_view=nav_view,
-            subpage_class=TopicInfoPage,
-            subpage_kwargs={"topic": self.topic},
+            subpage_class=page_class,
+            subpage_kwargs=page_kwargs,
             label="Show topic info page",
         )
         self._add_model_action(
@@ -302,6 +389,11 @@ class TopicRow(ModelObjectRow):
             lambda: self._push_page(InterfaceInfoPage, {"interface": self.topic.interface}),
             icon_name="shapes-symbolic",
         )
+
+    def _get_info_page(self):
+        from insight_gui.ros2_pages.topic_info_page import TopicInfoPage
+
+        return TopicInfoPage, {"topic": self.topic}
 
 
 class ServiceRow(ModelObjectRow):
@@ -338,12 +430,12 @@ class ServiceRow(ModelObjectRow):
     def set_navigation_actions(self, nav_view: Adw.NavigationView):
         from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
         from insight_gui.ros2_pages.service_call_page import ServiceCallPage
-        from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
+        page_class, page_kwargs = self._get_info_page()
 
         self.set_subpage_link(
             nav_view=nav_view,
-            subpage_class=ServiceInfoPage,
-            subpage_kwargs={"service": self.service},
+            subpage_class=page_class,
+            subpage_kwargs=page_kwargs,
             label="Show service info page",
         )
         self._add_model_action(
@@ -358,6 +450,11 @@ class ServiceRow(ModelObjectRow):
             lambda: self._push_page(InterfaceInfoPage, {"interface": self.service.interface}),
             icon_name="shapes-symbolic",
         )
+
+    def _get_info_page(self):
+        from insight_gui.ros2_pages.service_info_page import ServiceInfoPage
+
+        return ServiceInfoPage, {"service": self.service}
 
 
 class ActionRow(ModelObjectRow):
@@ -393,13 +490,13 @@ class ActionRow(ModelObjectRow):
 
     def set_navigation_actions(self, nav_view: Adw.NavigationView):
         from insight_gui.ros2_pages.action_goal_page import ActionGoalPage
-        from insight_gui.ros2_pages.action_info_page import ActionInfoPage
         from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
+        page_class, page_kwargs = self._get_info_page()
 
         self.set_subpage_link(
             nav_view=nav_view,
-            subpage_class=ActionInfoPage,
-            subpage_kwargs={"action": self.action},
+            subpage_class=page_class,
+            subpage_kwargs=page_kwargs,
             label="Show action info page",
         )
         self._add_model_action(
@@ -414,6 +511,11 @@ class ActionRow(ModelObjectRow):
             lambda: self._push_page(InterfaceInfoPage, {"interface": self.action.interface}),
             icon_name="shapes-symbolic",
         )
+
+    def _get_info_page(self):
+        from insight_gui.ros2_pages.action_info_page import ActionInfoPage
+
+        return ActionInfoPage, {"action": self.action}
 
 
 class PackageRow(ModelObjectRow):
@@ -436,14 +538,19 @@ class PackageRow(ModelObjectRow):
             self.set_navigation_actions(nav_view)
 
     def set_navigation_actions(self, nav_view: Adw.NavigationView):
-        from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
+        page_class, page_kwargs = self._get_info_page()
 
         self.set_subpage_link(
             nav_view=nav_view,
-            subpage_class=PackageInfoPage,
-            subpage_kwargs={"pkg": self.package},
+            subpage_class=page_class,
+            subpage_kwargs=page_kwargs,
             label="Show package info page",
         )
+
+    def _get_info_page(self):
+        from insight_gui.ros2_pages.pkg_info_page import PackageInfoPage
+
+        return PackageInfoPage, {"pkg": self.package}
 
 
 class ParameterRow(ModelObjectRow):
@@ -473,12 +580,12 @@ class ParameterRow(ModelObjectRow):
 
     def set_navigation_actions(self, nav_view: Adw.NavigationView):
         from insight_gui.ros2_pages.node_info_page import NodeInfoPage
-        from insight_gui.ros2_pages.param_edit_page import ParamEditPage
+        page_class, page_kwargs = self._get_info_page()
 
         self.set_subpage_link(
             nav_view=nav_view,
-            subpage_class=ParamEditPage,
-            subpage_kwargs={"parameter": self.parameter},
+            subpage_class=page_class,
+            subpage_kwargs=page_kwargs,
             label="Edit parameter",
         )
         self._add_model_action(
@@ -487,6 +594,14 @@ class ParameterRow(ModelObjectRow):
             lambda: self._push_page(NodeInfoPage, {"node": self.parameter.node}),
             icon_name="token-symbolic",
         )
+
+    def _get_info_page(self):
+        if not self.parameter.type:
+            return None
+
+        from insight_gui.ros2_pages.param_edit_page import ParamEditPage
+
+        return ParamEditPage, {"parameter": self.parameter}
 
 
 class InterfaceTypeRow(ModelObjectRow):
@@ -518,11 +633,16 @@ class InterfaceTypeRow(ModelObjectRow):
             self.set_navigation_actions(nav_view)
 
     def set_navigation_actions(self, nav_view: Adw.NavigationView):
-        from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
+        page_class, page_kwargs = self._get_info_page()
 
         self.set_subpage_link(
             nav_view=nav_view,
-            subpage_class=InterfaceInfoPage,
-            subpage_kwargs={"interface": self.interface},
+            subpage_class=page_class,
+            subpage_kwargs=page_kwargs,
             label="Open interface",
         )
+
+    def _get_info_page(self):
+        from insight_gui.ros2_pages.interface_info_page import InterfaceInfoPage
+
+        return InterfaceInfoPage, {"interface": self.interface}
