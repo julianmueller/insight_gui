@@ -136,7 +136,11 @@ class ControllerManagerPage(ContentPage):
 
     def refresh_ui(self):
         for manager, controllers in self.controller_data:
-            group = self.pref_page.add_group(title=manager.display_name, description="Controllers")
+            group = self.pref_page.add_group(
+                title=manager.display_name,
+                description="Controllers",
+                collapsable=True,
+            )
             self.manager_groups.append(group)
 
             if not controllers:
@@ -415,15 +419,15 @@ class ControllerManagerPage(ContentPage):
     def _set_switch_request_flags(self, request):
         if hasattr(request, "strictness"):
             try:
-                best_effort = getattr(request, "BEST_EFFORT")
+                strictness = getattr(request, "STRICT")
             except AttributeError:
                 try:
-                    best_effort = getattr(type(request), "BEST_EFFORT")
+                    strictness = getattr(type(request), "STRICT")
                 except AttributeError:
-                    best_effort = None
+                    strictness = None
 
-            if best_effort is not None:
-                request.strictness = best_effort
+            if strictness is not None:
+                request.strictness = strictness
             else:
                 current_value = getattr(request, "strictness")
                 if isinstance(current_value, bool):
@@ -436,7 +440,15 @@ class ControllerManagerPage(ContentPage):
                 setattr(request, field_name, True)
 
         if hasattr(request, "timeout"):
-            setattr(request, "timeout", 0.0)
+            try:
+                from builtin_interfaces.msg import Duration
+
+                request.timeout = Duration(sec=5, nanosec=0)
+            except Exception:
+                try:
+                    request.timeout = 5.0
+                except Exception:
+                    pass
 
     def _assign_request_field(self, request, field_name: str, values: List[str]):
         if hasattr(request, field_name):
@@ -455,7 +467,7 @@ class ControllerManagerPage(ContentPage):
         return True
 
     def _extract_switch_message(self, response) -> str:
-        for field_name in ("error_message", "status_message", "reason"):
+        for field_name in ("message", "error_message", "status_message", "reason"):
             if hasattr(response, field_name):
                 field_value = getattr(response, field_name)
                 if field_value:

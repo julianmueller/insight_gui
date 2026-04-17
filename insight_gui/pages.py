@@ -320,14 +320,13 @@ all_pages = [
     PageGroup(
         title="Control",
         pages=[
-            # TODO this was purely-vibe coded, so rework
-            # Page(
-            #     title="Controllers",
-            #     subtitle="Manage ros2_control controllers",
-            #     icon_name="memory-symbolic",
-            #     page_id="controllers",
-            #     nav_page_class=ControllerManagerPage,
-            # ),
+            Page(
+                title="Controllers",
+                subtitle="Manage ros2_control controllers",
+                icon_name="memory-symbolic",
+                page_id="controllers",
+                nav_page_class="insight_gui.ros2_pages.controller_manager_page.ControllerManagerPage",
+            ),
             Page(
                 title="Joint States",
                 subtitle="Manipulate joints",
